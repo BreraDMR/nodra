@@ -1354,4 +1354,8 @@ final class Routes
      *
      * @psalm-return RoutesConfig
      */
+    public static function config(array $config): array
+    {
+        return $config;
+    }
 }
