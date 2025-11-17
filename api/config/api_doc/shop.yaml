@@ -1,0 +1,280 @@
+openapi: 3.1.0
+info:
+  title: NORDRA Commerce API
+  version: 0.1.0
+  description: JSON contract for the fictional NORDRA cycling equipment storefront and administration.
+servers:
+  - url: http://localhost:8000
+tags:
+  - name: Catalogue
+  - name: Checkout
+  - name: Administration
+paths:
+  /api/products:
+    get:
+      tags: [Catalogue]
+      summary: Browse published cycling products
+      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list.
+      parameters:
+        - $ref: '#/components/parameters/Locale'
+        - { name: category, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: sort, in: query, schema: { type: string, enum: [featured, price_asc, price_desc, newest] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        '200':
+          description: Paginated published products.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, pages, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ProductCard' } }
+                  page: { type: integer }
+                  pages: { type: integer }
+                  total: { type: integer }
+  /api/products/{slug}:
+    get:
+      tags: [Catalogue]
+      summary: Read one published product
+      description: Returns localized copy, product imagery, options, prices and live availability for one product.
+      parameters:
+        - $ref: '#/components/parameters/Locale'
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Product details.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/categories:
+    get:
+      tags: [Catalogue]
+      summary: List catalogue categories
+      description: Returns localized category labels and product counts for public navigation.
+      parameters: [{ $ref: '#/components/parameters/Locale' }]
+      responses:
+        '200':
+          description: Public categories.
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } }
+  /api/checkout:
+    post:
+      tags: [Checkout]
+      summary: Place a guest demo order
+      description: Reprices items and checks stock in a transaction. Repeating the same idempotency key returns the same order. No payment or shipment is performed.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 80 }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutRequest' } } }
+      responses:
+        '201':
+          description: Demo order placed and stock reserved.
+          content: { application/json: { schema: { $ref: '#/components/schemas/OrderReceipt' } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/orders/{reference}:
+    get:
+      tags: [Checkout]
+      summary: Look up a demo order
+      description: Requires the unguessable lookup token returned at checkout; never exposes customer information to a reference alone.
+      parameters:
+        - { name: reference, in: path, required: true, schema: { type: string } }
+        - { name: token, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Customer-facing order receipt.
+          content: { application/json: { schema: { $ref: '#/components/schemas/OrderReceipt' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/login:
+    post:
+      tags: [Administration]
+      summary: Start an admin session
+      description: Authenticates a seeded demo administrator and starts an HTTP-only session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200': { description: Signed in. }
+        '401': { description: Invalid credentials. }
+  /api/admin/me:
+    get:
+      tags: [Administration]
+      summary: Read the active admin session
+      description: Returns the admin identity and CSRF token for authenticated requests.
+      responses:
+        '200': { description: Authenticated administrator. }
+        '401': { description: No active session. }
+  /api/admin/dashboard:
+    get:
+      tags: [Administration]
+      summary: Read operational dashboard
+      description: Returns order counts, recent orders, low-stock variants and demo revenue totals.
+      responses:
+        '200': { description: Admin dashboard data. }
+        '401': { description: Authentication required. }
+  /api/admin/products:
+    get:
+      tags: [Administration]
+      summary: List products for editing
+      description: Includes drafts and inventory data for administration.
+      responses:
+        '200': { description: Admin product list. }
+        '401': { description: Authentication required. }
+    post:
+      tags: [Administration]
+      summary: Create a product
+      description: Creates a draft product and its initial variants from a validated payload.
+      responses:
+        '201': { description: Product created. }
+        '401': { description: Authentication required. }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/products/{id}:
+    patch:
+      tags: [Administration]
+      summary: Update a product
+      description: Changes merchandising copy, status, imagery or variants; published changes are visible in the storefront.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Product updated. }
+        '401': { description: Authentication required. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/stock-adjustments:
+    post:
+      tags: [Administration]
+      summary: Adjust variant inventory
+      description: Records a reasoned stock movement and updates availability atomically.
+      responses:
+        '201': { description: Stock movement recorded. }
+        '401': { description: Authentication required. }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders:
+    get:
+      tags: [Administration]
+      summary: List orders for fulfillment
+      description: Returns recent demo orders, with optional status filtering.
+      responses:
+        '200': { description: Admin order list. }
+        '401': { description: Authentication required. }
+  /api/admin/orders/{id}/status:
+    patch:
+      tags: [Administration]
+      summary: Advance an order
+      description: Permits only valid order state transitions; cancellation restores reserved inventory once.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Order status updated. }
+        '401': { description: Authentication required. }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  parameters:
+    Locale:
+      name: locale
+      in: query
+      schema: { type: string, enum: [cs, de, en], default: en }
+  responses:
+    NotFound:
+      description: Resource not found.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Conflict:
+      description: Request conflicts with current stock or order state.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Validation:
+      description: Request failed validation.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
+  schemas:
+    Problem:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    Category:
+      type: object
+      required: [slug, name, count]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        count: { type: integer }
+    Price:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: integer, description: Minor currency units. }
+        currency: { type: string, enum: [CZK, EUR] }
+    ProductCard:
+      type: object
+      required: [id, slug, name, category, image, fromPrice, inStock]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        image: { type: string }
+        fromPrice: { $ref: '#/components/schemas/Price' }
+        inStock: { type: boolean }
+        badge: { type: string, nullable: true }
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/ProductCard'
+        - type: object
+          required: [description, images, variants]
+          properties:
+            description: { type: string }
+            details: { type: array, items: { type: string } }
+            images: { type: array, items: { type: string } }
+            variants:
+              type: array
+              items:
+                type: object
+                required: [id, sku, label, price, stock]
+                properties:
+                  id: { type: string, format: uuid }
+                  sku: { type: string }
+                  label: { type: string }
+                  price: { $ref: '#/components/schemas/Price' }
+                  stock: { type: integer }
+    CheckoutRequest:
+      type: object
+      required: [locale, customer, items]
+      properties:
+        locale: { type: string, enum: [cs, de, en] }
+        customer:
+          type: object
+          required: [name, email, country, address, postalCode]
+          properties:
+            name: { type: string }
+            email: { type: string, format: email }
+            country: { type: string }
+            address: { type: string }
+            postalCode: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [variantId, quantity]
+            properties:
+              variantId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1, maximum: 10 }
+        promotionCode: { type: string, nullable: true }
+    OrderReceipt:
+      type: object
+      required: [reference, status, items, subtotal, shipping, total, lookupToken]
+      properties:
+        reference: { type: string }
+        status: { type: string, enum: [placed, processing, shipped, completed, cancelled] }
+        items: { type: array, items: { type: object } }
+        subtotal: { $ref: '#/components/schemas/Price' }
+        shipping: { $ref: '#/components/schemas/Price' }
+        total: { $ref: '#/components/schemas/Price' }
+        lookupToken: { type: string }
