@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Entity;
+
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid\Uuid;
+
+#[ORM\Entity]
+#[ORM\Table(name: 'product')]
+#[ORM\Index(columns: ['status', 'category', 'featured_rank'], name: 'idx_product_browse')]
+class Product
+{
+    #[ORM\Id]
+    #[ORM\Column(type: UuidType::NAME, unique: true)]
+    private Uuid $id;
+
+    #[ORM\Column(length: 120, unique: true)]
+    private string $slug;
+
+    #[ORM\Column(length: 40)]
+    private string $category;
+
+    #[ORM\Column(length: 16)]
+    private string $status = 'draft';
+
+    /** @var array<string, array{name: string, short: string, description: string, details: list<string>}> */
+    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true])]
+    private array $copy = [];
+
+    #[ORM\Column(length: 255)]
+    private string $image;
+
+    /** @var list<string> */
+    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true])]
+    private array $images = [];
+
+    #[ORM\Column(length: 40, nullable: true)]
+    private ?string $badge = null;
+
+    #[ORM\Column]
+    private int $featuredRank = 100;
+
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
+    private \DateTimeImmutable $createdAt;
+}
