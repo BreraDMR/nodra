@@ -46,4 +46,15 @@ class Product
 
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
+
+    public function __construct(string $slug, string $category, array $copy, string $image)
+    {
+        $this->id = Uuid::v7();
+        $this->slug = $slug;
+        $this->category = $category;
+        $this->copy = $copy;
+        $this->image = $image;
+        $this->images = [$image];
+        $this->createdAt = new \DateTimeImmutable();
+    }
 }
