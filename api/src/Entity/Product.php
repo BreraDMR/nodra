@@ -57,4 +57,6 @@ class Product
         $this->images = [$image];
         $this->createdAt = new \DateTimeImmutable();
     }
+
+    public function getId(): Uuid { return $this->id; }
 }
