@@ -68,4 +68,16 @@ class Product
     public function getBadge(): ?string { return $this->badge; }
     public function getFeaturedRank(): int { return $this->featuredRank; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+
+    public function update(string $slug, string $category, array $copy, string $image, array $images, ?string $badge, int $featuredRank, string $status): void
+    {
+        $this->slug = $slug;
+        $this->category = $category;
+        $this->copy = $copy;
+        $this->image = $image;
+        $this->images = $images;
+        $this->badge = $badge;
+        $this->featuredRank = $featuredRank;
+        $this->status = $status;
+    }
 }
