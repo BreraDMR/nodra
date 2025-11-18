@@ -64,4 +64,5 @@ class Product
     public function getStatus(): string { return $this->status; }
     public function getCopy(): array { return $this->copy; }
     public function getImage(): string { return $this->image; }
+    public function getImages(): array { return $this->images; }
 }
