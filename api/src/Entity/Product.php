@@ -61,4 +61,5 @@ class Product
     public function getId(): Uuid { return $this->id; }
     public function getSlug(): string { return $this->slug; }
     public function getCategory(): string { return $this->category; }
+    public function getStatus(): string { return $this->status; }
 }
