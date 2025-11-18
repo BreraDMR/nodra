@@ -66,4 +66,5 @@ class Product
     public function getImage(): string { return $this->image; }
     public function getImages(): array { return $this->images; }
     public function getBadge(): ?string { return $this->badge; }
+    public function getFeaturedRank(): int { return $this->featuredRank; }
 }
