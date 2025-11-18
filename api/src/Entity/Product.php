@@ -62,4 +62,5 @@ class Product
     public function getSlug(): string { return $this->slug; }
     public function getCategory(): string { return $this->category; }
     public function getStatus(): string { return $this->status; }
+    public function getCopy(): array { return $this->copy; }
 }
