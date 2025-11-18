@@ -59,4 +59,5 @@ class Product
     }
 
     public function getId(): Uuid { return $this->id; }
+    public function getSlug(): string { return $this->slug; }
 }
