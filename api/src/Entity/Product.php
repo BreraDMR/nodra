@@ -65,4 +65,5 @@ class Product
     public function getCopy(): array { return $this->copy; }
     public function getImage(): string { return $this->image; }
     public function getImages(): array { return $this->images; }
+    public function getBadge(): ?string { return $this->badge; }
 }
