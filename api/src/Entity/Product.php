@@ -67,4 +67,5 @@ class Product
     public function getImages(): array { return $this->images; }
     public function getBadge(): ?string { return $this->badge; }
     public function getFeaturedRank(): int { return $this->featuredRank; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 }
