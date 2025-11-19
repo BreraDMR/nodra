@@ -59,4 +59,6 @@ class ProductVariant
         $this->color = $color;
         $this->size = $size;
     }
+
+    public function getId(): Uuid { return $this->id; }
 }
