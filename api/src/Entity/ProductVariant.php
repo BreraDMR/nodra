@@ -46,4 +46,17 @@ class ProductVariant
 
     #[ORM\Column]
     private bool $active = true;
+
+    public function __construct(Product $product, string $sku, array $label, int $priceCzk, int $priceEur, int $stock, ?string $color = null, ?string $size = null)
+    {
+        $this->id = Uuid::v7();
+        $this->product = $product;
+        $this->sku = $sku;
+        $this->label = $label;
+        $this->priceCzk = $priceCzk;
+        $this->priceEur = $priceEur;
+        $this->stock = $stock;
+        $this->color = $color;
+        $this->size = $size;
+    }
 }
