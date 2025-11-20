@@ -64,4 +64,5 @@ class ProductVariant
     public function getProduct(): Product { return $this->product; }
     public function getSku(): string { return $this->sku; }
     public function getLabel(): array { return $this->label; }
+    public function getColor(): ?string { return $this->color; }
 }
