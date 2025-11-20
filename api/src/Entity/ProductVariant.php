@@ -62,4 +62,5 @@ class ProductVariant
 
     public function getId(): Uuid { return $this->id; }
     public function getProduct(): Product { return $this->product; }
+    public function getSku(): string { return $this->sku; }
 }
