@@ -65,4 +65,5 @@ class ProductVariant
     public function getSku(): string { return $this->sku; }
     public function getLabel(): array { return $this->label; }
     public function getColor(): ?string { return $this->color; }
+    public function getSize(): ?string { return $this->size; }
 }
