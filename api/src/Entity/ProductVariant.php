@@ -66,4 +66,5 @@ class ProductVariant
     public function getLabel(): array { return $this->label; }
     public function getColor(): ?string { return $this->color; }
     public function getSize(): ?string { return $this->size; }
+    public function getPriceCzk(): int { return $this->priceCzk; }
 }
