@@ -68,4 +68,5 @@ class ProductVariant
     public function getSize(): ?string { return $this->size; }
     public function getPriceCzk(): int { return $this->priceCzk; }
     public function getPriceEur(): int { return $this->priceEur; }
+    public function getStock(): int { return $this->stock; }
 }
