@@ -69,4 +69,5 @@ class ProductVariant
     public function getPriceCzk(): int { return $this->priceCzk; }
     public function getPriceEur(): int { return $this->priceEur; }
     public function getStock(): int { return $this->stock; }
+    public function isActive(): bool { return $this->active; }
 }
