@@ -67,4 +67,5 @@ class ProductVariant
     public function getColor(): ?string { return $this->color; }
     public function getSize(): ?string { return $this->size; }
     public function getPriceCzk(): int { return $this->priceCzk; }
+    public function getPriceEur(): int { return $this->priceEur; }
 }
