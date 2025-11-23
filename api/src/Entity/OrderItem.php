@@ -55,4 +55,6 @@ class OrderItem
         $this->unitPriceMinor = $unitPriceMinor;
         $this->lineTotalMinor = $quantity * $unitPriceMinor;
     }
+
+    public function getId(): Uuid { return $this->id; }
 }
