@@ -57,4 +57,5 @@ class OrderItem
     }
 
     public function getId(): Uuid { return $this->id; }
+    public function getOrder(): ShopOrder { return $this->order; }
 }
