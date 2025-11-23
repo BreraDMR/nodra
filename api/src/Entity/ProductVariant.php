@@ -78,4 +78,14 @@ class ProductVariant
         }
         $this->stock += $delta;
     }
+
+    public function update(array $label, int $priceCzk, int $priceEur, bool $active, ?string $color, ?string $size): void
+    {
+        $this->label = $label;
+        $this->priceCzk = $priceCzk;
+        $this->priceEur = $priceEur;
+        $this->active = $active;
+        $this->color = $color;
+        $this->size = $size;
+    }
 }
