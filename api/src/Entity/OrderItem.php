@@ -42,4 +42,17 @@ class OrderItem
 
     #[ORM\Column]
     private int $lineTotalMinor;
+
+    public function __construct(ShopOrder $order, ProductVariant $variant, string $productName, string $variantLabel, int $quantity, int $unitPriceMinor)
+    {
+        $this->id = Uuid::v7();
+        $this->order = $order;
+        $this->variant = $variant;
+        $this->productName = $productName;
+        $this->variantLabel = $variantLabel;
+        $this->sku = $variant->getSku();
+        $this->quantity = $quantity;
+        $this->unitPriceMinor = $unitPriceMinor;
+        $this->lineTotalMinor = $quantity * $unitPriceMinor;
+    }
 }
