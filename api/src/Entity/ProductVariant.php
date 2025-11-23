@@ -70,4 +70,12 @@ class ProductVariant
     public function getPriceEur(): int { return $this->priceEur; }
     public function getStock(): int { return $this->stock; }
     public function isActive(): bool { return $this->active; }
+
+    public function adjustStock(int $delta): void
+    {
+        if ($this->stock + $delta < 0) {
+            throw new \DomainException('Insufficient stock');
+        }
+        $this->stock += $delta;
+    }
 }
