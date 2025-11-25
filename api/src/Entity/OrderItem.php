@@ -59,4 +59,5 @@ class OrderItem
     public function getId(): Uuid { return $this->id; }
     public function getOrder(): ShopOrder { return $this->order; }
     public function getVariant(): ?ProductVariant { return $this->variant; }
+    public function getProductName(): string { return $this->productName; }
 }
