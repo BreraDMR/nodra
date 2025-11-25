@@ -60,4 +60,5 @@ class OrderItem
     public function getOrder(): ShopOrder { return $this->order; }
     public function getVariant(): ?ProductVariant { return $this->variant; }
     public function getProductName(): string { return $this->productName; }
+    public function getVariantLabel(): string { return $this->variantLabel; }
 }
