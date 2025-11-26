@@ -88,4 +88,5 @@ class ShopOrder
     public function getIdempotencyKey(): string { return $this->idempotencyKey; }
     public function getLookupToken(): string { return $this->lookupToken; }
     public function getStatus(): string { return $this->status; }
+    public function getLocale(): string { return $this->locale; }
 }
