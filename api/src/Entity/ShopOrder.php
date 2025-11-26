@@ -92,4 +92,5 @@ class ShopOrder
     public function getCurrency(): string { return $this->currency; }
     public function getCustomerName(): string { return $this->customerName; }
     public function getEmail(): string { return $this->email; }
+    public function getCountry(): string { return $this->country; }
 }
