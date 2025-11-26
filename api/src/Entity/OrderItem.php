@@ -63,4 +63,5 @@ class OrderItem
     public function getVariantLabel(): string { return $this->variantLabel; }
     public function getSku(): string { return $this->sku; }
     public function getQuantity(): int { return $this->quantity; }
+    public function getUnitPriceMinor(): int { return $this->unitPriceMinor; }
 }
