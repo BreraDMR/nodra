@@ -64,4 +64,5 @@ class OrderItem
     public function getSku(): string { return $this->sku; }
     public function getQuantity(): int { return $this->quantity; }
     public function getUnitPriceMinor(): int { return $this->unitPriceMinor; }
+    public function getLineTotalMinor(): int { return $this->lineTotalMinor; }
 }
