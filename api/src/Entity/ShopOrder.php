@@ -82,4 +82,6 @@ class ShopOrder
         $this->totalMinor = $subtotalMinor + $shippingMinor;
         $this->createdAt = new \DateTimeImmutable();
     }
+
+    public function getId(): Uuid { return $this->id; }
 }
