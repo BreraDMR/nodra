@@ -90,4 +90,5 @@ class ShopOrder
     public function getStatus(): string { return $this->status; }
     public function getLocale(): string { return $this->locale; }
     public function getCurrency(): string { return $this->currency; }
+    public function getCustomerName(): string { return $this->customerName; }
 }
