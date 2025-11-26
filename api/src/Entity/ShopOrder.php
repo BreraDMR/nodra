@@ -85,4 +85,5 @@ class ShopOrder
 
     public function getId(): Uuid { return $this->id; }
     public function getReference(): string { return $this->reference; }
+    public function getIdempotencyKey(): string { return $this->idempotencyKey; }
 }
