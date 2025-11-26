@@ -89,4 +89,5 @@ class ShopOrder
     public function getLookupToken(): string { return $this->lookupToken; }
     public function getStatus(): string { return $this->status; }
     public function getLocale(): string { return $this->locale; }
+    public function getCurrency(): string { return $this->currency; }
 }
