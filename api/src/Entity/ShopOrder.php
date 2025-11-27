@@ -94,4 +94,5 @@ class ShopOrder
     public function getEmail(): string { return $this->email; }
     public function getCountry(): string { return $this->country; }
     public function getAddress(): string { return $this->address; }
+    public function getPostalCode(): string { return $this->postalCode; }
 }
