@@ -97,4 +97,5 @@ class ShopOrder
     public function getPostalCode(): string { return $this->postalCode; }
     public function getSubtotalMinor(): int { return $this->subtotalMinor; }
     public function getShippingMinor(): int { return $this->shippingMinor; }
+    public function getTotalMinor(): int { return $this->totalMinor; }
 }
