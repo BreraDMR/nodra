@@ -98,4 +98,5 @@ class ShopOrder
     public function getSubtotalMinor(): int { return $this->subtotalMinor; }
     public function getShippingMinor(): int { return $this->shippingMinor; }
     public function getTotalMinor(): int { return $this->totalMinor; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 }
