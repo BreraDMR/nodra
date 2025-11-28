@@ -95,4 +95,5 @@ class ShopOrder
     public function getCountry(): string { return $this->country; }
     public function getAddress(): string { return $this->address; }
     public function getPostalCode(): string { return $this->postalCode; }
+    public function getSubtotalMinor(): int { return $this->subtotalMinor; }
 }
