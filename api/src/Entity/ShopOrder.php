@@ -99,4 +99,19 @@ class ShopOrder
     public function getShippingMinor(): int { return $this->shippingMinor; }
     public function getTotalMinor(): int { return $this->totalMinor; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+
+    public function advanceTo(string $next): void
+    {
+        $allowed = [
+            'placed' => ['processing', 'cancelled'],
+            'processing' => ['shipped', 'cancelled'],
+            'shipped' => ['completed'],
+        ];
+
+        if (!in_array($next, $allowed[$this->status] ?? [], true)) {
+            throw new \DomainException('Invalid order status transition');
+        }
+
+        $this->status = $next;
+    }
 }
