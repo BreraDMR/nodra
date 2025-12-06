@@ -146,5 +146,42 @@
         "size": "L"
       }
     ]
+  },
+  {
+    "slug": "rider-gilet",
+    "category": "apparel",
+    "image": "gilet.png",
+    "badge": null,
+    "priceCzk": 259000,
+    "priceEur": 10900,
+    "stock": 15,
+    "name": {
+      "cs": "Vesta Rider",
+      "de": "Rider Weste",
+      "en": "Rider Gilet"
+    },
+    "short": {
+      "cs": "Vrstva navíc pro chladná rána.",
+      "de": "Eine Schicht mehr für kühle Morgen.",
+      "en": "One more layer for cooler mornings."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Velikost M",
+          "de": "Größe M",
+          "en": "Size M"
+        },
+        "size": "M"
+      },
+      {
+        "label": {
+          "cs": "Velikost L",
+          "de": "Größe L",
+          "en": "Size L"
+        },
+        "size": "L"
+      }
+    ]
   }
 ]
