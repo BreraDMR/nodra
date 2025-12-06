@@ -405,5 +405,42 @@
         "color": "copper"
       }
     ]
+  },
+  {
+    "slug": "city-cycle-cap",
+    "category": "accessories",
+    "image": "gloves.png",
+    "badge": null,
+    "priceCzk": 69000,
+    "priceEur": 2900,
+    "stock": 10,
+    "name": {
+      "cs": "Cyklistická čepice City",
+      "de": "City Radmütze",
+      "en": "City Cycle Cap"
+    },
+    "short": {
+      "cs": "Lehká vrstva pod helmu.",
+      "de": "Eine leichte Schicht unter dem Helm.",
+      "en": "A light layer under your helmet."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Grafitová",
+          "de": "Graphit",
+          "en": "Graphite"
+        },
+        "color": "graphite"
+      },
+      {
+        "label": {
+          "cs": "Měděná",
+          "de": "Kupfer",
+          "en": "Copper"
+        },
+        "color": "copper"
+      }
+    ]
   }
 ]
