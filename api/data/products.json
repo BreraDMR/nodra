@@ -294,5 +294,42 @@
         "priceDeltaEur": 3200
       }
     ]
+  },
+  {
+    "slug": "signal-reflective-kit",
+    "category": "lights",
+    "image": "rear-light.png",
+    "badge": null,
+    "priceCzk": 59000,
+    "priceEur": 2500,
+    "stock": 24,
+    "name": {
+      "cs": "Reflexní sada Signal",
+      "de": "Signal Reflektor-Set",
+      "en": "Signal Reflective Kit"
+    },
+    "short": {
+      "cs": "Viditelnost bez zbytečné zátěže.",
+      "de": "Sichtbarkeit ohne Extra-Gewicht.",
+      "en": "Visibility without extra bulk."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Základní sada",
+          "de": "Basis-Set",
+          "en": "Core kit"
+        }
+      },
+      {
+        "label": {
+          "cs": "Rozšířená sada",
+          "de": "Erweitertes Set",
+          "en": "Extended kit"
+        },
+        "priceDeltaCzk": 25000,
+        "priceDeltaEur": 1000
+      }
+    ]
   }
 ]
