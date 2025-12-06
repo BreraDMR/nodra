@@ -109,5 +109,42 @@
         "color": "copper"
       }
     ]
+  },
+  {
+    "slug": "storm-shell",
+    "category": "apparel",
+    "image": "jacket.png",
+    "badge": "Bestseller",
+    "priceCzk": 429000,
+    "priceEur": 17900,
+    "stock": 12,
+    "name": {
+      "cs": "Bunda Storm Shell",
+      "de": "Storm Shell Jacke",
+      "en": "Storm Shell Jacket"
+    },
+    "short": {
+      "cs": "Lehká ochrana proti dešti a větru.",
+      "de": "Leichter Schutz gegen Regen und Wind.",
+      "en": "Light protection when the weather turns."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Velikost M",
+          "de": "Größe M",
+          "en": "Size M"
+        },
+        "size": "M"
+      },
+      {
+        "label": {
+          "cs": "Velikost L",
+          "de": "Größe L",
+          "en": "Size L"
+        },
+        "size": "L"
+      }
+    ]
   }
 ]
