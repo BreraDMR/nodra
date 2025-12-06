@@ -220,5 +220,42 @@
         "size": "L"
       }
     ]
+  },
+  {
+    "slug": "beam-front-light",
+    "category": "lights",
+    "image": "light.png",
+    "badge": "New",
+    "priceCzk": 179000,
+    "priceEur": 7500,
+    "stock": 18,
+    "name": {
+      "cs": "Přední světlo Beam",
+      "de": "Beam Frontlicht",
+      "en": "Beam Front Light"
+    },
+    "short": {
+      "cs": "Čistý světelný kužel pro večerní jízdu.",
+      "de": "Klares Licht für die Fahrt am Abend.",
+      "en": "A clean beam for the ride after dark."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Samostatně",
+          "de": "Einzeln",
+          "en": "Single"
+        }
+      },
+      {
+        "label": {
+          "cs": "Sada 2 ks",
+          "de": "2er-Set",
+          "en": "Pair"
+        },
+        "priceDeltaCzk": 140000,
+        "priceDeltaEur": 5900
+      }
+    ]
   }
 ]
