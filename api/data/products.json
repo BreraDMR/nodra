@@ -35,5 +35,42 @@
         "priceDeltaEur": 1200
       }
     ]
+  },
+  {
+    "slug": "roam-frame-pack",
+    "category": "bags",
+    "image": "frame-bag.png",
+    "badge": "New",
+    "priceCzk": 189000,
+    "priceEur": 7900,
+    "stock": 11,
+    "name": {
+      "cs": "Rámová brašna Roam",
+      "de": "Roam Rahmentasche",
+      "en": "Roam Frame Pack"
+    },
+    "short": {
+      "cs": "Vše podstatné vždy po ruce.",
+      "de": "Alles Wichtige immer griffbereit.",
+      "en": "Keep the essentials within easy reach."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Malá",
+          "de": "Klein",
+          "en": "Small"
+        }
+      },
+      {
+        "label": {
+          "cs": "Velká",
+          "de": "Groß",
+          "en": "Large"
+        },
+        "priceDeltaCzk": 20000,
+        "priceDeltaEur": 800
+      }
+    ]
   }
 ]
