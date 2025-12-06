@@ -331,5 +331,42 @@
         "priceDeltaEur": 1000
       }
     ]
+  },
+  {
+    "slug": "all-weather-gloves",
+    "category": "accessories",
+    "image": "gloves.png",
+    "badge": "Bestseller",
+    "priceCzk": 119000,
+    "priceEur": 4900,
+    "stock": 16,
+    "name": {
+      "cs": "Rukavice All-Weather",
+      "de": "All-Weather Handschuhe",
+      "en": "All-Weather Gloves"
+    },
+    "short": {
+      "cs": "Jistý úchop v každém počasí.",
+      "de": "Sicherer Griff bei jedem Wetter.",
+      "en": "A confident grip in changing weather."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Velikost M",
+          "de": "Größe M",
+          "en": "Size M"
+        },
+        "size": "M"
+      },
+      {
+        "label": {
+          "cs": "Velikost L",
+          "de": "Größe L",
+          "en": "Size L"
+        },
+        "size": "L"
+      }
+    ]
   }
 ]
