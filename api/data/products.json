@@ -72,5 +72,42 @@
         "priceDeltaEur": 800
       }
     ]
+  },
+  {
+    "slug": "arc-handlebar-bag",
+    "category": "bags",
+    "image": "pannier.png",
+    "badge": null,
+    "priceCzk": 149000,
+    "priceEur": 6300,
+    "stock": 9,
+    "name": {
+      "cs": "Brašna na řídítka Arc",
+      "de": "Arc Lenkertasche",
+      "en": "Arc Handlebar Bag"
+    },
+    "short": {
+      "cs": "Malá brašna na velké cesty.",
+      "de": "Kleine Tasche für große Wege.",
+      "en": "Small storage for the long way home."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Grafitová",
+          "de": "Graphit",
+          "en": "Graphite"
+        },
+        "color": "graphite"
+      },
+      {
+        "label": {
+          "cs": "Měděná",
+          "de": "Kupfer",
+          "en": "Copper"
+        },
+        "color": "copper"
+      }
+    ]
   }
 ]
