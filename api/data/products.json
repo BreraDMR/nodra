@@ -257,5 +257,42 @@
         "priceDeltaEur": 5900
       }
     ]
+  },
+  {
+    "slug": "trace-rear-light",
+    "category": "lights",
+    "image": "rear-light.png",
+    "badge": null,
+    "priceCzk": 99000,
+    "priceEur": 4200,
+    "stock": 21,
+    "name": {
+      "cs": "Zadní světlo Trace",
+      "de": "Trace Rücklicht",
+      "en": "Trace Rear Light"
+    },
+    "short": {
+      "cs": "Kompaktní světlo s jasným signálem.",
+      "de": "Kompaktes Licht mit klarem Signal.",
+      "en": "Compact form, unmistakable presence."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Samostatně",
+          "de": "Einzeln",
+          "en": "Single"
+        }
+      },
+      {
+        "label": {
+          "cs": "Sada 2 ks",
+          "de": "2er-Set",
+          "en": "Pair"
+        },
+        "priceDeltaCzk": 75000,
+        "priceDeltaEur": 3200
+      }
+    ]
   }
 ]
