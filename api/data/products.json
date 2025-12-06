@@ -1,0 +1,39 @@
+[
+  {
+    "slug": "transit-rolltop",
+    "category": "bags",
+    "image": "pannier.png",
+    "badge": "Bestseller",
+    "priceCzk": 329000,
+    "priceEur": 13900,
+    "stock": 14,
+    "name": {
+      "cs": "Brašna Transit Roll-Top",
+      "de": "Transit Roll-Top Tasche",
+      "en": "Transit Roll-Top Pannier"
+    },
+    "short": {
+      "cs": "Nepromokavá brašna pro každý den ve městě.",
+      "de": "Wasserdichte Tasche für jeden Tag in der Stadt.",
+      "en": "A weatherproof daily carry for the city ride."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "12 L",
+          "de": "12 L",
+          "en": "12 L"
+        }
+      },
+      {
+        "label": {
+          "cs": "18 L",
+          "de": "18 L",
+          "en": "18 L"
+        },
+        "priceDeltaCzk": 30000,
+        "priceDeltaEur": 1200
+      }
+    ]
+  }
+]
