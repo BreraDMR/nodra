@@ -183,5 +183,42 @@
         "size": "L"
       }
     ]
+  },
+  {
+    "slug": "dawn-merino-layer",
+    "category": "apparel",
+    "image": "jacket.png",
+    "badge": null,
+    "priceCzk": 199000,
+    "priceEur": 8300,
+    "stock": 8,
+    "name": {
+      "cs": "Merino triko Dawn",
+      "de": "Dawn Merino-Baselayer",
+      "en": "Dawn Merino Layer"
+    },
+    "short": {
+      "cs": "Pohodlí na kole i mimo něj.",
+      "de": "Komfort auf dem Rad und danach.",
+      "en": "Comfort on the bike and beyond."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Velikost M",
+          "de": "Größe M",
+          "en": "Size M"
+        },
+        "size": "M"
+      },
+      {
+        "label": {
+          "cs": "Velikost L",
+          "de": "Größe L",
+          "en": "Size L"
+        },
+        "size": "L"
+      }
+    ]
   }
 ]
