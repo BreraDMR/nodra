@@ -368,5 +368,42 @@
         "size": "L"
       }
     ]
+  },
+  {
+    "slug": "steel-ride-bottle",
+    "category": "accessories",
+    "image": "bottle.png",
+    "badge": null,
+    "priceCzk": 79000,
+    "priceEur": 3300,
+    "stock": 19,
+    "name": {
+      "cs": "Lahev Steel Ride",
+      "de": "Steel Ride Trinkflasche",
+      "en": "Steel Ride Bottle"
+    },
+    "short": {
+      "cs": "Jednoduchá lahev, která vydrží.",
+      "de": "Eine schlichte Flasche für jeden Tag.",
+      "en": "A simple bottle made to go further."
+    },
+    "variants": [
+      {
+        "label": {
+          "cs": "Grafitová",
+          "de": "Graphit",
+          "en": "Graphite"
+        },
+        "color": "graphite"
+      },
+      {
+        "label": {
+          "cs": "Měděná",
+          "de": "Kupfer",
+          "en": "Copper"
+        },
+        "color": "copper"
+      }
+    ]
   }
 ]
