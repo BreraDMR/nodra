@@ -14,4 +14,6 @@ final class CatalogService
         'lights' => ['cs' => 'Světla', 'de' => 'Beleuchtung', 'en' => 'Lights'],
         'accessories' => ['cs' => 'Doplňky', 'de' => 'Zubehör', 'en' => 'Accessories'],
     ];
+
+    public function __construct(private Connection $db) {}
 }
