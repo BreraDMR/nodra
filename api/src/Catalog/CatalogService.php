@@ -93,4 +93,15 @@ final class CatalogService
             }, $variants),
         ];
     }
+
+    public function categories(string $locale): array
+    {
+        $counts = $this->db->fetchAllKeyValue("SELECT category, COUNT(*) FROM product WHERE status = 'published' GROUP BY category");
+        $categories = [];
+        foreach (self::CATEGORIES as $slug => $labels) {
+            $categories[] = ['slug' => $slug, 'name' => $labels[$locale], 'count' => (int) ($counts[$slug] ?? 0)];
+        }
+
+        return $categories;
+    }
 }
