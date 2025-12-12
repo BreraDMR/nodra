@@ -54,4 +54,43 @@ final class CatalogService
             'total' => $total,
         ];
     }
+
+    public function product(string $slug, string $locale): ?array
+    {
+        $row = $this->db->fetchAssociative("SELECT p.*, p.copy -> :locale ->> 'name' AS name,
+            MIN(v.price_czk) AS from_czk, MIN(v.price_eur) AS from_eur,
+            SUM(CASE WHEN v.stock > 0 THEN 1 ELSE 0 END) AS available
+            FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
+            WHERE p.slug = :slug AND p.status = 'published' GROUP BY p.id", ['slug' => $slug, 'locale' => $locale]);
+        if ($row === false) {
+            return null;
+        }
+        $currency = $locale === 'cs' ? 'CZK' : 'EUR';
+        $copy = json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR)[$locale];
+        $variants = $this->db->fetchAllAssociative('SELECT * FROM product_variant WHERE product_id = :id AND active = TRUE ORDER BY sku', ['id' => $row['id']]);
+
+        return [
+            'id' => $row['id'],
+            'slug' => $row['slug'],
+            'category' => $row['category'],
+            'name' => $copy['name'],
+            'short' => $copy['short'],
+            'description' => $copy['description'],
+            'details' => $copy['details'],
+            'image' => $row['image'],
+            'images' => json_decode($row['images'], true, flags: JSON_THROW_ON_ERROR),
+            'badge' => $row['badge'],
+            'fromPrice' => ['amount' => (int) $row[$currency === 'CZK' ? 'from_czk' : 'from_eur'], 'currency' => $currency],
+            'inStock' => (int) $row['available'] > 0,
+            'variants' => array_map(static function (array $variant) use ($locale, $currency): array {
+                $labels = json_decode($variant['label'], true, flags: JSON_THROW_ON_ERROR);
+
+                return [
+                    'id' => $variant['id'], 'sku' => $variant['sku'], 'label' => $labels[$locale],
+                    'color' => $variant['color'], 'size' => $variant['size'], 'stock' => (int) $variant['stock'],
+                    'price' => ['amount' => (int) $variant[$currency === 'CZK' ? 'price_czk' : 'price_eur'], 'currency' => $currency],
+                ];
+            }, $variants),
+        ];
+    }
 }
