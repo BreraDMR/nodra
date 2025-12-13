@@ -14,4 +14,5 @@ use Symfony\Component\Uid\Uuid;
 
 final class CheckoutService
 {
+    public function __construct(private EntityManagerInterface $em, private Connection $db) {}
 }
