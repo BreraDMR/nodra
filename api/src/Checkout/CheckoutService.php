@@ -78,4 +78,14 @@ final class CheckoutService
 
         return $this->receipt($order);
     }
+
+    public function lookup(string $reference, string $token): ?array
+    {
+        $order = $this->em->getRepository(ShopOrder::class)->findOneBy(['reference' => $reference]);
+        if ($order === null || !hash_equals($order->getLookupToken(), $token)) {
+            return null;
+        }
+
+        return $this->receipt($order);
+    }
 }
