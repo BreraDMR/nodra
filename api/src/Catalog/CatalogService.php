@@ -104,4 +104,14 @@ final class CatalogService
 
         return $categories;
     }
+
+    private function card(array $row, string $currency): array
+    {
+        return [
+            'id' => $row['id'], 'slug' => $row['slug'], 'name' => $row['name'],
+            'category' => $row['category'], 'image' => $row['image'], 'badge' => $row['badge'],
+            'fromPrice' => ['amount' => (int) $row['from_price'], 'currency' => $currency],
+            'inStock' => (int) $row['available'] > 0,
+        ];
+    }
 }
