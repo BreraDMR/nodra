@@ -88,4 +88,24 @@ final class CheckoutService
 
         return $this->receipt($order);
     }
+
+    public function receipt(ShopOrder $order): array
+    {
+        $items = $this->em->getRepository(OrderItem::class)->findBy(['order' => $order]);
+        $price = fn (int $amount): array => ['amount' => $amount, 'currency' => $order->getCurrency()];
+
+        return [
+            'reference' => $order->getReference(),
+            'status' => $order->getStatus(),
+            'items' => array_map(static fn (OrderItem $item): array => [
+                'name' => $item->getProductName(), 'variant' => $item->getVariantLabel(),
+                'sku' => $item->getSku(), 'quantity' => $item->getQuantity(),
+                'unitPrice' => $item->getUnitPriceMinor(), 'lineTotal' => $item->getLineTotalMinor(),
+            ], $items),
+            'subtotal' => $price($order->getSubtotalMinor()),
+            'shipping' => $price($order->getShippingMinor()),
+            'total' => $price($order->getTotalMinor()),
+            'lookupToken' => $order->getLookupToken(),
+        ];
+    }
 }
