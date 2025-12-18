@@ -108,4 +108,29 @@ final class CheckoutService
             'lookupToken' => $order->getLookupToken(),
         ];
     }
+
+    private function customer(array $input): array
+    {
+        $fields = ['name', 'email', 'country', 'address', 'postalCode'];
+        foreach ($fields as $field) {
+            if (!isset($input[$field]) || !is_string($input[$field]) || trim($input[$field]) === '') {
+                throw new \InvalidArgumentException('Customer '.$field.' is required');
+            }
+        }
+        if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+            throw new \InvalidArgumentException('A valid email is required');
+        }
+        $country = strtoupper(trim($input['country']));
+        if (!preg_match('/^[A-Z]{2}$/', $country)) {
+            throw new \InvalidArgumentException('Country must be a two-letter code');
+        }
+
+        return [
+            'name' => mb_substr(trim($input['name']), 0, 160),
+            'email' => mb_substr(trim($input['email']), 0, 180),
+            'country' => $country,
+            'address' => mb_substr(trim($input['address']), 0, 255),
+            'postalCode' => mb_substr(trim($input['postalCode']), 0, 24),
+        ];
+    }
 }
