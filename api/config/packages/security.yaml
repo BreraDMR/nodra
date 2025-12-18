@@ -5,7 +5,10 @@ security:
 
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
-        users_in_memory: { memory: null }
+        admin_users:
+            entity:
+                class: App\Entity\AdminUser
+                property: email
 
     firewalls:
         dev:
@@ -14,7 +17,13 @@ security:
             security: false
         main:
             lazy: true
-            provider: users_in_memory
+            provider: admin_users
+            json_login:
+                check_path: /api/admin/login
+                username_path: email
+                password_path: password
+            logout:
+                path: /api/admin/logout
 
             # Activate different ways to authenticate:
             # https://symfony.com/doc/current/security.html#the-firewall
@@ -24,8 +33,8 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/api/admin/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
 
 when@test:
     security:
