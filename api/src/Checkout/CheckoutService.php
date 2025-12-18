@@ -133,4 +133,21 @@ final class CheckoutService
             'postalCode' => mb_substr(trim($input['postalCode']), 0, 24),
         ];
     }
+
+    private function quantities(array $items): array
+    {
+        $quantities = [];
+        foreach ($items as $item) {
+            if (!is_array($item) || !isset($item['variantId'], $item['quantity']) || !Uuid::isValid($item['variantId']) || !is_int($item['quantity']) || $item['quantity'] < 1 || $item['quantity'] > 10) {
+                throw new \InvalidArgumentException('Each item needs a valid variant and quantity from 1 to 10');
+            }
+            $quantities[$item['variantId']] = ($quantities[$item['variantId']] ?? 0) + $item['quantity'];
+            if ($quantities[$item['variantId']] > 10) {
+                throw new \InvalidArgumentException('Only 10 units of one variant are allowed per order');
+            }
+        }
+        ksort($quantities);
+
+        return $quantities;
+    }
 }
