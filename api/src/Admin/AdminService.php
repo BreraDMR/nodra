@@ -35,4 +35,24 @@ final class AdminService
             'recentOrders' => array_slice($this->orders(), 0, 5),
         ];
     }
+
+    public function products(): array
+    {
+        $rows = $this->db->fetchAllAssociative("SELECT p.*, p.copy -> 'en' ->> 'name' AS name FROM product p ORDER BY p.featured_rank, p.slug");
+
+        return array_map(function (array $row): array {
+            $variants = $this->db->fetchAllAssociative('SELECT id, sku, label, price_czk, price_eur, stock, active, color, size FROM product_variant WHERE product_id = :id ORDER BY sku', ['id' => $row['id']]);
+
+            return [
+                'id' => $row['id'], 'slug' => $row['slug'], 'category' => $row['category'],
+                'status' => $row['status'], 'name' => $row['name'], 'copy' => json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR),
+                'image' => $row['image'], 'badge' => $row['badge'], 'featuredRank' => (int) $row['featured_rank'],
+                'variants' => array_map(static fn (array $v): array => [
+                    'id' => $v['id'], 'sku' => $v['sku'], 'label' => json_decode($v['label'], true, flags: JSON_THROW_ON_ERROR),
+                    'priceCzk' => (int) $v['price_czk'], 'priceEur' => (int) $v['price_eur'], 'stock' => (int) $v['stock'],
+                    'active' => (bool) $v['active'], 'color' => $v['color'], 'size' => $v['size'],
+                ], $variants),
+            ];
+        }, $rows);
+    }
 }
