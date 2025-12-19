@@ -16,4 +16,5 @@ use Symfony\Component\Uid\Uuid;
 
 final class AdminService
 {
+    public function __construct(private EntityManagerInterface $em, private Connection $db, private CheckoutService $checkout) {}
 }
