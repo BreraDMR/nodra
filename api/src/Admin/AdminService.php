@@ -55,4 +55,18 @@ final class AdminService
             ];
         }, $rows);
     }
+
+    public function createProduct(ProductWriteRequest $input): array
+    {
+        $this->validateSlug($input->slug);
+        $copy = $this->copy($input);
+        $product = new Product($input->slug, $input->category, $copy, $input->image);
+        $product->update($input->slug, $input->category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
+        $variant = new ProductVariant($product, 'ND-'.strtoupper(bin2hex(random_bytes(4))), ['cs' => 'Standardní', 'de' => 'Standard', 'en' => 'Standard'], $input->priceCzk, $input->priceEur, 0);
+        $this->em->persist($product);
+        $this->em->persist($variant);
+        $this->em->flush();
+
+        return ['id' => $product->getId()->toRfc4122(), 'variantId' => $variant->getId()->toRfc4122()];
+    }
 }
