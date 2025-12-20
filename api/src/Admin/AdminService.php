@@ -124,4 +124,29 @@ final class AdminService
             'customer' => ['name' => $order->getCustomerName(), 'email' => $order->getEmail(), 'country' => $order->getCountry(), 'address' => $order->getAddress(), 'postalCode' => $order->getPostalCode()],
         ];
     }
+
+    public function advanceOrder(string $id, string $status): ?array
+    {
+        return $this->db->transactional(function () use ($id, $status): ?array {
+            $this->db->fetchOne('SELECT id FROM shop_order WHERE id = :id FOR UPDATE', ['id' => $id]);
+            $order = $this->em->find(ShopOrder::class, Uuid::fromString($id));
+            if ($order === null) {
+                return null;
+            }
+            $order->advanceTo($status);
+            if ($status === 'cancelled') {
+                foreach ($this->em->getRepository(OrderItem::class)->findBy(['order' => $order]) as $item) {
+                    $variant = $item->getVariant();
+                    if ($variant === null) {
+                        continue;
+                    }
+                    $variant->adjustStock($item->getQuantity());
+                    $this->em->persist(new StockMovement($variant, $item->getQuantity(), 'Order '.$order->getReference().' cancelled'));
+                }
+            }
+            $this->em->flush();
+
+            return ['id' => $id, 'status' => $order->getStatus()];
+        });
+    }
 }
