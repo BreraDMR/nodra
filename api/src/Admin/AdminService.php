@@ -149,4 +149,14 @@ final class AdminService
             return ['id' => $id, 'status' => $order->getStatus()];
         });
     }
+
+    private function copy(ProductWriteRequest $input): array
+    {
+        $copy = [];
+        foreach (['cs' => ['nameCs', 'shortCs'], 'de' => ['nameDe', 'shortDe'], 'en' => ['nameEn', 'shortEn']] as $locale => [$name, $short]) {
+            $copy[$locale] = ['name' => trim($input->$name), 'short' => trim($input->$short), 'description' => trim($input->$short), 'details' => []];
+        }
+
+        return $copy;
+    }
 }
