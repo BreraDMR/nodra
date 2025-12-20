@@ -69,4 +69,22 @@ final class AdminService
 
         return ['id' => $product->getId()->toRfc4122(), 'variantId' => $variant->getId()->toRfc4122()];
     }
+
+    public function updateProduct(string $id, ProductWriteRequest $input): ?array
+    {
+        $product = $this->em->find(Product::class, Uuid::fromString($id));
+        if ($product === null) {
+            return null;
+        }
+        $this->validateSlug($input->slug);
+        $copy = $this->copy($input);
+        $product->update($input->slug, $input->category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
+        $variant = $this->em->getRepository(ProductVariant::class)->findOneBy(['product' => $product], ['sku' => 'ASC']);
+        if ($variant !== null) {
+            $variant->update($variant->getLabel(), $input->priceCzk, $input->priceEur, $variant->isActive(), $variant->getColor(), $variant->getSize());
+        }
+        $this->em->flush();
+
+        return ['id' => $product->getId()->toRfc4122()];
+    }
 }
