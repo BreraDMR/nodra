@@ -111,4 +111,17 @@ final class AdminService
             'total' => ['amount' => (int) $row['total_minor'], 'currency' => $row['currency']], 'createdAt' => $row['created_at'],
         ], $rows);
     }
+
+    public function order(string $id): ?array
+    {
+        $order = $this->em->find(ShopOrder::class, Uuid::fromString($id));
+        if ($order === null) {
+            return null;
+        }
+
+        return $this->checkout->receipt($order) + [
+            'id' => $id,
+            'customer' => ['name' => $order->getCustomerName(), 'email' => $order->getEmail(), 'country' => $order->getCountry(), 'address' => $order->getAddress(), 'postalCode' => $order->getPostalCode()],
+        ];
+    }
 }
