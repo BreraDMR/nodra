@@ -100,4 +100,15 @@ final class AdminService
 
         return ['variantId' => $input->variantId, 'stock' => $variant->getStock()];
     }
+
+    public function orders(): array
+    {
+        $rows = $this->db->fetchAllAssociative('SELECT id, reference, status, customer_name, email, country, currency, total_minor, created_at FROM shop_order ORDER BY created_at DESC, id DESC LIMIT 100');
+
+        return array_map(static fn (array $row): array => [
+            'id' => $row['id'], 'reference' => $row['reference'], 'status' => $row['status'],
+            'customerName' => $row['customer_name'], 'email' => $row['email'], 'country' => $row['country'],
+            'total' => ['amount' => (int) $row['total_minor'], 'currency' => $row['currency']], 'createdAt' => $row['created_at'],
+        ], $rows);
+    }
 }
