@@ -87,4 +87,17 @@ final class AdminService
 
         return ['id' => $product->getId()->toRfc4122()];
     }
+
+    public function adjustStock(StockAdjustmentRequest $input): array
+    {
+        $variant = $this->em->find(ProductVariant::class, Uuid::fromString($input->variantId));
+        if ($variant === null) {
+            throw new \InvalidArgumentException('Variant not found');
+        }
+        $variant->adjustStock($input->delta);
+        $this->em->persist(new StockMovement($variant, $input->delta, trim($input->reason)));
+        $this->em->flush();
+
+        return ['variantId' => $input->variantId, 'stock' => $variant->getStock()];
+    }
 }
