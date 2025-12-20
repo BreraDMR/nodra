@@ -159,4 +159,11 @@ final class AdminService
 
         return $copy;
     }
+
+    private function validateSlug(string $slug): void
+    {
+        if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
+            throw new \InvalidArgumentException('Slug must contain lowercase letters, numbers and hyphens');
+        }
+    }
 }
