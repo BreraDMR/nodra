@@ -20,4 +20,7 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 final class AdminController extends AbstractController
 {
     public function __construct(private AdminService $admin, private CsrfTokenManagerInterface $csrf) {}
+
+    #[Route('/dashboard', methods: ['GET'])]
+    public function dashboard(): JsonResponse { return $this->json($this->admin->dashboard()); }
 }
