@@ -19,4 +19,5 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 #[Route('/api/admin')]
 final class AdminController extends AbstractController
 {
+    public function __construct(private AdminService $admin, private CsrfTokenManagerInterface $csrf) {}
 }
