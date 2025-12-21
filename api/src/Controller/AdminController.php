@@ -23,4 +23,7 @@ final class AdminController extends AbstractController
 
     #[Route('/dashboard', methods: ['GET'])]
     public function dashboard(): JsonResponse { return $this->json($this->admin->dashboard()); }
+
+    #[Route('/products', methods: ['GET'])]
+    public function products(): JsonResponse { return $this->json(['items' => $this->admin->products()]); }
 }
