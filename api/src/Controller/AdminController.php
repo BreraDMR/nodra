@@ -26,4 +26,12 @@ final class AdminController extends AbstractController
 
     #[Route('/products', methods: ['GET'])]
     public function products(): JsonResponse { return $this->json(['items' => $this->admin->products()]); }
+
+    #[Route('/products', methods: ['POST'])]
+    public function createProduct(#[MapRequestPayload] ProductWriteRequest $payload, Request $request): JsonResponse
+    {
+        if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
+        try { return $this->json($this->admin->createProduct($payload), 201); }
+        catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+    }
 }
