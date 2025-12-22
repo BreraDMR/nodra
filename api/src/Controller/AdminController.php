@@ -44,4 +44,12 @@ final class AdminController extends AbstractController
             return $result === null ? $this->json(['message' => 'Product not found'], 404) : $this->json($result);
         } catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
     }
+
+    #[Route('/stock-adjustments', methods: ['POST'])]
+    public function adjustStock(#[MapRequestPayload] StockAdjustmentRequest $payload, Request $request): JsonResponse
+    {
+        if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
+        try { return $this->json($this->admin->adjustStock($payload), 201); }
+        catch (\InvalidArgumentException|\DomainException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+    }
 }
