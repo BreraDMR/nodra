@@ -55,4 +55,11 @@ final class AdminController extends AbstractController
 
     #[Route('/orders', methods: ['GET'])]
     public function orders(): JsonResponse { return $this->json(['items' => $this->admin->orders()]); }
+
+    #[Route('/orders/{id}', methods: ['GET'])]
+    public function order(string $id): JsonResponse
+    {
+        $order = $this->admin->order($id);
+        return $order === null ? $this->json(['message' => 'Order not found'], 404) : $this->json($order);
+    }
 }
