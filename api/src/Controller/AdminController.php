@@ -52,4 +52,7 @@ final class AdminController extends AbstractController
         try { return $this->json($this->admin->adjustStock($payload), 201); }
         catch (\InvalidArgumentException|\DomainException $error) { return $this->json(['message' => $error->getMessage()], 422); }
     }
+
+    #[Route('/orders', methods: ['GET'])]
+    public function orders(): JsonResponse { return $this->json(['items' => $this->admin->orders()]); }
 }
