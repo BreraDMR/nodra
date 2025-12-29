@@ -72,4 +72,9 @@ final class AdminController extends AbstractController
             return $result === null ? $this->json(['message' => 'Order not found'], 404) : $this->json($result);
         } catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
     }
+
+    private function validCsrf(Request $request): bool
+    {
+        return $this->csrf->isTokenValid(new CsrfToken('admin-write', $request->headers->get('X-CSRF-Token', '')));
+    }
 }
