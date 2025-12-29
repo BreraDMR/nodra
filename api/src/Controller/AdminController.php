@@ -62,4 +62,14 @@ final class AdminController extends AbstractController
         $order = $this->admin->order($id);
         return $order === null ? $this->json(['message' => 'Order not found'], 404) : $this->json($order);
     }
+
+    #[Route('/orders/{id}/status', methods: ['PATCH'])]
+    public function status(string $id, #[MapRequestPayload] OrderStatusRequest $payload, Request $request): JsonResponse
+    {
+        if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
+        try {
+            $result = $this->admin->advanceOrder($id, $payload->status);
+            return $result === null ? $this->json(['message' => 'Order not found'], 404) : $this->json($result);
+        } catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
+    }
 }
