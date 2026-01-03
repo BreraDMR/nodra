@@ -33,6 +33,7 @@ final class AdminController extends AbstractController
         if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
         try { return $this->json($this->admin->createProduct($payload), 201); }
         catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+        catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
     }
 
     #[Route('/products/{id}', methods: ['PUT'])]
@@ -43,6 +44,7 @@ final class AdminController extends AbstractController
             $result = $this->admin->updateProduct($id, $payload);
             return $result === null ? $this->json(['message' => 'Product not found'], 404) : $this->json($result);
         } catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+        catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
     }
 
     #[Route('/stock-adjustments', methods: ['POST'])]
