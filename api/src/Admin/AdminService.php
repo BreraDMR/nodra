@@ -76,7 +76,7 @@ final class AdminService
         if ($product === null) {
             return null;
         }
-        $this->validateSlug($input->slug);
+        $this->validateSlug($input->slug, $id);
         $copy = $this->copy($input);
         $product->update($input->slug, $input->category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
         $variant = $this->em->getRepository(ProductVariant::class)->findOneBy(['product' => $product], ['sku' => 'ASC']);
@@ -160,10 +160,14 @@ final class AdminService
         return $copy;
     }
 
-    private function validateSlug(string $slug): void
+    private function validateSlug(string $slug, ?string $exceptId = null): void
     {
         if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
             throw new \InvalidArgumentException('Slug must contain lowercase letters, numbers and hyphens');
+        }
+        $existing = $this->db->fetchOne('SELECT id FROM product WHERE slug = :slug', ['slug' => $slug]);
+        if ($existing !== false && $existing !== $exceptId) {
+            throw new \DomainException('A product with this slug already exists');
         }
     }
 }
