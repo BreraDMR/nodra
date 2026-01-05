@@ -26,6 +26,9 @@ class ShopOrder
     private string $idempotencyKey;
 
     #[ORM\Column(length: 64)]
+    private string $requestHash;
+
+    #[ORM\Column(length: 64)]
     private string $lookupToken;
 
     #[ORM\Column(length: 16)]
@@ -64,12 +67,13 @@ class ShopOrder
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(string $idempotencyKey, string $locale, string $currency, string $customerName, string $email, string $country, string $address, string $postalCode, int $subtotalMinor, int $shippingMinor)
+    public function __construct(string $idempotencyKey, string $requestHash, string $locale, string $currency, string $customerName, string $email, string $country, string $address, string $postalCode, int $subtotalMinor, int $shippingMinor)
     {
         $this->id = Uuid::v7();
         $this->reference = 'ND-'.strtoupper(bin2hex(random_bytes(4)));
         $this->lookupToken = bin2hex(random_bytes(32));
         $this->idempotencyKey = $idempotencyKey;
+        $this->requestHash = $requestHash;
         $this->locale = $locale;
         $this->currency = $currency;
         $this->customerName = $customerName;
@@ -86,6 +90,7 @@ class ShopOrder
     public function getId(): Uuid { return $this->id; }
     public function getReference(): string { return $this->reference; }
     public function getIdempotencyKey(): string { return $this->idempotencyKey; }
+    public function getRequestHash(): string { return $this->requestHash; }
     public function getLookupToken(): string { return $this->lookupToken; }
     public function getStatus(): string { return $this->status; }
     public function getLocale(): string { return $this->locale; }
