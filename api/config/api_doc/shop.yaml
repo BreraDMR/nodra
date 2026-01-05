@@ -61,7 +61,7 @@ paths:
     post:
       tags: [Checkout]
       summary: Place a guest demo order
-      description: Reprices items and checks stock in a transaction. Repeating the same idempotency key returns the same order. No payment or shipment is performed.
+      description: Reprices items and checks stock in a transaction. Repeating the same idempotency key and payload returns the same order; a changed payload conflicts. No payment or shipment is performed.
       parameters:
         - name: Idempotency-Key
           in: header
@@ -115,6 +115,12 @@ paths:
       responses:
         '200': { description: Authenticated administrator. }
         '401': { description: No active session. }
+  /api/admin/logout:
+    post:
+      tags: [Administration]
+      summary: End the admin session
+      responses:
+        '302': { description: Session ended. }
   /api/admin/dashboard:
     get:
       tags: [Administration]
@@ -134,47 +140,87 @@ paths:
     post:
       tags: [Administration]
       summary: Create a product
-      description: Creates a draft product and its initial variants from a validated payload.
+      description: Creates a product with one zero-stock variant; the submitted status may be draft or published. Requires X-CSRF-Token from /api/admin/me.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
       responses:
         '201': { description: Product created. }
         '401': { description: Authentication required. }
+        '403': { description: Invalid CSRF token. }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/products/{id}:
-    patch:
+    put:
       tags: [Administration]
       summary: Update a product
-      description: Changes merchandising copy, status, imagery or variants; published changes are visible in the storefront.
+      description: Changes localized copy, status, image, merchandising order and the first variant's base prices. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
       responses:
         '200': { description: Product updated. }
         '401': { description: Authentication required. }
+        '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/admin/stock-adjustments:
     post:
       tags: [Administration]
       summary: Adjust variant inventory
-      description: Records a reasoned stock movement and updates availability atomically.
+      description: Records a reasoned stock movement and updates availability atomically. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, delta, reason]
+              properties:
+                variantId: { type: string, format: uuid }
+                delta: { type: integer, not: { const: 0 } }
+                reason: { type: string, minLength: 1, maxLength: 200 }
       responses:
         '201': { description: Stock movement recorded. }
         '401': { description: Authentication required. }
+        '403': { description: Invalid CSRF token. }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/orders:
     get:
       tags: [Administration]
       summary: List orders for fulfillment
-      description: Returns recent demo orders, with optional status filtering.
+      description: Returns the latest 100 demo orders.
       responses:
         '200': { description: Admin order list. }
         '401': { description: Authentication required. }
+  /api/admin/orders/{id}:
+    get:
+      tags: [Administration]
+      summary: Read order details for fulfillment
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Order and customer delivery details. }
+        '401': { description: Authentication required. }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/admin/orders/{id}/status:
     patch:
       tags: [Administration]
       summary: Advance an order
-      description: Permits only valid order state transitions; cancellation restores reserved inventory once.
+      description: Permits only valid order state transitions; cancellation restores reserved inventory once. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [processing, shipped, completed, cancelled] }
       responses:
         '200': { description: Order status updated. }
         '401': { description: Authentication required. }
+        '403': { description: Invalid CSRF token. }
         '409': { $ref: '#/components/responses/Conflict' }
 components:
   parameters:
@@ -229,6 +275,7 @@ components:
         - type: object
           required: [description, images, variants]
           properties:
+            short: { type: string }
             description: { type: string }
             details: { type: array, items: { type: string } }
             images: { type: array, items: { type: string } }
@@ -266,7 +313,24 @@ components:
             properties:
               variantId: { type: string, format: uuid }
               quantity: { type: integer, minimum: 1, maximum: 10 }
-        promotionCode: { type: string, nullable: true }
+    ProductWriteRequest:
+      type: object
+      required: [slug, category, nameCs, nameDe, nameEn, shortCs, shortDe, shortEn, image, status, priceCzk, priceEur]
+      properties:
+        slug: { type: string, maxLength: 120 }
+        category: { type: string, enum: [bags, apparel, lights, accessories] }
+        nameCs: { type: string }
+        nameDe: { type: string }
+        nameEn: { type: string }
+        shortCs: { type: string }
+        shortDe: { type: string }
+        shortEn: { type: string }
+        image: { type: string }
+        status: { type: string, enum: [draft, published] }
+        priceCzk: { type: integer, minimum: 0 }
+        priceEur: { type: integer, minimum: 0 }
+        badge: { type: [string, 'null'] }
+        featuredRank: { type: integer }
     OrderReceipt:
       type: object
       required: [reference, status, items, subtotal, shipping, total, lookupToken]
