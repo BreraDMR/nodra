@@ -23,12 +23,19 @@ final class CheckoutService
         }
         $customer = $this->customer($request->customer);
         $quantities = $this->quantities($request->items);
+        if ($request->promotionCode !== null) {
+            throw new \InvalidArgumentException('Promotion codes are not available in this demo');
+        }
+        $requestHash = hash('sha256', json_encode([$request->locale, $customer, $quantities], JSON_THROW_ON_ERROR));
         $currency = $request->locale === 'cs' ? 'CZK' : 'EUR';
 
         try {
-            $order = $this->db->transactional(function () use ($request, $key, $customer, $quantities, $currency): ShopOrder {
+            $order = $this->db->transactional(function () use ($request, $key, $requestHash, $customer, $quantities, $currency): ShopOrder {
                 $existing = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key]);
                 if ($existing !== null) {
+                    if (!hash_equals($existing->getRequestHash(), $requestHash)) {
+                        throw new \DomainException('Idempotency key was used with different order details');
+                    }
                     return $existing;
                 }
 
@@ -56,7 +63,7 @@ final class CheckoutService
                     'DE' => $currency === 'CZK' ? 16900 : 690,
                     default => $currency === 'CZK' ? 29900 : 1200,
                 };
-                $order = new ShopOrder($key, $request->locale, $currency, $customer['name'], $customer['email'], $customer['country'], $customer['address'], $customer['postalCode'], $subtotal, $shipping);
+                $order = new ShopOrder($key, $requestHash, $request->locale, $currency, $customer['name'], $customer['email'], $customer['country'], $customer['address'], $customer['postalCode'], $subtotal, $shipping);
                 $this->em->persist($order);
 
                 foreach ($lines as [$id, $quantity, $price, $name, $label]) {
@@ -73,6 +80,9 @@ final class CheckoutService
             $order = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key]);
             if ($order === null) {
                 throw new \DomainException('The order could not be completed');
+            }
+            if (!hash_equals($order->getRequestHash(), $requestHash)) {
+                throw new \DomainException('Idempotency key was used with different order details');
             }
         }
 
