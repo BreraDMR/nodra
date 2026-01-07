@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: NORDRA Commerce API
+  title: NODRA Commerce API
   version: 0.1.0
-  description: JSON contract for the fictional NORDRA cycling equipment storefront and administration.
+  description: JSON contract for the fictional NODRA cycling equipment storefront and administration.
 servers:
   - url: http://localhost:8000
 tags:
@@ -185,6 +185,34 @@ paths:
         '401': { description: Authentication required. }
         '403': { description: Invalid CSRF token. }
         '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/products/{id}/variants:
+    post:
+      tags: [Administration]
+      summary: Add a variant with zero stock
+      description: Requires an authenticated session and X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/VariantWriteRequest' } } }
+      responses:
+        '201': { description: Variant created. }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/admin/variants/{id}:
+    put:
+      tags: [Administration]
+      summary: Update a variant
+      description: Updates labels, prices and active status. SKU is immutable. Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/VariantWriteRequest' } } }
+      responses:
+        '200': { description: Variant updated. }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/admin/orders:
     get:
       tags: [Administration]
@@ -331,6 +359,19 @@ components:
         priceEur: { type: integer, minimum: 0 }
         badge: { type: [string, 'null'] }
         featuredRank: { type: integer }
+    VariantWriteRequest:
+      type: object
+      required: [sku, labelCs, labelDe, labelEn, priceCzk, priceEur]
+      properties:
+        sku: { type: string, maxLength: 80 }
+        labelCs: { type: string }
+        labelDe: { type: string }
+        labelEn: { type: string }
+        priceCzk: { type: integer, minimum: 0 }
+        priceEur: { type: integer, minimum: 0 }
+        active: { type: boolean }
+        color: { type: [string, 'null'] }
+        size: { type: [string, 'null'] }
     OrderReceipt:
       type: object
       required: [reference, status, items, subtotal, shipping, total, lookupToken]
