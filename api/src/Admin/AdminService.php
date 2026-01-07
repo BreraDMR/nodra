@@ -90,15 +90,47 @@ final class AdminService
 
     public function adjustStock(StockAdjustmentRequest $input): array
     {
-        $variant = $this->em->find(ProductVariant::class, Uuid::fromString($input->variantId));
-        if ($variant === null) {
-            throw new \InvalidArgumentException('Variant not found');
+        return $this->db->transactional(function () use ($input): array {
+            $affected = $this->db->executeStatement('UPDATE product_variant SET stock = stock + :delta WHERE id = :id AND stock + :delta >= 0', ['id' => $input->variantId, 'delta' => $input->delta]);
+            if ($affected !== 1) {
+                throw new \DomainException('Variant not found or stock would become negative');
+            }
+            $variant = $this->em->find(ProductVariant::class, Uuid::fromString($input->variantId));
+            $this->em->persist(new StockMovement($variant, $input->delta, trim($input->reason)));
+            $this->em->flush();
+
+            return ['variantId' => $input->variantId, 'stock' => (int) $this->db->fetchOne('SELECT stock FROM product_variant WHERE id = :id', ['id' => $input->variantId])];
+        });
+    }
+
+    public function createVariant(string $productId, VariantWriteRequest $input): ?array
+    {
+        $product = $this->em->find(Product::class, Uuid::fromString($productId));
+        if ($product === null) {
+            return null;
         }
-        $variant->adjustStock($input->delta);
-        $this->em->persist(new StockMovement($variant, $input->delta, trim($input->reason)));
+        $this->validateSku($input->sku);
+        $variant = new ProductVariant($product, trim($input->sku), $this->variantLabels($input), $input->priceCzk, $input->priceEur, 0, $input->color, $input->size);
+        $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
+        $this->em->persist($variant);
         $this->em->flush();
 
-        return ['variantId' => $input->variantId, 'stock' => $variant->getStock()];
+        return ['id' => $variant->getId()->toRfc4122(), 'sku' => $variant->getSku()];
+    }
+
+    public function updateVariant(string $id, VariantWriteRequest $input): ?array
+    {
+        $variant = $this->em->find(ProductVariant::class, Uuid::fromString($id));
+        if ($variant === null) {
+            return null;
+        }
+        if ($variant->getSku() !== $input->sku) {
+            throw new \InvalidArgumentException('SKU cannot be changed after creation');
+        }
+        $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
+        $this->em->flush();
+
+        return ['id' => $id, 'sku' => $variant->getSku()];
     }
 
     public function orders(): array
@@ -140,7 +172,7 @@ final class AdminService
                     if ($variant === null) {
                         continue;
                     }
-                    $variant->adjustStock($item->getQuantity());
+                    $this->db->executeStatement('UPDATE product_variant SET stock = stock + :quantity WHERE id = :id', ['quantity' => $item->getQuantity(), 'id' => $variant->getId()->toRfc4122()]);
                     $this->em->persist(new StockMovement($variant, $item->getQuantity(), 'Order '.$order->getReference().' cancelled'));
                 }
             }
@@ -169,5 +201,20 @@ final class AdminService
         if ($existing !== false && $existing !== $exceptId) {
             throw new \DomainException('A product with this slug already exists');
         }
+    }
+
+    private function validateSku(string $sku): void
+    {
+        if (!preg_match('/^[A-Z0-9-]+$/', $sku)) {
+            throw new \InvalidArgumentException('SKU must contain uppercase letters, numbers and hyphens');
+        }
+        if ($this->db->fetchOne('SELECT id FROM product_variant WHERE sku = :sku', ['sku' => $sku]) !== false) {
+            throw new \DomainException('A variant with this SKU already exists');
+        }
+    }
+
+    private function variantLabels(VariantWriteRequest $input): array
+    {
+        return ['cs' => trim($input->labelCs), 'de' => trim($input->labelDe), 'en' => trim($input->labelEn)];
     }
 }
