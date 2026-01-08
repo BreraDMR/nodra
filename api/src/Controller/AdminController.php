@@ -8,6 +8,7 @@ use App\Admin\AdminService;
 use App\Admin\OrderStatusRequest;
 use App\Admin\ProductWriteRequest;
 use App\Admin\StockAdjustmentRequest;
+use App\Admin\VariantWriteRequest;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -53,6 +54,27 @@ final class AdminController extends AbstractController
         if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
         try { return $this->json($this->admin->adjustStock($payload), 201); }
         catch (\InvalidArgumentException|\DomainException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+    }
+
+    #[Route('/products/{id}/variants', methods: ['POST'])]
+    public function createVariant(string $id, #[MapRequestPayload] VariantWriteRequest $payload, Request $request): JsonResponse
+    {
+        if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
+        try {
+            $result = $this->admin->createVariant($id, $payload);
+            return $result === null ? $this->json(['message' => 'Product not found'], 404) : $this->json($result, 201);
+        } catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+        catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
+    }
+
+    #[Route('/variants/{id}', methods: ['PUT'])]
+    public function updateVariant(string $id, #[MapRequestPayload] VariantWriteRequest $payload, Request $request): JsonResponse
+    {
+        if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
+        try {
+            $result = $this->admin->updateVariant($id, $payload);
+            return $result === null ? $this->json(['message' => 'Variant not found'], 404) : $this->json($result);
+        } catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
     }
 
     #[Route('/orders', methods: ['GET'])]
