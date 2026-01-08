@@ -31,6 +31,7 @@ final class CheckoutService
 
         try {
             $order = $this->db->transactional(function () use ($request, $key, $requestHash, $customer, $quantities, $currency): ShopOrder {
+                $this->db->fetchOne('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))', ['key' => $key]);
                 $existing = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key]);
                 if ($existing !== null) {
                     if (!hash_equals($existing->getRequestHash(), $requestHash)) {
