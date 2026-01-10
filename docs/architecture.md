@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-NORDRA is a local commerce demonstration, not a production merchant. The contract in `api/config/api_doc/shop.yaml` was written before persistence and feature implementation, following the API → schema → code sequence of the Max standard.
+NODRA is a local commerce demonstration, not a production merchant. The contract in `api/config/api_doc/shop.yaml` was written before persistence and feature implementation, following the API → schema → code sequence of the Max standard.
 
 ## System boundaries
 
