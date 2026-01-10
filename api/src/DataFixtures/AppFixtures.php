@@ -17,11 +17,11 @@ final class AppFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        $admin = new AdminUser('admin@nordra.test', '', 'NORDRA Studio');
+        $admin = new AdminUser('admin@nodra.test', '', 'NODRA Studio');
         $manager->persist(new AdminUser(
-            'admin@nordra.test',
-            $this->passwordHasher->hashPassword($admin, 'NordraDemo2026!'),
-            'NORDRA Studio',
+            'admin@nodra.test',
+            $this->passwordHasher->hashPassword($admin, 'NodraDemo2026!'),
+            'NODRA Studio',
         ));
 
         $products = json_decode(file_get_contents(__DIR__.'/../../data/products.json'), true, flags: JSON_THROW_ON_ERROR);
