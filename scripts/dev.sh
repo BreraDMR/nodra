@@ -8,5 +8,5 @@ api_pid=$!
 web_pid=$!
 cleanup() { kill "$api_pid" "$web_pid" 2>/dev/null || true; wait "$api_pid" "$web_pid" 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
-printf '\nNORDRA storefront: http://127.0.0.1:3000/cs\nNORDRA admin:      http://127.0.0.1:3000/admin\nPress Ctrl+C to stop the web servers.\n\n'
+printf '\nNODRA storefront: http://127.0.0.1:3000/cs\nNODRA admin:      http://127.0.0.1:3000/admin\nPress Ctrl+C to stop the web servers.\n\n'
 wait "$web_pid"
