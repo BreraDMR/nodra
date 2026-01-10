@@ -1,4 +1,4 @@
-# NORDRA
+# NODRA
 
 A fictional cycling equipment store built for a full-stack portfolio. The editorial storefront and operations dashboard are React/Next.js 16 applications backed by a Symfony 8 JSON API and PostgreSQL. All products, images and orders are demo material. Checkout does not collect payment or arrange shipment.
 
@@ -11,7 +11,7 @@ Requirements: PHP 8.4+, Composer, Node.js 22+, npm and Docker with Compose. Port
 ./scripts/dev.sh
 ```
 
-Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http://127.0.0.1:3000/de), [English storefront](http://127.0.0.1:3000/en), or [admin](http://127.0.0.1:3000/admin). Demo admin: `admin@nordra.test` / `NordraDemo2026!`. This credential is seeded for local review and must be replaced before any public deployment. Stop the two web servers with Ctrl+C. Stop the database with `cd api && docker compose down`. To reset demo orders and products, run `cd api && php bin/console doctrine:fixtures:load --no-interaction` while the database is running.
+Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http://127.0.0.1:3000/de), [English storefront](http://127.0.0.1:3000/en), or [admin](http://127.0.0.1:3000/admin). Demo admin: `admin@nodra.test` / `NodraDemo2026!`. This credential is seeded for local review and must be replaced before any public deployment. Stop the two web servers with Ctrl+C. Stop the database with `cd api && docker compose down`. To reset demo orders and products, run `cd api && php bin/console doctrine:fixtures:load --no-interaction` while the database is running.
 
 Run verification with `./scripts/check.sh`. The API contract is in [`api/config/api_doc/shop.yaml`](api/config/api_doc/shop.yaml).
 
@@ -31,7 +31,7 @@ Next server components render catalogue pages using the Symfony API. Client comp
 
 ## Demo boundaries
 
-NORDRA is not a real merchant. Shipping values are illustrative; taxes, real shipping rates, payment processing, email delivery, refunds, promotions, media uploads and legal commerce pages are outside the demo. For other countries the English checkout uses a flat illustrative EUR shipping amount. Images were generated for this project. No customer reviews or transaction history are fabricated in the seeded data.
+NODRA is not a real merchant. Shipping values are illustrative; taxes, real shipping rates, payment processing, email delivery, refunds, promotions, media uploads and legal commerce pages are outside the demo. For other countries the English checkout uses a flat illustrative EUR shipping amount. Images were generated for this project. No customer reviews or transaction history are fabricated in the seeded data.
 
 ## Publication status
 
