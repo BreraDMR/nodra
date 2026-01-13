@@ -22,3 +22,30 @@
   min-height: 100vh;
   color: white;
 }
+.admin-login-art:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(10, 23, 16, 0.65), transparent 70%);
+}
+.admin-login-art > div {
+  position: absolute;
+  z-index: 1;
+  bottom: 9%;
+  left: 9%;
+}
+.admin-login-art span {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+.admin-login-art h1 {
+  font-size: clamp(52px, 5vw, 85px);
+  line-height: 1.05;
+  margin: 20px 0;
+}
+.admin-login-panel {
+  padding: 50px 9%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
