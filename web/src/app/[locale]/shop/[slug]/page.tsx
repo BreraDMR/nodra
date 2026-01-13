@@ -4,5 +4,80 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BuyBox } from "@/components/BuyBox";
 import { api, copy, isLocale, type Product } from "@/lib/shop";
-export async function generateMetadata({ params }: { params: Promise<{locale: string; slug: string}> }): Promise<Metadata> { const {locale,slug} = await params; if (!isLocale(locale)) return {}; try { const p = await api<Product>(`/api/products/${slug}?locale=${locale}`); return { title: p.name, description: p.short }; } catch { return {}; } }
-export default async function ProductPage({ params }: { params: Promise<{locale: string; slug: string}> }) { const {locale,slug} = await params; if (!isLocale(locale)) notFound(); let product: Product; try { product = await api<Product>(`/api/products/${slug}?locale=${locale}`); } catch { notFound(); } return <main className="detail-page"><Link href={`/${locale}/shop`} className="back-link">← {copy[locale].back}</Link><div className="detail-layout"><div className="detail-visual"><Image src={product.image} alt={product.name} fill sizes="(max-width: 800px) 100vw, 60vw" priority /></div><BuyBox product={product} locale={locale} /></div><div className="detail-description"><span className="eyebrow">NODRA / PRODUCT NOTES</span><p>{product.description}</p><ul>{product.details.map((d,i) => <li key={i}>{d}</li>)}</ul></div><script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({"@context":"https://schema.org","@type":"Product",name:product.name,description:product.short,image:product.image,sku:product.variants[0]?.sku,offers:{"@type":"Offer",priceCurrency:product.fromPrice.currency,price:(product.fromPrice.amount/100).toFixed(2),availability:product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"}}).replace(/</g,"\\u003c")}} /></main>; }
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  if (!isLocale(locale)) return {};
+  try {
+    const p = await api<Product>(`/api/products/${slug}?locale=${locale}`);
+    return { title: p.name, description: p.short };
+  } catch {
+    return {};
+  }
+}
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) {
+  const { locale, slug } = await params;
+  if (!isLocale(locale)) notFound();
+  let product: Product;
+  try {
+    product = await api<Product>(`/api/products/${slug}?locale=${locale}`);
+  } catch {
+    notFound();
+  }
+  return (
+    <main className="detail-page">
+      <Link href={`/${locale}/shop`} className="back-link">
+        ← {copy[locale].back}
+      </Link>
+      <div className="detail-layout">
+        <div className="detail-visual">
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            sizes="(max-width: 800px) 100vw, 60vw"
+            priority
+          />
+        </div>
+        <BuyBox product={product} locale={locale} />
+      </div>
+      <div className="detail-description">
+        <span className="eyebrow">NODRA / PRODUCT NOTES</span>
+        <p>{product.description}</p>
+        <ul>
+          {product.details.map((d, i) => (
+            <li key={i}>{d}</li>
+          ))}
+        </ul>
+      </div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.name,
+            description: product.short,
+            image: product.image,
+            sku: product.variants[0]?.sku,
+            offers: {
+              "@type": "Offer",
+              priceCurrency: product.fromPrice.currency,
+              price: (product.fromPrice.amount / 100).toFixed(2),
+              availability: product.inStock
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
+            },
+          }).replace(/</g, "\\u003c"),
+        }}
+      />
+    </main>
+  );
+}
