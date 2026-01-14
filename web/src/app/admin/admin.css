@@ -103,3 +103,27 @@
 .admin-login-box form button span {
   font-size: 17px;
 }
+.admin-login-box small,
+.admin-login-foot {
+  display: block;
+  font-size: 11px;
+  color: #8e9a8e;
+  margin-top: 30px;
+}
+.admin-shell {
+  display: flex;
+}
+.admin-sidebar {
+  width: 245px;
+  flex: none;
+  min-height: 100vh;
+  background: #172920;
+  color: white;
+  padding: 31px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
