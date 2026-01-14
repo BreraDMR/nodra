@@ -127,3 +127,30 @@
   top: 0;
   height: 100vh;
 }
+.admin-sidebar > div > p {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: #8da995;
+  margin: 4px 0 58px;
+}
+.admin-sidebar nav {
+  display: grid;
+  gap: 5px;
+}
+.admin-sidebar nav button {
+  background: transparent;
+  color: #b6c8b9;
+  border: 0;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-sidebar nav button.active {
+  background: #d7ed6c;
+  color: #243522;
+  font-weight: 800;
+}
