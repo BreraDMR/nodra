@@ -179,3 +179,30 @@
   color: #7f9b86;
   margin-top: 18px;
 }
+.admin-content {
+  flex: 1;
+  min-width: 0;
+}
+.admin-topbar {
+  height: 72px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4vw;
+  background: white;
+}
+.admin-topbar > span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.admin-topbar > div {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.admin-status {
+  font-size: 11px;
+  color: #6b9661;
+}
