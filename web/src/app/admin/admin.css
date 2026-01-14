@@ -154,3 +154,28 @@
   color: #243522;
   font-weight: 800;
 }
+.admin-sidebar nav button > span {
+  flex: 1;
+}
+.admin-sidebar nav small {
+  font-size: 10px;
+}
+.admin-sidebar-bottom {
+  display: grid;
+  gap: 20px;
+}
+.admin-sidebar-bottom a,
+.admin-sidebar-bottom button {
+  font-size: 12px;
+  background: none;
+  border: 0;
+  color: #c0cfbf;
+  text-align: left;
+  padding: 0;
+}
+.admin-sidebar-bottom small {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: #7f9b86;
+  margin-top: 18px;
+}
