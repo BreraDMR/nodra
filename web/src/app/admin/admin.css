@@ -77,3 +77,29 @@
   display: grid;
   gap: 20px;
 }
+.admin-login-box label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-login-box input {
+  padding: 15px;
+  border: 1px solid #cbd5c9;
+  background: #fff;
+}
+.admin-login-box form button,
+.admin-primary {
+  background: var(--adm);
+  border: 0;
+  color: white;
+  padding: 15px 20px;
+  display: inline-flex;
+  gap: 40px;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 800;
+}
+.admin-login-box form button span {
+  font-size: 17px;
+}
