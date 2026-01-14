@@ -49,3 +49,31 @@
   flex-direction: column;
   justify-content: space-between;
 }
+.admin-wordmark {
+  font: 800 29px var(--display);
+  letter-spacing: -0.09em;
+}
+.admin-wordmark span {
+  font-size: 9px;
+  vertical-align: top;
+  letter-spacing: 0;
+  margin-left: 3px;
+}
+.admin-login-box {
+  max-width: 400px;
+  width: 100%;
+  margin: auto;
+}
+.admin-login-box h2 {
+  font-size: 48px;
+  margin: 12px 0;
+}
+.admin-login-box > p:not(.eyebrow) {
+  color: #738076;
+  font-size: 14px;
+}
+.admin-login-box form {
+  margin-top: 45px;
+  display: grid;
+  gap: 20px;
+}
