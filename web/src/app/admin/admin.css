@@ -281,3 +281,30 @@
   color: #839186;
   letter-spacing: 0.1em;
 }
+.metric-grid strong {
+  font: 700 31px var(--display);
+  letter-spacing: -0.05em;
+  margin-top: 24px;
+}
+.metric-grid small {
+  font-size: 11px;
+  color: #8d9a8e;
+  margin-top: 5px;
+}
+.admin-overview-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 17px;
+  margin-top: 25px;
+}
+.admin-panel {
+  background: white;
+  border: 1px solid var(--line);
+  padding: 26px;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 25px;
+}
