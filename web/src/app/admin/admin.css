@@ -357,3 +357,29 @@
   background: #dfeafa;
   color: #376195;
 }
+.status.shipped {
+  background: #e7e2fc;
+  color: #62549a;
+}
+.status.completed,
+.status.published {
+  background: #e2f3db;
+  color: #448245;
+}
+.status.cancelled,
+.status.draft {
+  background: #f4e5e5;
+  color: #986666;
+}
+.low-stock {
+  border-top: 1px solid var(--line);
+  padding: 18px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.low-stock strong,
+.low-stock small {
+  display: block;
+  font-size: 12px;
+}
