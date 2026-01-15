@@ -256,3 +256,28 @@
 .admin-heading.compact {
   margin-bottom: 32px;
 }
+.admin-heading.compact h1 {
+  font-size: 66px;
+}
+.admin-heading.compact h1 span {
+  color: #9ab52b;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 13px;
+}
+.metric-grid > div {
+  background: white;
+  border: 1px solid var(--line);
+  padding: 25px;
+  min-height: 175px;
+  display: flex;
+  flex-direction: column;
+}
+.metric-grid span {
+  font-size: 10px;
+  font-weight: 800;
+  color: #839186;
+  letter-spacing: 0.1em;
+}
