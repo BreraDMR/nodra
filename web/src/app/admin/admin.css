@@ -231,3 +231,28 @@
 .admin-heading .eyebrow {
   color: #6d816d;
 }
+.admin-heading h1 {
+  font-size: clamp(45px, 4vw, 69px);
+  line-height: 1.1;
+  margin: 18px 0;
+}
+.admin-heading h1 em {
+  font-family: Georgia, serif;
+  font-weight: 400;
+}
+.admin-heading p:last-child {
+  font-size: 14px;
+  color: #7e8b7f;
+}
+.admin-heading-icon {
+  border: 1px solid #d6ddd4;
+  border-radius: 50%;
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+}
+.admin-heading.compact {
+  margin-bottom: 32px;
+}
