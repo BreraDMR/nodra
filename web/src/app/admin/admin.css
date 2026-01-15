@@ -308,3 +308,28 @@
   align-items: end;
   margin-bottom: 25px;
 }
+.panel-head .eyebrow {
+  font-size: 9px;
+  color: #8fa18f;
+}
+.panel-head h2 {
+  font-size: 23px;
+  margin: 7px 0 0;
+}
+.panel-head button,
+.admin-link {
+  background: none;
+  border: 0;
+  color: #3d6842;
+  font-size: 11px;
+  font-weight: 800;
+}
+.mini-order {
+  display: grid;
+  grid-template-columns: 1.2fr 1.3fr 1fr 0.8fr;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+  font-size: 11px;
+}
