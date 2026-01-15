@@ -333,3 +333,27 @@
   padding: 16px 0;
   font-size: 11px;
 }
+.mini-order strong {
+  text-align: right;
+}
+.order-ref {
+  font-weight: 800;
+}
+.status {
+  display: inline-block;
+  padding: 6px 8px;
+  background: #e9eee6;
+  color: #59715a;
+  text-transform: capitalize;
+  font-size: 10px;
+  font-weight: 800;
+  width: max-content;
+}
+.status.placed {
+  background: #fff2d1;
+  color: #a37120;
+}
+.status.processing {
+  background: #dfeafa;
+  color: #376195;
+}
