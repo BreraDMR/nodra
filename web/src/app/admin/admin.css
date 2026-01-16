@@ -438,3 +438,30 @@
   background: #edf0e9;
   flex: none;
 }
+.admin-variants {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.admin-variants button {
+  border: 1px solid #dce4da;
+  background: white;
+  padding: 7px 9px;
+  font-size: 10px;
+}
+.admin-variants button:hover {
+  border-color: #729273;
+}
+.admin-success,
+.admin-error {
+  padding: 13px 16px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+}
+.admin-success {
+  background: #e3f3dc;
+  color: #336c3a;
+}
