@@ -408,3 +408,33 @@
   min-width: 750px;
   text-align: left;
 }
+.admin-table th {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #809181;
+  font-weight: 800;
+  padding: 17px 20px;
+  background: #f9fbf7;
+}
+.admin-table td {
+  padding: 17px 20px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.admin-table td small {
+  display: block;
+  color: #8b988d;
+  margin-top: 4px;
+}
+.admin-product-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-product-thumb {
+  width: 58px;
+  height: 58px;
+  position: relative;
+  background: #edf0e9;
+  flex: none;
+}
