@@ -543,3 +543,50 @@
   border-top: 1px solid var(--line);
   font-size: 13px;
 }
+.order-detail-total {
+  font-size: 18px;
+}
+.order-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 30px;
+}
+.order-actions button {
+  background: var(--adm);
+  color: white;
+  border: 0;
+  padding: 14px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.order-actions button.danger {
+  background: #f5e3e3;
+  color: #9d3e3e;
+}
+@media (max-width: 900px) {
+  .admin-sidebar {
+    width: 76px;
+  }
+  .admin-sidebar .admin-wordmark {
+    font-size: 0;
+  }
+  .admin-sidebar .admin-wordmark:before {
+    content: "N";
+    font: 800 23px var(--display);
+  }
+  .admin-sidebar .admin-wordmark span {
+    display: none;
+  }
+  .admin-sidebar nav span,
+  .admin-sidebar nav small,
+  .admin-sidebar > div > p,
+  .admin-sidebar-bottom {
+    display: none;
+  }
+  .admin-overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
