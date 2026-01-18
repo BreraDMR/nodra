@@ -189,5 +189,22 @@ export default function AdminPage() {
       setBusy(false);
     }
   }
+  async function saveProduct(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const ok = await mutate(
+      editing !== "new"
+        ? `/api/admin/products/${editing}`
+        : "/api/admin/products",
+      editing !== "new" ? "PUT" : "POST",
+      {
+        ...form,
+        badge: form.badge || null,
+        priceCzk: Number(form.priceCzk),
+        priceEur: Number(form.priceEur),
+        featuredRank: Number(form.featuredRank),
+      },
+    );
+    if (ok) setEditing(null);
+  }
   return null;
 }
