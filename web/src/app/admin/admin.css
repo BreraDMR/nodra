@@ -490,3 +490,31 @@
   overflow: auto;
   padding: 35px;
 }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+.modal-header h2 {
+  font-size: 35px;
+  margin: 8px 0 0;
+}
+.modal-header > button {
+  background: none;
+  border: 0;
+  font-size: 28px;
+}
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.admin-field {
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
