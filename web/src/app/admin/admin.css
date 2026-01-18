@@ -646,3 +646,25 @@
     padding: 20px;
   }
 }
+.variant-actions {
+  display: flex;
+  gap: 4px;
+}
+.admin-variants > .variant-actions button:last-child {
+  background: #edf3e9;
+  color: #32603b;
+}
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.check-field input {
+  width: 16px;
+  height: 16px;
+}
+.variant-note {
+  font-size: 12px;
+  color: #738073;
+  margin-top: 24px;
+}
