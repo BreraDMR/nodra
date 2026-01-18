@@ -518,3 +518,28 @@
   font-size: 11px;
   font-weight: 800;
 }
+.admin-field input,
+.admin-field select {
+  background: white;
+  border: 1px solid #ccd8cc;
+  padding: 12px;
+  min-width: 0;
+}
+.admin-modal form > .admin-primary {
+  margin-top: 25px;
+}
+.order-detail-meta {
+  display: grid;
+  gap: 10px;
+  padding: 10px 0 25px;
+  font-size: 13px;
+}
+.order-detail-lines > div,
+.order-detail-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
