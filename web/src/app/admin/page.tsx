@@ -224,5 +224,23 @@ export default function AdminPage() {
     );
     if (ok) setVariantEditing(null);
   }
+  function editVariant(productId: string, variant?: Variant) {
+    setVariantEditing({ productId, id: variant?.id });
+    setVariantForm(
+      variant
+        ? {
+            sku: variant.sku,
+            labelCs: variant.label.cs,
+            labelDe: variant.label.de,
+            labelEn: variant.label.en,
+            priceCzk: variant.priceCzk,
+            priceEur: variant.priceEur,
+            active: variant.active,
+            color: variant.color || "",
+            size: variant.size || "",
+          }
+        : variantFresh,
+    );
+  }
   return null;
 }
