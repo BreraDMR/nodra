@@ -242,5 +242,27 @@ export default function AdminPage() {
         : variantFresh,
     );
   }
+  async function stock(variant: Variant) {
+    const input = prompt(
+      `Adjust ${variant.sku} (current: ${variant.stock}). Enter signed quantity:`,
+      "1",
+    );
+    if (input === null) return;
+    const delta = Number(input);
+    if (!Number.isInteger(delta) || delta === 0) {
+      setError("Enter a non-zero whole number.");
+      return;
+    }
+    const reason = prompt(
+      "Reason for stock adjustment:",
+      "Cycle count correction",
+    );
+    if (!reason) return;
+    await mutate("/api/admin/stock-adjustments", "POST", {
+      variantId: variant.id,
+      delta,
+      reason,
+    });
+  }
   return null;
 }
