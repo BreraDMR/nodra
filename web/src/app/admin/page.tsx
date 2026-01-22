@@ -264,5 +264,15 @@ export default function AdminPage() {
       reason,
     });
   }
+  async function advance(order: Order, status: string) {
+    if (
+      status === "cancelled" &&
+      !confirm(`Cancel ${order.reference} and return stock?`)
+    )
+      return;
+    return await mutate(`/api/admin/orders/${order.id}/status`, "PATCH", {
+      status,
+    });
+  }
   return null;
 }
