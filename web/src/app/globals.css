@@ -81,3 +81,27 @@ p {
   font-weight: 800;
   letter-spacing: 0.16em;
 }
+.announcement span {
+  font-size: 12px;
+}
+.site-header {
+  height: 82px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  z-index: 10;
+}
+.header-inner {
+  max-width: 1560px;
+  margin: auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4vw;
+}
+.wordmark,
+.footer-mark {
+  font: 800 30px var(--display);
+  letter-spacing: -0.095em;
+}
