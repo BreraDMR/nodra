@@ -105,3 +105,29 @@ p {
   font: 800 30px var(--display);
   letter-spacing: -0.095em;
 }
+.wordmark span,
+.footer-mark span {
+  font-size: 9px;
+  vertical-align: top;
+  letter-spacing: 0;
+  margin-left: 3px;
+}
+.site-header nav {
+  display: flex;
+  gap: 44px;
+  margin-left: 9vw;
+}
+.site-header nav a,
+.basket-link {
+  font-size: 13px;
+  font-weight: 700;
+}
+.site-header nav a:hover,
+.basket-link:hover {
+  opacity: 0.55;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
