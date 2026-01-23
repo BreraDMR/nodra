@@ -282,5 +282,25 @@ export default function AdminPage() {
       setError(e instanceof Error ? e.message : "Could not load order");
     }
   }
+  const field = (
+    key: keyof Form,
+    label: string,
+    kind: "text" | "number" = "text",
+  ) => (
+    <label className="admin-field">
+      {label}
+      <input
+        type={kind}
+        value={String(form[key])}
+        onChange={(e) =>
+          setForm({
+            ...form,
+            [key]: kind === "number" ? Number(e.target.value) : e.target.value,
+          })
+        }
+        required={key !== "badge"}
+      />
+    </label>
+  );
   return null;
 }
