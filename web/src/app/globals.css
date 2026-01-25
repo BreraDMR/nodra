@@ -131,3 +131,32 @@ p {
   align-items: center;
   gap: 32px;
 }
+.locale-switch {
+  display: flex;
+  gap: 10px;
+}
+.locale-switch a {
+  font-size: 10px;
+  font-weight: 800;
+  color: #8b948b;
+}
+.locale-switch a.active {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.basket-link {
+  white-space: nowrap;
+}
+.basket-link span {
+  display: inline-flex;
+  background: var(--ink);
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  font-size: 10px;
+}
