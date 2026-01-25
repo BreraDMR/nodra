@@ -185,3 +185,32 @@ p {
   background: var(--lime);
   color: var(--ink);
 }
+.button-dark {
+  background: var(--ink);
+  color: white;
+}
+.button-dark:hover {
+  background: #344a34;
+}
+.hero {
+  height: min(760px, 76vw);
+  min-height: 560px;
+  position: relative;
+  color: white;
+  overflow: hidden;
+}
+.hero > img {
+  object-position: center 58%;
+}
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(10, 26, 18, 0.68),
+      rgba(10, 26, 18, 0.28) 60%,
+      rgba(10, 26, 18, 0.05)
+    ),
+    linear-gradient(0deg, rgba(10, 26, 18, 0.38), transparent 42%);
+}
