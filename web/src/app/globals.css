@@ -160,3 +160,28 @@ p {
   margin-left: 4px;
   font-size: 10px;
 }
+.button {
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 50px;
+  padding: 18px 22px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+.button:hover {
+  transform: translateY(-2px);
+}
+.button span {
+  font-size: 17px;
+  font-weight: 400;
+}
+.button-light {
+  background: var(--lime);
+  color: var(--ink);
+}
