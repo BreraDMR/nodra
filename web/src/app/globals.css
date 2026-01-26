@@ -456,3 +456,30 @@ p {
   margin: 55px 0 25px;
   border-bottom: 1px solid var(--line);
 }
+.category-tabs {
+  display: flex;
+  gap: 27px;
+  overflow: auto;
+}
+.category-tabs a {
+  padding-bottom: 17px;
+  white-space: nowrap;
+  color: #788478;
+  font-size: 13px;
+  font-weight: 700;
+}
+.category-tabs a.selected {
+  border-bottom: 2px solid var(--ink);
+  color: var(--ink);
+}
+.category-tabs small {
+  font-size: 9px;
+  color: #a0aa9f;
+  margin-left: 3px;
+}
+.shop-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+}
