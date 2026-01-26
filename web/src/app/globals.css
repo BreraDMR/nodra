@@ -380,3 +380,30 @@ p {
   line-height: 1.04;
   margin: 20px 0 28px;
 }
+.story-copy em {
+  font-family: Georgia, serif;
+  font-weight: 400;
+}
+.story-copy > p:not(.eyebrow) {
+  max-width: 380px;
+  margin-bottom: 32px;
+}
+.marquee {
+  padding: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  font-weight: 800;
+  background: var(--lime);
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 20px;
+  padding: 65px 4vw 45px;
+  background: #19271f;
+  color: white;
+}
