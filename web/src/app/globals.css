@@ -326,3 +326,30 @@ p {
   font-weight: 800;
   padding: 8px 11px;
 }
+.product-arrow {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: white;
+  border-radius: 50%;
+}
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 1px;
+}
+.product-meta .eyebrow {
+  color: #869188;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.product-meta h3 {
+  font-size: 16px;
+  letter-spacing: -0.045em;
+  margin: 0;
+}
