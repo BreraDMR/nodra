@@ -248,3 +248,28 @@ p {
   font-weight: 800;
   letter-spacing: 0.13em;
 }
+.home-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 76px 8vw;
+  border-bottom: 1px solid var(--line);
+}
+.home-intro .eyebrow {
+  width: 27%;
+  color: var(--muted);
+}
+.home-intro p {
+  font: 600 clamp(24px, 3vw, 42px)/1.2 var(--display);
+  letter-spacing: -0.06em;
+  width: 55%;
+  margin: 0;
+}
+.home-intro > span {
+  font-size: 30px;
+}
+.section-shell {
+  padding: 110px 4vw 120px;
+  max-width: 1650px;
+  margin: auto;
+}
