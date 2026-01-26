@@ -483,3 +483,30 @@ p {
   gap: 10px;
   padding-bottom: 8px;
 }
+.shop-controls input,
+.shop-controls select {
+  border: 0;
+  background: transparent;
+  border-bottom: 1px solid #bcc4b9;
+  padding: 8px 2px;
+  outline: none;
+  color: var(--ink);
+  font-size: 12px;
+}
+.shop-controls input {
+  width: 170px;
+}
+.shop-controls button {
+  border: 0;
+  background: none;
+  font-size: 20px;
+}
+.shop-grid {
+  row-gap: 48px;
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 55px;
+}
