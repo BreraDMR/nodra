@@ -407,3 +407,28 @@ p {
   background: #19271f;
   color: white;
 }
+.footer-mark {
+  font-size: 48px;
+}
+.footer p {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  font-weight: 800;
+}
+.footer small,
+.footer-languages {
+  font-size: 11px;
+  color: #9da99d;
+  line-height: 1.7;
+}
+.footer-languages {
+  text-align: right;
+}
+.shop-main,
+.cart-page,
+.checkout-page {
+  padding: 75px 4vw 120px;
+  max-width: 1650px;
+  margin: auto;
+  min-height: 70vh;
+}
