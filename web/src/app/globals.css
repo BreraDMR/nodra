@@ -432,3 +432,27 @@ p {
   margin: auto;
   min-height: 70vh;
 }
+.shop-heading h1,
+.page-title h1 {
+  font-size: clamp(64px, 8vw, 130px);
+  line-height: 1;
+  margin: 10px 0 20px;
+}
+.shop-heading h1 sup,
+.page-title h1 sup {
+  font-size: 14px;
+  letter-spacing: 0;
+  vertical-align: top;
+  margin-left: 10px;
+}
+.shop-heading > p:last-child {
+  color: var(--muted);
+}
+.shop-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 25px;
+  margin: 55px 0 25px;
+  border-bottom: 1px solid var(--line);
+}
