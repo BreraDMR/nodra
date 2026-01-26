@@ -353,3 +353,30 @@ p {
   letter-spacing: -0.045em;
   margin: 0;
 }
+.product-meta > span {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.story-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 670px;
+  background: #dae5c4;
+}
+.story-image {
+  position: relative;
+  min-height: 560px;
+}
+.story-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: start;
+  padding: 7vw;
+}
+.story-copy h2 {
+  font-size: clamp(54px, 6vw, 90px);
+  line-height: 1.04;
+  margin: 20px 0 28px;
+}
