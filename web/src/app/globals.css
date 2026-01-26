@@ -559,3 +559,29 @@ p {
   color: #526252;
   max-width: 380px;
 }
+.detail-price {
+  font: 700 28px var(--display);
+  margin: 25px 0 46px;
+}
+.variant-heading {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 13px;
+}
+.variant-heading span {
+  color: var(--muted);
+}
+.variant-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 30px;
+}
+.variant-picker button {
+  background: transparent;
+  border: 1px solid #aeb8aa;
+  padding: 12px 18px;
+  font-size: 12px;
+  min-width: 65px;
+}
