@@ -301,3 +301,28 @@ p {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
 }
+.product-card {
+  display: block;
+  min-width: 0;
+}
+.product-image {
+  position: relative;
+  aspect-ratio: 4/4.6;
+  background: #eaebe3;
+  overflow: hidden;
+}
+.product-image img {
+  transition: transform 0.45s;
+}
+.product-card:hover .product-image img {
+  transform: scale(1.045);
+}
+.product-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: var(--lime);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 8px 11px;
+}
