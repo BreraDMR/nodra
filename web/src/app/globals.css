@@ -585,3 +585,32 @@ p {
   font-size: 12px;
   min-width: 65px;
 }
+.variant-picker button.active {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.add-button {
+  width: 100%;
+}
+.added-note {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 13px;
+  color: #40682a;
+}
+.detail-notes {
+  border-top: 1px solid var(--line);
+  margin-top: 38px;
+  padding-top: 16px;
+  color: #667367;
+  font-size: 11px;
+}
+.detail-description {
+  display: flex;
+  gap: 6vw;
+  border-top: 1px solid var(--line);
+  margin-top: 80px;
+  padding-top: 55px;
+}
