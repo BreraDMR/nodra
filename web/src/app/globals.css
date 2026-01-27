@@ -718,3 +718,28 @@ p {
 .checkout-layout {
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.75fr);
 }
+.form-heading {
+  display: flex;
+  gap: 22px;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 30px;
+}
+.form-heading span {
+  font-size: 12px;
+}
+.form-heading h2 {
+  font-size: 29px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 8px;
+}
