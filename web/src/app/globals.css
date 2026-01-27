@@ -643,3 +643,28 @@ p {
   height: 140px;
   flex: none;
 }
+.cart-line-info {
+  flex: 1;
+}
+.cart-line h2 {
+  font-size: 20px;
+  margin: 5px 0;
+}
+.cart-line p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.cart-line-info button {
+  border: 0;
+  background: none;
+  padding: 0;
+  text-decoration: underline;
+  color: var(--muted);
+  font-size: 11px;
+}
+.cart-line-end {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
