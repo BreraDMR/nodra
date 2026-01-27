@@ -668,3 +668,27 @@ p {
   flex-direction: column;
   justify-content: space-between;
 }
+.cart-line-end strong {
+  font-size: 14px;
+}
+.cart-line-end label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.cart-line-end input {
+  width: 53px;
+  border: 1px solid var(--line);
+  background: transparent;
+  padding: 7px;
+  margin-left: 7px;
+}
+.cart-summary,
+.checkout-summary {
+  background: #e9ede3;
+  padding: 30px;
+  height: max-content;
+}
+.cart-summary h2 {
+  font-size: 27px;
+}
+.cart-summary > div,
