@@ -743,3 +743,27 @@ p {
   font-weight: 700;
   gap: 8px;
 }
+.form-grid .wide {
+  grid-column: span 2;
+}
+.form-grid input,
+.form-grid select {
+  border: 1px solid #bac5b9;
+  background: #fff;
+  padding: 15px;
+  border-radius: 0;
+  min-width: 0;
+}
+.demo-notice {
+  background: #e9edce;
+  padding: 18px;
+  font-size: 12px;
+  margin: 32px 0;
+}
+.form-error {
+  color: #a63131;
+  font-weight: 700;
+}
+.checkout-form .button {
+  min-width: 330px;
+}
