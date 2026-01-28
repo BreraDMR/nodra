@@ -767,3 +767,33 @@ p {
 .checkout-form .button {
   min-width: 330px;
 }
+.summary-line {
+  border-top: 1px solid #cbd4c9;
+  padding: 18px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 12px;
+}
+.summary-line small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.confirmation-page {
+  min-height: 75vh;
+  max-width: 700px;
+  margin: auto;
+  text-align: center;
+  padding: 95px 20px;
+}
+.confirmation-icon {
+  display: grid;
+  place-items: center;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  margin: 30px auto;
+  background: var(--lime);
+  font-size: 29px;
+}
