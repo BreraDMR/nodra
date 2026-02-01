@@ -39,7 +39,7 @@ export default function OrderPage() {
   }, [reference, token]);
   return (
     <main className="confirmation-page">
-      <p className="eyebrow">NODRA / ORDER CONFIRMATION</p>
+      <p className="eyebrow">NODRA / {t.confirmationLabel}</p>
       <div className="confirmation-icon">✓</div>
       <h1>{t.thankYou}</h1>
       {error && <p role="alert">{error}</p>}
