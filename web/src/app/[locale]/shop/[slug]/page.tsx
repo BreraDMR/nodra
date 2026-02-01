@@ -49,7 +49,7 @@ export default async function ProductPage({
         <BuyBox product={product} locale={locale} />
       </div>
       <div className="detail-description">
-        <span className="eyebrow">NODRA / PRODUCT NOTES</span>
+        <span className="eyebrow">NODRA / {copy[locale].notesLabel}</span>
         <p>{product.description}</p>
         <ul>
           {product.details.map((d, i) => (
