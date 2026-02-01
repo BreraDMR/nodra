@@ -1,19 +1,185 @@
 export type Locale = "cs" | "de" | "en";
 export type Money = { amount: number; currency: string };
-export type Card = { id: string; slug: string; name: string; category: string; image: string; badge: string | null; fromPrice: Money; inStock: boolean };
-export type Variant = { id: string; sku: string; label: string; color: string | null; size: string | null; stock: number; price: Money };
-export type Product = Card & { short: string; description: string; details: string[]; images: string[]; variants: Variant[] };
-export type CartItem = { variantId: string; slug: string; name: string; label: string; image: string; price: Money; quantity: number };
-export const locales: Locale[] = ["cs", "de", "en"];
-export function isLocale(value: string): value is Locale { return locales.includes(value as Locale); }
-export const copy = {
-  cs: { shop: "Obchod", story: "Náš příběh", bag: "Košík", heroEyebrow: "VYBAVENÍ PRO KAŽDOU CESTU", heroTitle: "Město končí. Jízda pokračuje.", heroText: "Promyšlené vybavení pro cestu přes město i daleko za něj.", explore: "Prohlédnout kolekci", featured: "Na cestu", featuredText: "Věci, které s vámi udrží krok.", all: "Vše", search: "Hledat produkty", sort: "Řadit", recommended: "Doporučené", low: "Cena: od nejnižší", high: "Cena: od nejvyšší", newest: "Nejnovější", add: "Přidat do košíku", out: "Vyprodáno", back: "Zpět do obchodu", checkout: "Pokračovat k objednávce", empty: "Košík je zatím prázdný.", subtotal: "Mezisoučet", shipping: "Doprava", total: "Celkem", name: "Jméno a příjmení", email: "E-mail", address: "Ulice a číslo", postal: "PSČ", country: "Země", place: "Dokončit ukázkovou objednávku", demo: "Ukázkový obchod. Žádná platba ani zásilka nebude zpracována.", thankYou: "Děkujeme. Objednávka je připravena.", order: "Číslo objednávky", noResults: "Nic jsme nenašli. Zkuste jiný výraz.", quantity: "Množství", remove: "Odebrat", details: "Detaily", promise: "Dobré věci jsou na dlouhé cesty.", promiseText: "Méně kompromisů, více kilometrů. Každý kus je navržen pro každodenní pohyb." },
-  de: { shop: "Shop", story: "Unsere Geschichte", bag: "Warenkorb", heroEyebrow: "AUSRÜSTUNG FÜR JEDEN WEG", heroTitle: "Die Stadt endet. Die Fahrt geht weiter.", heroText: "Durchdachte Ausrüstung für den Weg durch die Stadt und weit darüber hinaus.", explore: "Kollektion entdecken", featured: "Für unterwegs", featuredText: "Ausrüstung, die mit dir Schritt hält.", all: "Alle", search: "Produkte suchen", sort: "Sortieren", recommended: "Empfohlen", low: "Preis: aufsteigend", high: "Preis: absteigend", newest: "Neueste", add: "In den Warenkorb", out: "Ausverkauft", back: "Zurück zum Shop", checkout: "Zur Kasse", empty: "Dein Warenkorb ist noch leer.", subtotal: "Zwischensumme", shipping: "Versand", total: "Gesamt", name: "Vollständiger Name", email: "E-Mail", address: "Straße und Hausnummer", postal: "Postleitzahl", country: "Land", place: "Demo-Bestellung abschließen", demo: "Demo-Shop. Es erfolgt weder eine Zahlung noch ein Versand.", thankYou: "Danke. Deine Bestellung ist eingegangen.", order: "Bestellnummer", noResults: "Keine Ergebnisse. Versuche einen anderen Begriff.", quantity: "Menge", remove: "Entfernen", details: "Details", promise: "Gute Dinge bleiben lange unterwegs.", promiseText: "Weniger Kompromisse, mehr Kilometer. Jedes Stück ist für die tägliche Fahrt gedacht." },
-  en: { shop: "Shop", story: "Our story", bag: "Basket", heroEyebrow: "GEAR FOR EVERY WAY THROUGH", heroTitle: "The city ends. The ride goes on.", heroText: "Considered gear for the route across town and the miles beyond it.", explore: "Explore the collection", featured: "Made for the miles", featuredText: "The pieces that keep pace with you.", all: "All", search: "Search products", sort: "Sort by", recommended: "Recommended", low: "Price: low to high", high: "Price: high to low", newest: "Newest", add: "Add to basket", out: "Sold out", back: "Back to shop", checkout: "Continue to checkout", empty: "Your basket is empty for now.", subtotal: "Subtotal", shipping: "Shipping", total: "Total", name: "Full name", email: "Email", address: "Street address", postal: "Postal code", country: "Country code (ISO 2)", place: "Place demo order", demo: "This is a demo shop. No payment or shipment will be made.", thankYou: "Thanks. Your order is in.", order: "Order reference", noResults: "Nothing matched. Try another search.", quantity: "Quantity", remove: "Remove", details: "Details", promise: "Good things go the long way.", promiseText: "Fewer compromises, more kilometers. Every piece is made for everyday movement." },
+export type Card = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  image: string;
+  badge: string | null;
+  fromPrice: Money;
+  inStock: boolean;
 };
-export function money(value: Money, locale: Locale): string { return new Intl.NumberFormat(locale === "cs" ? "cs-CZ" : locale === "de" ? "de-DE" : "en-GB", { style: "currency", currency: value.currency }).format(value.amount / 100); }
+export type Variant = {
+  id: string;
+  sku: string;
+  label: string;
+  color: string | null;
+  size: string | null;
+  stock: number;
+  price: Money;
+};
+export type Product = Card & {
+  short: string;
+  description: string;
+  details: string[];
+  images: string[];
+  variants: Variant[];
+};
+export type CartItem = {
+  variantId: string;
+  slug: string;
+  name: string;
+  label: string;
+  image: string;
+  price: Money;
+  quantity: number;
+};
+export const locales: Locale[] = ["cs", "de", "en"];
+export function isLocale(value: string): value is Locale {
+  return locales.includes(value as Locale);
+}
+export const copy = {
+  cs: {
+    shop: "Obchod",
+    story: "Náš příběh",
+    bag: "Košík",
+    heroEyebrow: "VYBAVENÍ PRO KAŽDOU CESTU",
+    heroTitle: "Město končí. Jízda pokračuje.",
+    heroText: "Promyšlené vybavení pro cestu přes město i daleko za něj.",
+    explore: "Prohlédnout kolekci",
+    featured: "Na cestu",
+    featuredText: "Věci, které s vámi udrží krok.",
+    all: "Vše",
+    search: "Hledat produkty",
+    sort: "Řadit",
+    recommended: "Doporučené",
+    low: "Cena: od nejnižší",
+    high: "Cena: od nejvyšší",
+    newest: "Nejnovější",
+    add: "Přidat do košíku",
+    out: "Vyprodáno",
+    back: "Zpět do obchodu",
+    checkout: "Pokračovat k objednávce",
+    empty: "Košík je zatím prázdný.",
+    subtotal: "Mezisoučet",
+    shipping: "Doprava",
+    total: "Celkem",
+    name: "Jméno a příjmení",
+    email: "E-mail",
+    address: "Ulice a číslo",
+    postal: "PSČ",
+    country: "Země",
+    place: "Dokončit ukázkovou objednávku",
+    demo: "Ukázkový obchod. Žádná platba ani zásilka nebude zpracována.",
+    thankYou: "Děkujeme. Objednávka je připravena.",
+    order: "Číslo objednávky",
+    noResults: "Nic jsme nenašli. Zkuste jiný výraz.",
+    quantity: "Množství",
+    remove: "Odebrat",
+    details: "Detaily",
+    promise: "Dobré věci jsou na dlouhé cesty.",
+    promiseText:
+      "Méně kompromisů, více kilometrů. Každý kus je navržen pro každodenní pohyb.",
+  },
+  de: {
+    shop: "Shop",
+    story: "Unsere Geschichte",
+    bag: "Warenkorb",
+    heroEyebrow: "AUSRÜSTUNG FÜR JEDEN WEG",
+    heroTitle: "Die Stadt endet. Die Fahrt geht weiter.",
+    heroText:
+      "Durchdachte Ausrüstung für den Weg durch die Stadt und weit darüber hinaus.",
+    explore: "Kollektion entdecken",
+    featured: "Für unterwegs",
+    featuredText: "Ausrüstung, die mit dir Schritt hält.",
+    all: "Alle",
+    search: "Produkte suchen",
+    sort: "Sortieren",
+    recommended: "Empfohlen",
+    low: "Preis: aufsteigend",
+    high: "Preis: absteigend",
+    newest: "Neueste",
+    add: "In den Warenkorb",
+    out: "Ausverkauft",
+    back: "Zurück zum Shop",
+    checkout: "Zur Kasse",
+    empty: "Dein Warenkorb ist noch leer.",
+    subtotal: "Zwischensumme",
+    shipping: "Versand",
+    total: "Gesamt",
+    name: "Vollständiger Name",
+    email: "E-Mail",
+    address: "Straße und Hausnummer",
+    postal: "Postleitzahl",
+    country: "Land",
+    place: "Demo-Bestellung abschließen",
+    demo: "Demo-Shop. Es erfolgt weder eine Zahlung noch ein Versand.",
+    thankYou: "Danke. Deine Bestellung ist eingegangen.",
+    order: "Bestellnummer",
+    noResults: "Keine Ergebnisse. Versuche einen anderen Begriff.",
+    quantity: "Menge",
+    remove: "Entfernen",
+    details: "Details",
+    promise: "Gute Dinge bleiben lange unterwegs.",
+    promiseText:
+      "Weniger Kompromisse, mehr Kilometer. Jedes Stück ist für die tägliche Fahrt gedacht.",
+  },
+  en: {
+    shop: "Shop",
+    story: "Our story",
+    bag: "Basket",
+    heroEyebrow: "GEAR FOR EVERY WAY THROUGH",
+    heroTitle: "The city ends. The ride goes on.",
+    heroText:
+      "Considered gear for the route across town and the miles beyond it.",
+    explore: "Explore the collection",
+    featured: "Made for the miles",
+    featuredText: "The pieces that keep pace with you.",
+    all: "All",
+    search: "Search products",
+    sort: "Sort by",
+    recommended: "Recommended",
+    low: "Price: low to high",
+    high: "Price: high to low",
+    newest: "Newest",
+    add: "Add to basket",
+    out: "Sold out",
+    back: "Back to shop",
+    checkout: "Continue to checkout",
+    empty: "Your basket is empty for now.",
+    subtotal: "Subtotal",
+    shipping: "Shipping",
+    total: "Total",
+    name: "Full name",
+    email: "Email",
+    address: "Street address",
+    postal: "Postal code",
+    country: "Country code (ISO 2)",
+    place: "Place demo order",
+    demo: "This is a demo shop. No payment or shipment will be made.",
+    thankYou: "Thanks. Your order is in.",
+    order: "Order reference",
+    noResults: "Nothing matched. Try another search.",
+    quantity: "Quantity",
+    remove: "Remove",
+    details: "Details",
+    promise: "Good things go the long way.",
+    promiseText:
+      "Fewer compromises, more kilometers. Every piece is made for everyday movement.",
+  },
+};
+export function money(value: Money, locale: Locale): string {
+  return new Intl.NumberFormat(
+    locale === "cs" ? "cs-CZ" : locale === "de" ? "de-DE" : "en-GB",
+    { style: "currency", currency: value.currency },
+  ).format(value.amount / 100);
+}
 export async function api<T>(path: string): Promise<T> {
-  const res = await fetch(`${process.env.API_INTERNAL_URL || "http://127.0.0.1:8000"}${path}`, { cache: "no-store" });
+  const res = await fetch(
+    `${process.env.API_INTERNAL_URL || "http://127.0.0.1:8000"}${path}`,
+    { cache: "no-store" },
+  );
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json() as Promise<T>;
 }
