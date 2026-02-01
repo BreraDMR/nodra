@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { StoreHeader } from "@/components/StoreHeader";
-import { isLocale } from "@/lib/shop";
+import { copy, isLocale } from "@/lib/shop";
 export default async function LocaleLayout({
   children,
   params,
@@ -20,7 +20,7 @@ export default async function LocaleLayout({
         </div>
         <div>
           <p>GOOD GEAR. OPEN ROADS.</p>
-          <small>Fictional portfolio store · No real orders or payments</small>
+          <small>{copy[locale].demoFooter}</small>
         </div>
         <div className="footer-languages">
           PRAGUE / EVERYWHERE
