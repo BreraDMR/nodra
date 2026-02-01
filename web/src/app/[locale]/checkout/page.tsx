@@ -63,20 +63,14 @@ export default function Checkout() {
         ← {t.bag}
       </Link>
       <div className="page-title">
-        <p className="eyebrow">NODRA / DEMO CHECKOUT</p>
+        <p className="eyebrow">NODRA / {t.checkoutLabel}</p>
         <h1>{t.checkout}</h1>
       </div>
       <div className="checkout-layout">
         <form onSubmit={submit} className="checkout-form">
           <div className="form-heading">
             <span>01</span>
-            <h2>
-              {locale === "cs"
-                ? "Kontaktní údaje"
-                : locale === "de"
-                  ? "Kontakt & Lieferung"
-                  : "Contact & delivery"}
-            </h2>
+            <h2>{t.contact}</h2>
           </div>
           <div className="form-grid">
             <label>
@@ -159,7 +153,7 @@ export default function Checkout() {
           </button>
         </form>
         <aside className="checkout-summary">
-          <p className="eyebrow">NODRA / ORDER SUMMARY</p>
+          <p className="eyebrow">NODRA / {t.summaryLabel}</p>
           {items.map((x) => (
             <div key={x.variantId} className="summary-line">
               <div>
@@ -191,7 +185,7 @@ export default function Checkout() {
             </strong>
           </div>
           <p>
-            {t.shipping} — {locale === "cs" ? "89 Kč" : "calculated on order"}
+            {t.shipping} — {locale === "cs" ? "89 Kč" : t.shippingPending}
           </p>
         </aside>
       </div>
