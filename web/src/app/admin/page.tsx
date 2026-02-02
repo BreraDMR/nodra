@@ -157,5 +157,27 @@ export default function AdminPage() {
       .catch(() => {})
       .finally(() => setReady(true));
   }, [reload]);
+  async function login(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const d = new FormData(e.currentTarget);
+    try {
+      const u = await json("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: d.get("email"),
+          password: d.get("password"),
+        }),
+      });
+      setUser(u);
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sign-in failed");
+    } finally {
+      setBusy(false);
+    }
+  }
   return null;
 }
