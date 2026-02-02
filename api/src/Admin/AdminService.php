@@ -79,7 +79,8 @@ final class AdminService
         $this->validateSlug($input->slug, $id);
         $copy = $this->copy($input);
         $product->update($input->slug, $input->category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
-        $variant = $this->em->getRepository(ProductVariant::class)->findOneBy(['product' => $product], ['sku' => 'ASC']);
+        $baseId = $this->db->fetchOne('SELECT id FROM product_variant WHERE product_id = :id ORDER BY (active AND stock > 0) DESC, active DESC, sku ASC LIMIT 1', ['id' => $id]);
+        $variant = $baseId === false ? null : $this->em->find(ProductVariant::class, Uuid::fromString($baseId));
         if ($variant !== null) {
             $variant->update($variant->getLabel(), $input->priceCzk, $input->priceEur, $variant->isActive(), $variant->getColor(), $variant->getSize());
         }
