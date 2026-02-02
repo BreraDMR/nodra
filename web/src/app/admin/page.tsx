@@ -179,5 +179,29 @@ export default function AdminPage() {
       setBusy(false);
     }
   }
+  async function mutate(url: string, method: string, body: unknown) {
+    if (!user) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await json(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": user.csrfToken,
+        },
+        body: JSON.stringify(body),
+      });
+      setMessage("Saved successfully.");
+      await reload();
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   return null;
 }
