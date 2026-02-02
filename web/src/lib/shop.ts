@@ -78,6 +78,13 @@ export const copy = {
     quantity: "Množství",
     remove: "Odebrat",
     details: "Detaily",
+    contact: "Kontaktní údaje",
+    checkoutLabel: "UKÁZKOVÁ OBJEDNÁVKA",
+    summaryLabel: "SOUHRN OBJEDNÁVKY",
+    confirmationLabel: "POTVRZENÍ OBJEDNÁVKY",
+    notesLabel: "O PRODUKTU",
+    demoFooter: "Ukázkový obchod · Bez skutečných objednávek a plateb",
+    shippingPending: "vypočítá se při objednávce",
     promise: "Dobré věci jsou na dlouhé cesty.",
     promiseText:
       "Méně kompromisů, více kilometrů. Každý kus je navržen pro každodenní pohyb.",
@@ -121,6 +128,13 @@ export const copy = {
     quantity: "Menge",
     remove: "Entfernen",
     details: "Details",
+    contact: "Kontakt & Lieferung",
+    checkoutLabel: "DEMO-BESTELLUNG",
+    summaryLabel: "BESTELLÜBERSICHT",
+    confirmationLabel: "BESTELLBESTÄTIGUNG",
+    notesLabel: "PRODUKTDETAILS",
+    demoFooter: "Demo-Shop · Keine echten Bestellungen oder Zahlungen",
+    shippingPending: "wird bei Bestellung berechnet",
     promise: "Gute Dinge bleiben lange unterwegs.",
     promiseText:
       "Weniger Kompromisse, mehr Kilometer. Jedes Stück ist für die tägliche Fahrt gedacht.",
@@ -164,11 +178,49 @@ export const copy = {
     quantity: "Quantity",
     remove: "Remove",
     details: "Details",
+    contact: "Contact & delivery",
+    checkoutLabel: "DEMO CHECKOUT",
+    summaryLabel: "ORDER SUMMARY",
+    confirmationLabel: "ORDER CONFIRMATION",
+    notesLabel: "PRODUCT NOTES",
+    demoFooter: "Fictional portfolio store · No real orders or payments",
+    shippingPending: "calculated at checkout",
     promise: "Good things go the long way.",
     promiseText:
       "Fewer compromises, more kilometers. Every piece is made for everyday movement.",
   },
 };
+const categoryLabels: Record<Locale, Record<string, string>> = {
+  cs: {
+    bags: "Brašny",
+    apparel: "Oblečení",
+    lights: "Světla",
+    accessories: "Doplňky",
+  },
+  de: {
+    bags: "Taschen",
+    apparel: "Bekleidung",
+    lights: "Beleuchtung",
+    accessories: "Zubehör",
+  },
+  en: {
+    bags: "Bags",
+    apparel: "Apparel",
+    lights: "Lights",
+    accessories: "Accessories",
+  },
+};
+export function categoryName(locale: Locale, category: string): string {
+  return categoryLabels[locale][category] || category;
+}
+export function badgeName(locale: Locale, badge: string): string {
+  const labels: Record<Locale, Record<string, string>> = {
+    cs: { New: "Novinka", Limited: "Limitovaná", Bestseller: "Bestseller" },
+    de: { New: "Neu", Limited: "Limitiert", Bestseller: "Bestseller" },
+    en: { New: "New", Limited: "Limited", Bestseller: "Bestseller" },
+  };
+  return labels[locale][badge] || badge;
+}
 export function money(value: Money, locale: Locale): string {
   return new Intl.NumberFormat(
     locale === "cs" ? "cs-CZ" : locale === "de" ? "de-DE" : "en-GB",
