@@ -2,7 +2,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { addCart } from "@/lib/cart";
-import { copy, money, type Locale, type Product } from "@/lib/shop";
+import {
+  categoryName,
+  copy,
+  money,
+  type Locale,
+  type Product,
+} from "@/lib/shop";
 export function BuyBox({
   product,
   locale,
@@ -18,7 +24,9 @@ export function BuyBox({
   const t = copy[locale];
   return (
     <div className="buy-box">
-      <p className="eyebrow">NODRA / {product.category.toUpperCase()}</p>
+      <p className="eyebrow">
+        NODRA / {categoryName(locale, product.category).toUpperCase()}
+      </p>
       <h1>{product.name}</h1>
       <p className="product-short">{product.short}</p>
       <div className="detail-price">
