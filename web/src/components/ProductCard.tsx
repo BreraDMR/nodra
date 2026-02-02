@@ -1,6 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { money, type Card, type Locale } from "@/lib/shop";
+import {
+  badgeName,
+  categoryName,
+  money,
+  type Card,
+  type Locale,
+} from "@/lib/shop";
 export function ProductCard({
   product,
   locale,
@@ -22,12 +28,14 @@ export function ProductCard({
         />
         <span className="product-arrow">↗</span>
         {product.badge && (
-          <span className="product-badge">{product.badge}</span>
+          <span className="product-badge">
+            {badgeName(locale, product.badge)}
+          </span>
         )}
       </div>
       <div className="product-meta">
         <div>
-          <p className="eyebrow">{product.category}</p>
+          <p className="eyebrow">{categoryName(locale, product.category)}</p>
           <h3>{product.name}</h3>
         </div>
         <span>{money(product.fromPrice, locale)}</span>
