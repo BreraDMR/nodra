@@ -43,7 +43,8 @@ final class CatalogService
         $pages = max(1, (int) ceil($total / 12));
         $page = min($query->page, $pages);
         $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.category, p.image, p.badge, p.copy -> :locale ->> 'name' AS name,
-            MIN(v.$priceColumn) AS from_price, SUM(CASE WHEN v.stock > 0 THEN 1 ELSE 0 END) AS available
+            COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.$priceColumn END), MIN(v.$priceColumn)) AS from_price,
+            SUM(CASE WHEN v.stock > 0 THEN 1 ELSE 0 END) AS available
             FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
             WHERE $where GROUP BY p.id ORDER BY $sort LIMIT 12 OFFSET ".(($page - 1) * 12), $params);
 
@@ -58,7 +59,8 @@ final class CatalogService
     public function product(string $slug, string $locale): ?array
     {
         $row = $this->db->fetchAssociative("SELECT p.*, p.copy -> :locale ->> 'name' AS name,
-            MIN(v.price_czk) AS from_czk, MIN(v.price_eur) AS from_eur,
+            COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_czk END), MIN(v.price_czk)) AS from_czk,
+            COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_eur END), MIN(v.price_eur)) AS from_eur,
             SUM(CASE WHEN v.stock > 0 THEN 1 ELSE 0 END) AS available
             FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
             WHERE p.slug = :slug AND p.status = 'published' GROUP BY p.id", ['slug' => $slug, 'locale' => $locale]);
