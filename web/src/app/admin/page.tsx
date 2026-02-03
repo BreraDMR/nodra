@@ -316,5 +316,63 @@ export default function AdminPage() {
       />
     </label>
   );
+  if (!ready)
+    return <main className="admin-loading">Loading NODRA Studio…</main>;
+  if (!user)
+    return (
+      <main className="admin-login">
+        <div className="admin-login-art">
+          <Image
+            src="/images/hero-prague.png"
+            alt="Cyclist in Prague"
+            fill
+            sizes="50vw"
+          />
+          <div>
+            <span>NODRA / STUDIO</span>
+            <h1>
+              Keep the
+              <br />
+              journey moving.
+            </h1>
+          </div>
+        </div>
+        <div className="admin-login-panel">
+          <Link href="/cs" className="admin-wordmark">
+            NODRA<span>®</span>
+          </Link>
+          <div className="admin-login-box">
+            <p className="eyebrow">OPERATIONS / SIGN IN</p>
+            <h2>Welcome back.</h2>
+            <p>Manage the collection, stock and orders in one place.</p>
+            <form onSubmit={login}>
+              <label>
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  defaultValue="admin@nodra.test"
+                />
+              </label>
+              <label>
+                Password
+                <input type="password" name="password" required />
+              </label>
+              {error && (
+                <p className="admin-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <button disabled={busy}>
+                Sign in <span>↗</span>
+              </button>
+            </form>
+            <small>Local demo account: admin@nodra.test / NodraDemo2026!</small>
+          </div>
+          <span className="admin-login-foot">NODRA STUDIO © 2026</span>
+        </div>
+      </main>
+    );
   return null;
 }
