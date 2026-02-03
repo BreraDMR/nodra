@@ -220,5 +220,23 @@ export default function AdminPage() {
     );
     if (ok) setEditing(null);
   }
+  async function saveVariant(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!variantEditing) return;
+    const ok = await mutate(
+      variantEditing.id
+        ? `/api/admin/variants/${variantEditing.id}`
+        : `/api/admin/products/${variantEditing.productId}/variants`,
+      variantEditing.id ? "PUT" : "POST",
+      {
+        ...variantForm,
+        color: variantForm.color || null,
+        size: variantForm.size || null,
+        priceCzk: Number(variantForm.priceCzk),
+        priceEur: Number(variantForm.priceEur),
+      },
+    );
+    if (ok) setVariantEditing(null);
+  }
   return null;
 }
