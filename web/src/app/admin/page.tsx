@@ -288,5 +288,13 @@ export default function AdminPage() {
       status,
     });
   }
+  async function openOrder(id: string) {
+    setSelectedOrder(id);
+    try {
+      setOrderDetail(await json(`/api/admin/orders/${id}`));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load order");
+    }
+  }
   return null;
 }
