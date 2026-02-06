@@ -20,7 +20,7 @@ Run verification with `./scripts/check.sh`. The API contract is in [`api/config/
 - Czech, German and English routes, localized product copy and currency formatting
 - Product catalogue with category, search, sorting and pagination; variant selection and inventory availability
 - Browser basket, guest checkout, server-side repricing, inventory reservation, idempotent order creation and private order lookup token
-- Admin session, dashboard, product editing/creation, stock adjustments, order queue and status workflow
+- Admin session, dashboard, product and variant editing/creation, stock adjustments, order queue and status workflow
 - Original AI-generated demo imagery and a responsive storefront and admin interface
 
 ## Architecture
