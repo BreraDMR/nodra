@@ -55,6 +55,9 @@ class ShopOrder
     #[ORM\Column(length: 24)]
     private string $postalCode;
 
+    #[ORM\Column(length: 120, options: ['default' => ''])]
+    private string $district = '';
+
     #[ORM\Column]
     private int $subtotalMinor;
 
@@ -67,7 +70,7 @@ class ShopOrder
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(string $idempotencyKey, string $requestHash, string $locale, string $currency, string $customerName, string $email, string $country, string $address, string $postalCode, int $subtotalMinor, int $shippingMinor)
+    public function __construct(string $idempotencyKey, string $requestHash, string $locale, string $currency, string $customerName, string $email, string $country, string $address, string $postalCode, string $district, int $subtotalMinor, int $shippingMinor)
     {
         $this->id = Uuid::v7();
         $this->reference = 'ND-'.strtoupper(bin2hex(random_bytes(4)));
@@ -81,6 +84,7 @@ class ShopOrder
         $this->country = $country;
         $this->address = $address;
         $this->postalCode = $postalCode;
+        $this->district = $district;
         $this->subtotalMinor = $subtotalMinor;
         $this->shippingMinor = $shippingMinor;
         $this->totalMinor = $subtotalMinor + $shippingMinor;
@@ -100,6 +104,7 @@ class ShopOrder
     public function getCountry(): string { return $this->country; }
     public function getAddress(): string { return $this->address; }
     public function getPostalCode(): string { return $this->postalCode; }
+    public function getDistrict(): string { return $this->district; }
     public function getSubtotalMinor(): int { return $this->subtotalMinor; }
     public function getShippingMinor(): int { return $this->shippingMinor; }
     public function getTotalMinor(): int { return $this->totalMinor; }
