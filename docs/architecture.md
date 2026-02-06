@@ -18,4 +18,4 @@ Admin writes require an authenticated session and CSRF token. A product can be d
 
 ## Local demo limits
 
-Product media is selected by an image path, with no upload pipeline. Existing variant labels and price tiers can be stocked individually, while the product editor changes the first variant's base price. Shipping uses fixed illustrative amounts by destination. There is no payment capture, email, tax calculation, promotion engine, refund or fulfillment integration. Public deployment needs a separate security, accessibility, legal and operational review.
+Product media is selected by an image path, with no upload pipeline. Variants can be created and their labels, prices, active status and stock managed separately. The product editor also changes the base price of the first available variant. Shipping uses fixed illustrative amounts by destination. There is no payment capture, email, tax calculation, promotion engine, refund or fulfillment integration. Public deployment needs a separate security, accessibility, legal and operational review.
