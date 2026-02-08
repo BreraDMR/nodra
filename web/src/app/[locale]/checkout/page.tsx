@@ -23,9 +23,10 @@ export default function Checkout() {
     const customer = {
       name: String(data.get("name")),
       email: String(data.get("email")),
-      country: String(data.get("country")),
+      country: "CZ",
       address: String(data.get("address")),
       postalCode: String(data.get("postalCode")),
+      district: String(data.get("district")),
     };
     const key = (keyRef.current ||= crypto.randomUUID());
     try {
@@ -102,43 +103,25 @@ export default function Checkout() {
                 name="postalCode"
                 required
                 autoComplete="postal-code"
-                maxLength={24}
+                inputMode="numeric"
+                pattern="[0-9]{3} ?[0-9]{2}"
+                maxLength={6}
               />
             </label>
             <label>
-              {t.country}
-              {locale === "en" ? (
-                <>
-                  <input
-                    name="country"
-                    list="countries"
-                    defaultValue="US"
-                    required
-                    pattern="[A-Za-z]{2}"
-                    maxLength={2}
-                  />
-                  <datalist id="countries">
-                    <option value="US">United States</option>
-                    <option value="GB">United Kingdom</option>
-                    <option value="CA">Canada</option>
-                    <option value="AU">Australia</option>
-                    <option value="NZ">New Zealand</option>
-                    <option value="IE">Ireland</option>
-                    <option value="CZ">Czechia</option>
-                    <option value="DE">Germany</option>
-                  </datalist>
-                </>
-              ) : (
-                <select
-                  name="country"
-                  defaultValue={locale === "cs" ? "CZ" : "DE"}
-                >
-                  <option value="CZ">Česká republika</option>
-                  <option value="DE">Deutschland</option>
-                </select>
-              )}
+              {t.district}
+              <input name="district" required maxLength={120} />
             </label>
           </div>
+          <p className="delivery-scope">
+            {t.country}:{" "}
+            {locale === "cs"
+              ? "Česká republika"
+              : locale === "de"
+                ? "Tschechien"
+                : "Czechia"}{" "}
+            · {t.czechOnly}
+          </p>
           <div className="demo-notice">✦ {t.demo}</div>
           {error && (
             <p className="form-error" role="alert">
@@ -185,7 +168,7 @@ export default function Checkout() {
             </strong>
           </div>
           <p>
-            {t.shipping} — {locale === "cs" ? "89 Kč" : t.shippingPending}
+            {t.shipping} — {locale === "cs" ? "89 Kč" : "3,90 €"}
           </p>
         </aside>
       </div>

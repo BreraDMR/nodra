@@ -99,12 +99,7 @@ export default function Basket() {
               </strong>
             </div>
             <p>
-              {t.shipping} —{" "}
-              {locale === "cs"
-                ? "89 Kč"
-                : locale === "de"
-                  ? "6,90 €"
-                  : "calculated at checkout"}
+              {t.shipping} — {locale === "cs" ? "89 Kč" : "3,90 €"}
             </p>
             <Link href={`/${locale}/checkout`} className="button button-dark">
               {t.checkout} <span>↗</span>

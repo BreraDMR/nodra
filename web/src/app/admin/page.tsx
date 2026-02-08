@@ -938,6 +938,10 @@ export default function AdminPage() {
                   (orderDetail.customer as { postalCode: string })?.postalCode,
                 )}{" "}
                 ·{" "}
+                {String(
+                  (orderDetail.customer as { district: string })?.district,
+                )}{" "}
+                ·{" "}
                 {String((orderDetail.customer as { country: string })?.country)}
               </span>
             </div>
