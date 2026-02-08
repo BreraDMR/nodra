@@ -31,8 +31,8 @@ final class AppFixtures extends Fixture
                 $copy[$locale] = [
                     'name' => $item['name'][$locale],
                     'short' => $item['short'][$locale],
-                    'description' => $item['short'][$locale],
-                    'details' => $this->details($item['category'], $locale),
+                    'description' => $item['description'][$locale] ?? $item['short'][$locale],
+                    'details' => $item['details'][$locale] ?? $this->details($item['category'], $locale),
                 ];
             }
 
