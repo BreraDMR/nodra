@@ -59,12 +59,8 @@ final class CheckoutService
                     $lines[] = [$id, $quantity, $price, $copy['name'], $label];
                 }
 
-                $shipping = match ($customer['country']) {
-                    'CZ' => $currency === 'CZK' ? 8900 : 390,
-                    'DE' => $currency === 'CZK' ? 16900 : 690,
-                    default => $currency === 'CZK' ? 29900 : 1200,
-                };
-                $order = new ShopOrder($key, $requestHash, $request->locale, $currency, $customer['name'], $customer['email'], $customer['country'], $customer['address'], $customer['postalCode'], $subtotal, $shipping);
+                $shipping = $currency === 'CZK' ? 8900 : 390;
+                $order = new ShopOrder($key, $requestHash, $request->locale, $currency, $customer['name'], $customer['email'], $customer['country'], $customer['address'], $customer['postalCode'], $customer['district'], $subtotal, $shipping);
                 $this->em->persist($order);
 
                 foreach ($lines as [$id, $quantity, $price, $name, $label]) {
@@ -122,7 +118,7 @@ final class CheckoutService
 
     private function customer(array $input): array
     {
-        $fields = ['name', 'email', 'country', 'address', 'postalCode'];
+        $fields = ['name', 'email', 'country', 'address', 'postalCode', 'district'];
         foreach ($fields as $field) {
             if (!isset($input[$field]) || !is_string($input[$field]) || trim($input[$field]) === '') {
                 throw new \InvalidArgumentException('Customer '.$field.' is required');
@@ -132,8 +128,12 @@ final class CheckoutService
             throw new \InvalidArgumentException('A valid email is required');
         }
         $country = strtoupper(trim($input['country']));
-        if (!preg_match('/^[A-Z]{2}$/', $country)) {
-            throw new \InvalidArgumentException('Country must be a two-letter code');
+        if ($country !== 'CZ') {
+            throw new \InvalidArgumentException('Delivery is available only within Czechia');
+        }
+        $postalCode = trim($input['postalCode']);
+        if (!preg_match('/^\d{3}\s?\d{2}$/', $postalCode)) {
+            throw new \InvalidArgumentException('A Czech postal code is required');
         }
 
         return [
@@ -141,7 +141,8 @@ final class CheckoutService
             'email' => mb_substr(trim($input['email']), 0, 180),
             'country' => $country,
             'address' => mb_substr(trim($input['address']), 0, 255),
-            'postalCode' => mb_substr(trim($input['postalCode']), 0, 24),
+            'postalCode' => $postalCode,
+            'district' => mb_substr(trim($input['district']), 0, 120),
         ];
     }
 

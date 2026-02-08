@@ -61,7 +61,7 @@ paths:
     post:
       tags: [Checkout]
       summary: Place a guest demo order
-      description: Reprices items and checks stock in a transaction. Repeating the same idempotency key and payload returns the same order; a changed payload conflicts. No payment or shipment is performed.
+      description: Reprices items and checks stock in a transaction. Czech delivery address is required in every interface locale. Repeating the same idempotency key and payload returns the same order; a changed payload conflicts. No payment or shipment is performed.
       parameters:
         - name: Idempotency-Key
           in: header
@@ -325,13 +325,14 @@ components:
         locale: { type: string, enum: [cs, de, en] }
         customer:
           type: object
-          required: [name, email, country, address, postalCode]
+          required: [name, email, country, address, postalCode, district]
           properties:
             name: { type: string }
             email: { type: string, format: email }
-            country: { type: string }
+            country: { type: string, enum: [CZ] }
             address: { type: string }
-            postalCode: { type: string }
+            postalCode: { type: string, pattern: '^\\d{3}\\s?\\d{2}$' }
+            district: { type: string, maxLength: 120 }
         items:
           type: array
           minItems: 1

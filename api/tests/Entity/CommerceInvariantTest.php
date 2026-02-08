@@ -28,8 +28,8 @@ final class CommerceInvariantTest extends TestCase
 
     public function testOrderTotalAndTransitionSequence(): void
     {
-        $order = new ShopOrder(str_repeat('a', 20), str_repeat('f', 64), 'en', 'EUR', 'Demo Rider', 'rider@example.test', 'DE', 'Demo 12', '10115', 13900, 690);
-        self::assertSame(14590, $order->getTotalMinor());
+        $order = new ShopOrder(str_repeat('a', 20), str_repeat('f', 64), 'en', 'EUR', 'Demo Rider', 'rider@example.test', 'CZ', 'Demo 12', '11000', 'Praha', 13900, 390);
+        self::assertSame(14290, $order->getTotalMinor());
         $order->advanceTo('processing');
         $order->advanceTo('shipped');
         $order->advanceTo('completed');
@@ -40,7 +40,7 @@ final class CommerceInvariantTest extends TestCase
 
     public function testCancellationCannotBeShipped(): void
     {
-        $order = new ShopOrder(str_repeat('b', 20), str_repeat('f', 64), 'cs', 'CZK', 'Demo Rider', 'rider@example.test', 'CZ', 'Demo 12', '11000', 329000, 8900);
+        $order = new ShopOrder(str_repeat('b', 20), str_repeat('f', 64), 'cs', 'CZK', 'Demo Rider', 'rider@example.test', 'CZ', 'Demo 12', '11000', 'Praha', 329000, 8900);
         $order->advanceTo('cancelled');
         $this->expectException(\DomainException::class);
         $order->advanceTo('shipped');

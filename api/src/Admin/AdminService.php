@@ -154,7 +154,7 @@ final class AdminService
 
         return $this->checkout->receipt($order) + [
             'id' => $id,
-            'customer' => ['name' => $order->getCustomerName(), 'email' => $order->getEmail(), 'country' => $order->getCountry(), 'address' => $order->getAddress(), 'postalCode' => $order->getPostalCode()],
+            'customer' => ['name' => $order->getCustomerName(), 'email' => $order->getEmail(), 'country' => $order->getCountry(), 'address' => $order->getAddress(), 'postalCode' => $order->getPostalCode(), 'district' => $order->getDistrict()],
         ];
     }
 
