@@ -1,0 +1,51 @@
+{
+  "slug": "camelbak-podium-620",
+  "category": "accessories",
+  "image": "bottle.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 1,
+  "name": {
+    "cs": "CamelBak Podium 620 ml",
+    "de": "CamelBak Podium 620 ml",
+    "en": "CamelBak Podium 620 ml"
+  },
+  "short": {
+    "cs": "Cyklistická láhev o objemu 620 ml.",
+    "de": "Fahrradflasche mit 620 ml Volumen.",
+    "en": "Cycling bottle with 620 ml capacity."
+  },
+  "details": {
+    "cs": [
+      "Model v nabídce: CamelBak Podium",
+      "Objem: 620 ml"
+    ],
+    "de": [
+      "Modell im Angebot: CamelBak Podium",
+      "Volumen: 620 ml"
+    ],
+    "en": [
+      "Offer model: CamelBak Podium",
+      "Capacity: 620 ml"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/74d7d5952e",
+    "priceCzk": 364,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 326,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 16
+}
