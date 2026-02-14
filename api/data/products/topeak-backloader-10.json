@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-backloader-10",
+  "category": "bags",
+  "image": "seatpack.png",
+  "badge": null,
+  "priceCzk": 169000,
+  "priceEur": 6800,
+  "stock": 28,
+  "name": {
+    "cs": "Topeak BackLoader 10 l",
+    "de": "Topeak BackLoader 10 l",
+    "en": "Topeak BackLoader 10 L"
+  },
+  "short": {
+    "cs": "Podsedlová brašna o objemu 10 l.",
+    "de": "Satteltasche mit 10 l Volumen.",
+    "en": "Saddle bag with 10 L capacity."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak BackLoader",
+      "Objem: 10 l",
+      "Uchycení: sedlo a sedlovka"
+    ],
+    "de": [
+      "Modell: Topeak BackLoader",
+      "Volumen: 10 l",
+      "Befestigung: Sattel und Sattelstütze"
+    ],
+    "en": [
+      "Model: Topeak BackLoader",
+      "Capacity: 10 L",
+      "Mount: saddle and seatpost"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/08edd7a111",
+    "priceCzk": 1339,
+    "stock": 28,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 351,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 1
+}

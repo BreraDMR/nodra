@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DataFixtures;
 
+use App\Catalog\CatalogSeed;
 use App\Entity\AdminUser;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
@@ -24,7 +25,7 @@ final class AppFixtures extends Fixture
             'NODRA Studio',
         ));
 
-        $products = json_decode(file_get_contents(__DIR__.'/../../data/products.json'), true, flags: JSON_THROW_ON_ERROR);
+        $products = CatalogSeed::items();
         foreach ($products as $rank => $item) {
             $copy = [];
             foreach (['cs', 'de', 'en'] as $locale) {
@@ -38,13 +39,13 @@ final class AppFixtures extends Fixture
 
             $image = '/images/'.$item['image'];
             $product = new Product($item['slug'], $item['category'], $copy, $image);
-            $product->update($item['slug'], $item['category'], $copy, $image, [$image], $item['badge'], $rank + 1, 'published');
+            $product->update($item['slug'], $item['category'], $copy, $image, [$image], $item['badge'], $item['featuredRank'] ?? $rank + 1, 'published');
             $manager->persist($product);
 
             foreach ($item['variants'] as $index => $option) {
                 $manager->persist(new ProductVariant(
                     $product,
-                    'ND-'.strtoupper(str_replace('-', '', substr($item['slug'], 0, 10))).'-'.($index + 1),
+                    'ND-'.strtoupper(substr(hash('sha256', $item['slug']), 0, 12)).'-'.($index + 1),
                     $option['label'],
                     $item['priceCzk'] + ($option['priceDeltaCzk'] ?? 0),
                     $item['priceEur'] + ($option['priceDeltaEur'] ?? 0),
