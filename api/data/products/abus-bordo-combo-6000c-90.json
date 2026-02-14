@@ -1,0 +1,54 @@
+{
+  "slug": "abus-bordo-combo-6000c-90",
+  "category": "accessories",
+  "image": "lock.png",
+  "badge": null,
+  "priceCzk": 209000,
+  "priceEur": 8400,
+  "stock": 3,
+  "name": {
+    "cs": "Abus Bordo Combo 6000C/90",
+    "de": "Abus Bordo Combo 6000C/90",
+    "en": "Abus Bordo Combo 6000C/90"
+  },
+  "short": {
+    "cs": "Skládací zámek na jízdní kolo.",
+    "de": "Faltschloss für ein Fahrrad.",
+    "en": "Folding bicycle lock."
+  },
+  "details": {
+    "cs": [
+      "Model: Abus Bordo Combo 6000C/90",
+      "Typ: skládací zámek",
+      "Barva v nabídce: černá"
+    ],
+    "de": [
+      "Modell: Abus Bordo Combo 6000C/90",
+      "Typ: Faltschloss",
+      "Angebotsfarbe: schwarz"
+    ],
+    "en": [
+      "Model: Abus Bordo Combo 6000C/90",
+      "Type: folding lock",
+      "Listed colour: black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/8609d7a402",
+    "priceCzk": 1699,
+    "stock": 3,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 391,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 8
+}
