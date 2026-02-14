@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-aero-race-70",
+  "category": "apparel",
+  "image": "jersey.png",
+  "badge": null,
+  "priceCzk": 299000,
+  "priceEur": 12000,
+  "stock": 2,
+  "name": {
+    "cs": "Pánský dres Castelli Aero Race 7.0",
+    "de": "Castelli Aero Race 7.0 Herren-Trikot",
+    "en": "Castelli Aero Race 7.0 Men’s Jersey"
+  },
+  "short": {
+    "cs": "Silniční dres s krátkým rukávem.",
+    "de": "Kurzärmeliges Trikot für die Straße.",
+    "en": "Short-sleeve jersey for road rides."
+  },
+  "details": {
+    "cs": [
+      "Krátký rukáv",
+      "Černá barva"
+    ],
+    "de": [
+      "Kurze Ärmel",
+      "Schwarz"
+    ],
+    "en": [
+      "Short sleeves",
+      "Black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XXL",
+        "de": "Größe XXL",
+        "en": "Size XXL"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/aab3b36cdb",
+    "priceCzk": 2689,
+    "stock": 2,
+    "stockEvidence": "z(e) 2 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 301,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 2
+}
