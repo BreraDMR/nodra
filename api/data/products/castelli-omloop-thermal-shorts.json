@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-omloop-thermal-shorts",
+  "category": "apparel",
+  "image": "bib-shorts.png",
+  "badge": null,
+  "priceCzk": 269000,
+  "priceEur": 10800,
+  "stock": 2,
+  "name": {
+    "cs": "Pánské kraťasy Castelli Omloop Thermal",
+    "de": "Castelli Omloop Thermal Herren-Shorts",
+    "en": "Castelli Omloop Thermal Men’s Shorts"
+  },
+  "short": {
+    "cs": "Zateplené kraťasy pro chladnější dny.",
+    "de": "Warme Shorts für kühlere Tage.",
+    "en": "Thermal shorts for cooler days."
+  },
+  "details": {
+    "cs": [
+      "Zateplené provedení",
+      "Černá barva"
+    ],
+    "de": [
+      "Thermo-Ausführung",
+      "Schwarz"
+    ],
+    "en": [
+      "Thermal construction",
+      "Black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XXL",
+        "de": "Größe XXL",
+        "en": "Size XXL"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/a841755586",
+    "priceCzk": 2373,
+    "stock": 2,
+    "stockEvidence": "z(e) 2 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 317,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 18
+}
