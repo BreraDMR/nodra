@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-nanoflex-3g-knee",
+  "category": "apparel",
+  "image": "leg-warmers.png",
+  "badge": null,
+  "priceCzk": 169000,
+  "priceEur": 6800,
+  "stock": 10,
+  "name": {
+    "cs": "Návleky na kolena Castelli Nanoflex 3G",
+    "de": "Castelli Nanoflex 3G Knielinge",
+    "en": "Castelli Nanoflex 3G Knee Warmers"
+  },
+  "short": {
+    "cs": "Hřejivé návleky na kolena.",
+    "de": "Wärmende Knielinge fürs Rad.",
+    "en": "Warm knee sleeves for riding."
+  },
+  "details": {
+    "cs": [
+      "Materiál Nano Flex 3G",
+      "Hydrofobní úprava"
+    ],
+    "de": [
+      "Nano Flex 3G Material",
+      "Wasserabweisende Ausrüstung"
+    ],
+    "en": [
+      "Nano Flex 3G fabric",
+      "Hydrophobic finish"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost M",
+        "de": "Größe M",
+        "en": "Size M"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/31630523e2",
+    "priceCzk": 1316,
+    "stock": 10,
+    "stockEvidence": "z(e) 10 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 374,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 14
+}
