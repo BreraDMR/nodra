@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-anima-flow-jersey",
+  "category": "apparel",
+  "image": "jersey.png",
+  "badge": null,
+  "priceCzk": 269000,
+  "priceEur": 10800,
+  "stock": 1,
+  "name": {
+    "cs": "Dámský dres Castelli Anima Flow",
+    "de": "Castelli Anima Flow Damen-Trikot",
+    "en": "Castelli Anima Flow Women’s Jersey"
+  },
+  "short": {
+    "cs": "Letní dres s kapsami na zádech.",
+    "de": "Sommertrikot mit Rückentaschen.",
+    "en": "Summer jersey with rear pockets."
+  },
+  "details": {
+    "cs": [
+      "Celopropínací zip YKK Vislon",
+      "Tři zadní kapsy"
+    ],
+    "de": [
+      "Durchgehender YKK-Vislon-Reißverschluss",
+      "Drei Rückentaschen"
+    ],
+    "en": [
+      "Full-length YKK Vislon zip",
+      "Three rear pockets"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost L",
+        "de": "Größe L",
+        "en": "Size L"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/463bd9648f",
+    "priceCzk": 2373,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 317,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 6
+}
