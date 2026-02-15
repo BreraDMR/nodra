@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-espresso-thermal-tights",
+  "category": "apparel",
+  "image": "bib-tights.png",
+  "badge": null,
+  "priceCzk": 409000,
+  "priceEur": 16400,
+  "stock": 4,
+  "name": {
+    "cs": "Pánské kalhoty Castelli Espresso",
+    "de": "Castelli Espresso Herren-Trägerhose",
+    "en": "Castelli Espresso Men’s Bib Tights"
+  },
+  "short": {
+    "cs": "Dlouhé cyklistické kalhoty do chladu.",
+    "de": "Lange Radhose für kühle Tage.",
+    "en": "Long bib tights for cooler rides."
+  },
+  "details": {
+    "cs": [
+      "Materiál Thermoflex",
+      "Vložka Progetto X2 Air Seamless"
+    ],
+    "de": [
+      "Thermoflex-Material",
+      "Progetto X2 Air Seamless Sitzpolster"
+    ],
+    "en": [
+      "Thermoflex fabric",
+      "Progetto X2 Air Seamless pad"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost L",
+        "de": "Größe L",
+        "en": "Size L"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/052fa06b5a",
+    "priceCzk": 3765,
+    "stock": 4,
+    "stockEvidence": "z(e) 4 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 325,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 10
+}
