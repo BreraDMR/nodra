@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-ampp100-front",
+  "category": "lights",
+  "image": "front-round.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 1,
+  "name": {
+    "cs": "CatEye AMPP100 – přední světlo",
+    "de": "CatEye AMPP100 – Frontlicht",
+    "en": "CatEye AMPP100 Front Light"
+  },
+  "short": {
+    "cs": "Lehké světlo pro viditelnost při jízdě po městě.",
+    "de": "Ein leichtes Licht für Sichtbarkeit im Stadtverkehr.",
+    "en": "A small light for visibility on city rides."
+  },
+  "details": {
+    "cs": "Přední světlo; výkon 100 lm; nabíjení přes USB.",
+    "de": "Frontlicht; 100 lm Lichtleistung; Laden per USB.",
+    "en": "Front light; 100 lm output; USB charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/194f108b40",
+    "priceCzk": 306,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 384,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 11
+}
