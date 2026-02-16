@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-velocissima-3-shorts",
+  "category": "apparel",
+  "image": "bib-shorts.png",
+  "badge": null,
+  "priceCzk": 199000,
+  "priceEur": 8000,
+  "stock": 1,
+  "name": {
+    "cs": "Dámské kraťasy Castelli Velocissima 3",
+    "de": "Castelli Velocissima 3 Damen-Trägershorts",
+    "en": "Castelli Velocissima 3 Women’s Bib Shorts"
+  },
+  "short": {
+    "cs": "Cyklistické kraťasy s vložkou.",
+    "de": "Radshorts mit Sitzpolster.",
+    "en": "Cycling shorts with a seat pad."
+  },
+  "details": {
+    "cs": [
+      "Materiál Lycra",
+      "Laclové provedení"
+    ],
+    "de": [
+      "Lycra-Material",
+      "Mit Trägern"
+    ],
+    "en": [
+      "Lycra fabric",
+      "Bib straps"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XS",
+        "de": "Größe XS",
+        "en": "Size XS"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/11750f50ca",
+    "priceCzk": 1661,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 329,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 46
+}
