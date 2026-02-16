@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-originale-18-socks",
+  "category": "apparel",
+  "image": "socks.png",
+  "badge": null,
+  "priceCzk": 79000,
+  "priceEur": 3200,
+  "stock": 100,
+  "name": {
+    "cs": "Ponožky Castelli Originale 18",
+    "de": "Castelli Originale 18 Radsocken",
+    "en": "Castelli Originale 18 Cycling Socks"
+  },
+  "short": {
+    "cs": "Letní cyklistické ponožky s vyšším lemem.",
+    "de": "Sommersocken fürs Rad mit höherem Bund.",
+    "en": "Summer cycling socks with a taller cuff."
+  },
+  "details": {
+    "cs": [
+      "85 % nylon, 15 % elastan",
+      "Lem vysoký 18 cm"
+    ],
+    "de": [
+      "85 % Nylon, 15 % Elasthan",
+      "18 cm hoher Bund"
+    ],
+    "en": [
+      "85% nylon, 15% elastane",
+      "18 cm cuff"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost S/M",
+        "de": "Größe S/M",
+        "en": "Size S/M"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/9981128ce3",
+    "priceCzk": 412,
+    "stock": 100,
+    "stockEvidence": "ze 100 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 378,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 22
+}
