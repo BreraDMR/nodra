@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-unlimited-endurance",
+  "category": "apparel",
+  "image": "jersey.png",
+  "badge": null,
+  "priceCzk": 209000,
+  "priceEur": 8400,
+  "stock": 1,
+  "name": {
+    "cs": "Pánský dres Castelli Unlimited Endurance",
+    "de": "Castelli Unlimited Endurance Herren-Trikot",
+    "en": "Castelli Unlimited Endurance Men’s Jersey"
+  },
+  "short": {
+    "cs": "Dres s krátkým rukávem pro delší výjezdy.",
+    "de": "Kurzärmeliges Trikot für längere Fahrten.",
+    "en": "Short-sleeve jersey for longer rides."
+  },
+  "details": {
+    "cs": [
+      "Krátký rukáv",
+      "Béžová a rezavá barva"
+    ],
+    "de": [
+      "Kurze Ärmel",
+      "Beige und Rostorange"
+    ],
+    "en": [
+      "Short sleeves",
+      "Beige and rust colour"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XL",
+        "de": "Größe XL",
+        "en": "Size XL"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/ad79cae90a",
+    "priceCzk": 1715,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 375,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 34
+}
