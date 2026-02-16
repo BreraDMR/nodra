@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-pro-thermal-skully",
+  "category": "apparel",
+  "image": "skull-cap.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 3,
+  "name": {
+    "cs": "Dámská čepice Castelli Pro Thermal 2 W Skully",
+    "de": "Castelli Pro Thermal 2 W Skully Damen-Mütze",
+    "en": "Castelli Pro Thermal 2 W Skully Women’s Cap"
+  },
+  "short": {
+    "cs": "Tenká čepice pod cyklistickou helmu.",
+    "de": "Dünne Mütze unter dem Fahrradhelm.",
+    "en": "Slim cap for wearing under a helmet."
+  },
+  "details": {
+    "cs": [
+      "Materiál Thermoflex",
+      "Univerzální velikost"
+    ],
+    "de": [
+      "Thermoflex-Material",
+      "Einheitsgröße"
+    ],
+    "en": [
+      "Thermoflex fabric",
+      "One size"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Univerzální",
+        "de": "Einheitsgröße",
+        "en": "One size"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/07da8023b2",
+    "priceCzk": 575,
+    "stock": 3,
+    "stockEvidence": "z(e) 3 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 315,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 26
+}
