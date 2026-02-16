@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-ampp200-front",
+  "category": "lights",
+  "image": "front-round.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 6,
+  "name": {
+    "cs": "CatEye AMPP200 – přední světlo",
+    "de": "CatEye AMPP200 – Frontlicht",
+    "en": "CatEye AMPP200 Front Light"
+  },
+  "short": {
+    "cs": "Malé přední světlo s rychlou montáží na řídítka.",
+    "de": "Ein kleines Frontlicht mit schneller Lenkermontage.",
+    "en": "A small front light with quick handlebar mounting."
+  },
+  "details": {
+    "cs": "Výkon 200 lm; tři režimy svícení; nabíjení přes USB.",
+    "de": "200 lm Lichtleistung; drei Leuchtmodi; Laden per USB.",
+    "en": "200 lm output; three light modes; USB charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/3684d36fdb",
+    "priceCzk": 495,
+    "stock": 6,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 395,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 15
+}
