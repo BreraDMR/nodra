@@ -1,0 +1,55 @@
+{
+  "slug": "castelli-unlimited-2-cargo",
+  "category": "apparel",
+  "image": "bib-shorts.png",
+  "badge": null,
+  "priceCzk": 289000,
+  "priceEur": 11600,
+  "stock": 1,
+  "name": {
+    "cs": "Pánské kraťasy Castelli Unlimited 2 Cargo",
+    "de": "Castelli Unlimited 2 Cargo Herren-Trägershorts",
+    "en": "Castelli Unlimited 2 Cargo Men’s Bib Shorts"
+  },
+  "short": {
+    "cs": "Laclové kraťasy s úložnými kapsami.",
+    "de": "Trägershorts mit Stauraumtaschen.",
+    "en": "Bib shorts with cargo storage."
+  },
+  "details": {
+    "cs": [
+      "Čtyři kapsy",
+      "Vložka KISS Air2",
+      "Materiál Affinity Pro"
+    ],
+    "de": [
+      "Vier Taschen",
+      "KISS Air2 Sitzpolster",
+      "Affinity Pro Material"
+    ],
+    "en": [
+      "Four pockets",
+      "KISS Air2 pad",
+      "Affinity Pro fabric"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XXL",
+        "de": "Größe XXL",
+        "en": "Size XXL"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/f820f733a3",
+    "priceCzk": 2554,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 336,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 30
+}
