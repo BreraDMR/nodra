@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-ampp-400s-front",
+  "category": "lights",
+  "image": "front-round.png",
+  "badge": null,
+  "priceCzk": 99000,
+  "priceEur": 4000,
+  "stock": 6,
+  "name": {
+    "cs": "CatEye AMPP 400S – přední světlo",
+    "de": "CatEye AMPP 400S – Frontlicht",
+    "en": "CatEye AMPP 400S Front Light"
+  },
+  "short": {
+    "cs": "Kompaktní přední světlo s pěti režimy.",
+    "de": "Ein kompaktes Frontlicht mit fünf Modi.",
+    "en": "A compact front light with five modes."
+  },
+  "details": {
+    "cs": "Výkon 400 lm; pět režimů svícení; nabíjení přes USB-C.",
+    "de": "400 lm Lichtleistung; fünf Leuchtmodi; Laden per USB-C.",
+    "en": "400 lm output; five light modes; USB-C charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/9090036424",
+    "priceCzk": 612,
+    "stock": 6,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 378,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 7
+}
