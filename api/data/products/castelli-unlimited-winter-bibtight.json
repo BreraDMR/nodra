@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-unlimited-winter-bibtight",
+  "category": "apparel",
+  "image": "bib-tights.png",
+  "badge": null,
+  "priceCzk": 439000,
+  "priceEur": 17600,
+  "stock": 1,
+  "name": {
+    "cs": "Kalhoty Castelli Unlimited Bibtight",
+    "de": "Castelli Unlimited Bibtight Trägerhose",
+    "en": "Castelli Unlimited Bibtight"
+  },
+  "short": {
+    "cs": "Dlouhé cyklistické kalhoty na zimu.",
+    "de": "Lange Radhose für den Winter.",
+    "en": "Long bib tights for winter rides."
+  },
+  "details": {
+    "cs": [
+      "Zimní provedení",
+      "Černá barva"
+    ],
+    "de": [
+      "Winterausführung",
+      "Schwarz"
+    ],
+    "en": [
+      "Winter construction",
+      "Black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XXL",
+        "de": "Größe XXL",
+        "en": "Size XXL"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/de2d4629ae",
+    "priceCzk": 4014,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 376,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 38
+}
