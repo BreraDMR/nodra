@@ -1,0 +1,52 @@
+{
+  "slug": "castelli-upf-50-leg-warmers",
+  "category": "apparel",
+  "image": "leg-warmers.png",
+  "badge": null,
+  "priceCzk": 109000,
+  "priceEur": 4400,
+  "stock": 1,
+  "name": {
+    "cs": "Návleky na nohy Castelli UPF 50+ Light 2",
+    "de": "Castelli UPF 50+ Light 2 Beinlinge",
+    "en": "Castelli UPF 50+ Light 2 Leg Warmers"
+  },
+  "short": {
+    "cs": "Lehké návleky na nohy pro proměnlivé podmínky.",
+    "de": "Leichte Beinlinge für wechselnde Bedingungen.",
+    "en": "Light leg warmers for changing conditions."
+  },
+  "details": {
+    "cs": [
+      "Návleky na nohy",
+      "Černá barva"
+    ],
+    "de": [
+      "Beinlinge",
+      "Schwarz"
+    ],
+    "en": [
+      "Leg warmers",
+      "Black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost L",
+        "de": "Größe L",
+        "en": "Size L"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/4ed9bd147e",
+    "priceCzk": 692,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 398,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 42
+}
