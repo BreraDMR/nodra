@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-omni-3-rear",
+  "category": "lights",
+  "image": "rear-round.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 0,
+  "name": {
+    "cs": "CatEye Omni 3 – zadní světlo",
+    "de": "CatEye Omni 3 – Rücklicht",
+    "en": "CatEye Omni 3 Rear Light"
+  },
+  "short": {
+    "cs": "Jednoduché zadní světlo CatEye na běžné baterie.",
+    "de": "Ein unkompliziertes CatEye Rücklicht mit Batteriebetrieb.",
+    "en": "A straightforward CatEye rear light powered by batteries."
+  },
+  "details": {
+    "cs": "Tři LED diody; dvě baterie AAA; hmotnost 41,8 g včetně baterií.",
+    "de": "Drei LEDs; zwei AAA-Batterien; 41,8 g inklusive Batterien.",
+    "en": "Three LEDs; two AAA batteries; 41.8 g including batteries."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/1bd1025587",
+    "priceCzk": 257,
+    "stock": null,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 433,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 23
+}
