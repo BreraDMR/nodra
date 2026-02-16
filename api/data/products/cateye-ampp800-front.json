@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-ampp800-front",
+  "category": "lights",
+  "image": "front-round.png",
+  "badge": null,
+  "priceCzk": 159000,
+  "priceEur": 6400,
+  "stock": 1,
+  "name": {
+    "cs": "CatEye AMPP800 – přední světlo",
+    "de": "CatEye AMPP800 – Frontlicht",
+    "en": "CatEye AMPP800 Front Light"
+  },
+  "short": {
+    "cs": "Silnější přední světlo CatEye pro jízdu za tmy.",
+    "de": "Ein helleres CatEye Frontlicht für Fahrten bei Dunkelheit.",
+    "en": "A brighter CatEye front light for rides after dark."
+  },
+  "details": {
+    "cs": "Výkon 800 lm; nabíjení přes USB; držák na řídítka v balení.",
+    "de": "800 lm Lichtleistung; Laden per USB; Lenkerhalterung im Lieferumfang.",
+    "en": "800 lm output; USB charging; handlebar mount included."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/08f0735ab5",
+    "priceCzk": 1164,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 426,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 19
+}
