@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-reflex-auto-rear",
+  "category": "lights",
+  "image": "rear-round.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 1,
+  "name": {
+    "cs": "CatEye Reflex Auto – zadní světlo",
+    "de": "CatEye Reflex Auto – Rücklicht",
+    "en": "CatEye Reflex Auto Rear Light"
+  },
+  "short": {
+    "cs": "Zadní světlo, které reaguje na pohyb a šero.",
+    "de": "Ein Rücklicht mit Bewegungs- und Dämmerungssensor.",
+    "en": "A rear light with motion and dusk sensing."
+  },
+  "details": {
+    "cs": "Automatický senzor pohybu a šera; napájení dvěma bateriemi AAA.",
+    "de": "Automatischer Bewegungs- und Dämmerungssensor; Betrieb mit zwei AAA-Batterien.",
+    "en": "Automatic motion and dusk sensor; powered by two AAA batteries."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/cf342544c6",
+    "priceCzk": 457,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 433,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 27
+}
