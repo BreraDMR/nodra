@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-viz300-usbc-rear",
+  "category": "lights",
+  "image": "rear-light.png",
+  "badge": null,
+  "priceCzk": 109000,
+  "priceEur": 4400,
+  "stock": 100,
+  "name": {
+    "cs": "CatEye ViZ300 USB-C – zadní světlo",
+    "de": "CatEye ViZ300 USB-C – Rücklicht",
+    "en": "CatEye ViZ300 USB-C Rear Light"
+  },
+  "short": {
+    "cs": "Výrazné zadní světlo s nabíjením přes USB-C.",
+    "de": "Ein helles Rücklicht mit USB-C-Ladeanschluss.",
+    "en": "A bright rear light with USB-C charging."
+  },
+  "details": {
+    "cs": "Výkon 300 lm; tři LED diody; čtyři režimy svícení.",
+    "de": "300 lm Lichtleistung; drei LEDs; vier Leuchtmodi.",
+    "en": "300 lm output; three LEDs; four light modes."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/5025481a81",
+    "priceCzk": 684,
+    "stock": 100,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 406,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 35
+}
