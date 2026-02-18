@@ -1,0 +1,54 @@
+{
+  "slug": "crankbrothers-m19",
+  "category": "accessories",
+  "image": "multitool.png",
+  "badge": null,
+  "priceCzk": 109000,
+  "priceEur": 4400,
+  "stock": 1,
+  "name": {
+    "cs": "crankbrothers M19 s pouzdrem",
+    "de": "crankbrothers M19 mit Etui",
+    "en": "crankbrothers M19 with case"
+  },
+  "short": {
+    "cs": "Multifunkční cyklistické nářadí.",
+    "de": "Multifunktionswerkzeug fürs Fahrrad.",
+    "en": "Multitool for bicycle maintenance."
+  },
+  "details": {
+    "cs": [
+      "Model: crankbrothers M19",
+      "Funkce: 19",
+      "Součást nabídky: pouzdro"
+    ],
+    "de": [
+      "Modell: crankbrothers M19",
+      "Funktionen: 19",
+      "Im Angebot enthalten: Etui"
+    ],
+    "en": [
+      "Model: crankbrothers M19",
+      "Functions: 19",
+      "Offer includes: case"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/d6d5989fe5",
+    "priceCzk": 738,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 352,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 20
+}
