@@ -1,0 +1,55 @@
+{
+  "slug": "endura-hummvee-ii-trousers",
+  "category": "apparel",
+  "image": "bib-tights.png",
+  "badge": null,
+  "priceCzk": 209000,
+  "priceEur": 8400,
+  "stock": 1,
+  "name": {
+    "cs": "Pánské kalhoty Endura Hummvee II",
+    "de": "Endura Hummvee II Herren-Hose",
+    "en": "Endura Hummvee II Men’s Trousers"
+  },
+  "short": {
+    "cs": "Odolné dlouhé kalhoty na kolo.",
+    "de": "Robuste lange Hose fürs Rad.",
+    "en": "Durable long trousers for cycling."
+  },
+  "details": {
+    "cs": [
+      "Nylon mini-ripstop",
+      "Úprava DWR bez PFC",
+      "Kapsy na zip"
+    ],
+    "de": [
+      "Nylon-Mini-Ripstop",
+      "PFC-freie DWR-Ausrüstung",
+      "Reißverschlusstaschen"
+    ],
+    "en": [
+      "Nylon mini-ripstop",
+      "PFC-free DWR finish",
+      "Zip pockets"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost M",
+        "de": "Größe M",
+        "en": "Size M"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/0f8babb770",
+    "priceCzk": 1788,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 302,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 54
+}
