@@ -1,0 +1,54 @@
+{
+  "slug": "elite-custom-race-plus-white",
+  "category": "accessories",
+  "image": "bottle-cage.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 2,
+  "name": {
+    "cs": "Elite Custom Race+ bílo-černý",
+    "de": "Elite Custom Race+ weiß-schwarz",
+    "en": "Elite Custom Race+ white/black"
+  },
+  "short": {
+    "cs": "Košík na cyklistickou láhev.",
+    "de": "Flaschenhalter fürs Fahrrad.",
+    "en": "Bottle cage for a bicycle."
+  },
+  "details": {
+    "cs": [
+      "Model: Elite Custom Race+",
+      "Barva: bílo-černá",
+      "Hmotnost: 40 g"
+    ],
+    "de": [
+      "Modell: Elite Custom Race+",
+      "Farbe: weiß-schwarz",
+      "Gewicht: 40 g"
+    ],
+    "en": [
+      "Model: Elite Custom Race+",
+      "Colour: white and black",
+      "Weight: 40 g"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/7086ec529a",
+    "priceCzk": 330,
+    "stock": 2,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 360,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 24
+}
