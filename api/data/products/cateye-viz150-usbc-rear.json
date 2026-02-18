@@ -1,0 +1,42 @@
+{
+  "slug": "cateye-viz150-usbc-rear",
+  "category": "lights",
+  "image": "rear-light.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 98,
+  "name": {
+    "cs": "CatEye ViZ150 USB-C – zadní světlo",
+    "de": "CatEye ViZ150 USB-C – Rücklicht",
+    "en": "CatEye ViZ150 USB-C Rear Light"
+  },
+  "short": {
+    "cs": "Zadní světlo s jasem vhodným i pro denní viditelnost.",
+    "de": "Ein Rücklicht mit guter Sichtbarkeit auch bei Tageslicht.",
+    "en": "A rear light designed to remain visible in daylight."
+  },
+  "details": {
+    "cs": "Výkon 150 lm; čtyři režimy; odolnost IPX4.",
+    "de": "150 lm Lichtleistung; vier Modi; Schutzart IPX4.",
+    "en": "150 lm output; four modes; IPX4 rating."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/c6f031ee7a",
+    "priceCzk": 538,
+    "stock": 98,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 352,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 31
+}
