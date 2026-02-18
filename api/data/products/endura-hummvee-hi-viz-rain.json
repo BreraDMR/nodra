@@ -1,0 +1,52 @@
+{
+  "slug": "endura-hummvee-hi-viz-rain",
+  "category": "apparel",
+  "image": "jacket.png",
+  "badge": null,
+  "priceCzk": 239000,
+  "priceEur": 9600,
+  "stock": 1,
+  "name": {
+    "cs": "Bunda Endura Hummvee Waterproof Hi-Viz",
+    "de": "Endura Hummvee Waterproof Hi-Viz Jacke",
+    "en": "Endura Hummvee Waterproof Hi-Viz Jacket"
+  },
+  "short": {
+    "cs": "Nepromokavá bunda v jasně žluté barvě.",
+    "de": "Regenjacke in auffälligem Gelb.",
+    "en": "Waterproof jacket in high-visibility yellow."
+  },
+  "details": {
+    "cs": [
+      "Nepromokavá bunda",
+      "Výrazná žlutá barva"
+    ],
+    "de": [
+      "Wasserdichte Jacke",
+      "Auffälliges Gelb"
+    ],
+    "en": [
+      "Waterproof jacket",
+      "High-visibility yellow"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost XL",
+        "de": "Größe XL",
+        "en": "Size XL"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/400f4b70f3",
+    "priceCzk": 2061,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 329,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 50
+}
