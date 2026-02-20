@@ -1,0 +1,52 @@
+{
+  "slug": "endura-hummvee-lite-shorts",
+  "category": "apparel",
+  "image": "bib-shorts.png",
+  "badge": null,
+  "priceCzk": 169000,
+  "priceEur": 6800,
+  "stock": 1,
+  "name": {
+    "cs": "Pánské kraťasy Endura Hummvee Lite 2026",
+    "de": "Endura Hummvee Lite 2026 Herren-Shorts",
+    "en": "Endura Hummvee Lite 2026 Men’s Shorts"
+  },
+  "short": {
+    "cs": "Volné kraťasy pro jízdu v terénu.",
+    "de": "Lockere Shorts für Geländefahrten.",
+    "en": "Loose shorts for trail riding."
+  },
+  "details": {
+    "cs": [
+      "Nylonový materiál",
+      "Černá barva"
+    ],
+    "de": [
+      "Nylonmaterial",
+      "Schwarz"
+    ],
+    "en": [
+      "Nylon fabric",
+      "Black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standard",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/bcd642d2bb",
+    "priceCzk": 1338,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 352,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 58
+}
