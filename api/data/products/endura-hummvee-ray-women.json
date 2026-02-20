@@ -1,0 +1,55 @@
+{
+  "slug": "endura-hummvee-ray-women",
+  "category": "apparel",
+  "image": "jersey.png",
+  "badge": null,
+  "priceCzk": 79000,
+  "priceEur": 3200,
+  "stock": 2,
+  "name": {
+    "cs": "Dámský dres Endura Hummvee Ray E6206",
+    "de": "Endura Hummvee Ray E6206 Damen-Trikot",
+    "en": "Endura Hummvee Ray E6206 Women’s Jersey"
+  },
+  "short": {
+    "cs": "Lehký dres s kapsami na zádech.",
+    "de": "Leichtes Trikot mit Rückentaschen.",
+    "en": "Light jersey with rear pockets."
+  },
+  "details": {
+    "cs": [
+      "Více než 80 % recyklované tkaniny",
+      "Tři zadní kapsy",
+      "Zip po celé délce"
+    ],
+    "de": [
+      "Über 80 % recycelter Stoff",
+      "Drei Rückentaschen",
+      "Durchgehender Reißverschluss"
+    ],
+    "en": [
+      "More than 80% recycled fabric",
+      "Three rear pockets",
+      "Full-length zip"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost M",
+        "de": "Größe M",
+        "en": "Size M"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/27270ba6a4",
+    "priceCzk": 433,
+    "stock": 2,
+    "stockEvidence": "z(e) 2 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 357,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 62
+}
