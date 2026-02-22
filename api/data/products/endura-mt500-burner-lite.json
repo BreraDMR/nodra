@@ -1,0 +1,52 @@
+{
+  "slug": "endura-mt500-burner-lite",
+  "category": "apparel",
+  "image": "jersey.png",
+  "badge": null,
+  "priceCzk": 169000,
+  "priceEur": 6800,
+  "stock": 1,
+  "name": {
+    "cs": "Pánský dres Endura MT500 Burner Lite",
+    "de": "Endura MT500 Burner Lite Herren-Trikot",
+    "en": "Endura MT500 Burner Lite Men’s Jersey"
+  },
+  "short": {
+    "cs": "Lehký MTB dres s dlouhým rukávem.",
+    "de": "Leichtes MTB-Trikot mit langen Ärmeln.",
+    "en": "Light long-sleeve MTB jersey."
+  },
+  "details": {
+    "cs": [
+      "Zesílené panely na rukávech",
+      "Laserová perforace"
+    ],
+    "de": [
+      "Verstärkte Ärmelpartien",
+      "Laserperforation"
+    ],
+    "en": [
+      "Reinforced sleeve panels",
+      "Laser perforation"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost S",
+        "de": "Größe S",
+        "en": "Size S"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/6b58603446",
+    "priceCzk": 1351,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 339,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 74
+}
