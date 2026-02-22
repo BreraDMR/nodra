@@ -1,0 +1,54 @@
+{
+  "slug": "knog-oi-classic-large",
+  "category": "accessories",
+  "image": "bell.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 4,
+  "name": {
+    "cs": "Knog Oi Classic Large černý",
+    "de": "Knog Oi Classic Large schwarz",
+    "en": "Knog Oi Classic Large black"
+  },
+  "short": {
+    "cs": "Mechanický zvonek na řídítka.",
+    "de": "Mechanische Klingel für den Lenker.",
+    "en": "Mechanical handlebar bell."
+  },
+  "details": {
+    "cs": [
+      "Model: Knog Oi Classic Large",
+      "Pro řídítka: 23,8–31,8 mm",
+      "Materiál: hliník"
+    ],
+    "de": [
+      "Modell: Knog Oi Classic Large",
+      "Für Lenker: 23,8–31,8 mm",
+      "Material: Aluminium"
+    ],
+    "en": [
+      "Model: Knog Oi Classic Large",
+      "Handlebar diameter: 23.8–31.8 mm",
+      "Material: aluminium"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/6592eb3413",
+    "priceCzk": 330,
+    "stock": 4,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 360,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 28
+}
