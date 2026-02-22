@@ -1,0 +1,54 @@
+{
+  "slug": "lezyne-pocket-drive",
+  "category": "accessories",
+  "image": "pump.png",
+  "badge": null,
+  "priceCzk": 99000,
+  "priceEur": 4000,
+  "stock": 459,
+  "name": {
+    "cs": "Lezyne Pocket Drive černá",
+    "de": "Lezyne Pocket Drive schwarz",
+    "en": "Lezyne Pocket Drive black"
+  },
+  "short": {
+    "cs": "Ruční minipumpa pro kolo.",
+    "de": "Handliche Minipumpe fürs Fahrrad.",
+    "en": "Manual mini pump for a bicycle."
+  },
+  "details": {
+    "cs": [
+      "Model: Lezyne Pocket Drive",
+      "Maximální tlak: 160 psi / 11 bar",
+      "Hmotnost: 79 g"
+    ],
+    "de": [
+      "Modell: Lezyne Pocket Drive",
+      "Maximaldruck: 160 psi / 11 bar",
+      "Gewicht: 79 g"
+    ],
+    "en": [
+      "Model: Lezyne Pocket Drive",
+      "Maximum pressure: 160 psi / 11 bar",
+      "Weight: 79 g"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/e324112fdb",
+    "priceCzk": 612,
+    "stock": 459,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 378,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 32
+}
