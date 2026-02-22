@@ -1,0 +1,42 @@
+{
+  "slug": "knog-blinder-road-r150-rear",
+  "category": "lights",
+  "image": "rear-light.png",
+  "badge": null,
+  "priceCzk": 159000,
+  "priceEur": 6400,
+  "stock": 4,
+  "name": {
+    "cs": "Knog Blinder Road R150 – zadní světlo",
+    "de": "Knog Blinder Road R150 – Rücklicht",
+    "en": "Knog Blinder Road R150 Rear Light"
+  },
+  "short": {
+    "cs": "Silniční zadní světlo s devíti režimy.",
+    "de": "Ein Rücklicht für die Straße mit neun Modi.",
+    "en": "A road rear light with nine modes."
+  },
+  "details": {
+    "cs": "Výkon 150 lm; devět režimů; nabíjení přes USB.",
+    "de": "150 lm Lichtleistung; neun Modi; Laden per USB.",
+    "en": "150 lm output; nine modes; USB charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/98c5961e14",
+    "priceCzk": 1225,
+    "stock": 4,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 365,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 43
+}
