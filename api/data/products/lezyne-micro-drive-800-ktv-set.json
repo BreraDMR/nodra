@@ -1,0 +1,42 @@
+{
+  "slug": "lezyne-micro-drive-800-ktv-set",
+  "category": "lights",
+  "image": "light-set.png",
+  "badge": null,
+  "priceCzk": 189000,
+  "priceEur": 7600,
+  "stock": 5,
+  "name": {
+    "cs": "Lezyne Micro Drive 800+ / KTV Drive+ – sada",
+    "de": "Lezyne Micro Drive 800+ / KTV Drive+ – Set",
+    "en": "Lezyne Micro Drive 800+ / KTV Drive+ Set"
+  },
+  "short": {
+    "cs": "Sada Lezyne pro přední a zadní osvětlení kola.",
+    "de": "Ein Lezyne Set mit Front- und Rücklicht.",
+    "en": "A Lezyne set covering front and rear visibility."
+  },
+  "details": {
+    "cs": "Přední světlo 800 lm; nabíjení přes USB; zadní světlo s krytím IPX7.",
+    "de": "Frontlicht 800 lm; Laden per USB; Rücklicht mit Schutzart IPX7.",
+    "en": "800 lm front light; USB charging; rear light rated IPX7."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/948b08e901",
+    "priceCzk": 1461,
+    "stock": 5,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 429,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 59
+}
