@@ -1,0 +1,42 @@
+{
+  "slug": "knog-blinder-square-rear",
+  "category": "lights",
+  "image": "rear-round.png",
+  "badge": null,
+  "priceCzk": 119000,
+  "priceEur": 4800,
+  "stock": 9,
+  "name": {
+    "cs": "Knog Blinder Square – zadní světlo",
+    "de": "Knog Blinder Square – Rücklicht",
+    "en": "Knog Blinder Square Rear Light"
+  },
+  "short": {
+    "cs": "Čtvercové zadní světlo s osmi režimy.",
+    "de": "Ein quadratisches Rücklicht mit acht Modi.",
+    "en": "A square rear light with eight modes."
+  },
+  "details": {
+    "cs": "Výkon 100 lm; osm režimů; krytí IP67.",
+    "de": "100 lm Lichtleistung; acht Modi; Schutzart IP67.",
+    "en": "100 lm output; eight modes; IP67 rating."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/a9fbc724a9",
+    "priceCzk": 802,
+    "stock": 9,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 388,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 47
+}
