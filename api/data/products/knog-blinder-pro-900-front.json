@@ -1,0 +1,42 @@
+{
+  "slug": "knog-blinder-pro-900-front",
+  "category": "lights",
+  "image": "light.png",
+  "badge": null,
+  "priceCzk": 199000,
+  "priceEur": 8000,
+  "stock": 15,
+  "name": {
+    "cs": "Knog Blinder Pro 900 – přední světlo",
+    "de": "Knog Blinder Pro 900 – Frontlicht",
+    "en": "Knog Blinder Pro 900 Front Light"
+  },
+  "short": {
+    "cs": "Silné přední světlo Knog s držákem na řídítka.",
+    "de": "Ein leistungsstarkes Knog Frontlicht mit Lenkerhalterung.",
+    "en": "A powerful Knog front light with a handlebar mount."
+  },
+  "details": {
+    "cs": "Výkon 900 lm; dobíjecí baterie; držák na řídítka v balení.",
+    "de": "900 lm Lichtleistung; wiederaufladbarer Akku; Lenkerhalterung im Lieferumfang.",
+    "en": "900 lm output; rechargeable battery; handlebar mount included."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/e73a638bdf",
+    "priceCzk": 1574,
+    "stock": 15,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 416,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 39
+}
