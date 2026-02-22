@@ -1,0 +1,52 @@
+{
+  "slug": "gripgrab-pacr-toe-covers",
+  "category": "apparel",
+  "image": "leg-warmers.png",
+  "badge": null,
+  "priceCzk": 99000,
+  "priceEur": 4000,
+  "stock": 10,
+  "name": {
+    "cs": "Návleky na špičky bot GripGrab PACR",
+    "de": "GripGrab PACR Zehenwärmer",
+    "en": "GripGrab PACR Toe Covers"
+  },
+  "short": {
+    "cs": "Návleky chránící před větrem oblast špičky.",
+    "de": "Überzüge für den windgeschützten Zehenbereich.",
+    "en": "Windproof covers for the toe area."
+  },
+  "details": {
+    "cs": [
+      "Neopren s PU povlakem",
+      "Ochrana proti větru"
+    ],
+    "de": [
+      "Neopren mit PU-Beschichtung",
+      "Windschutz"
+    ],
+    "en": [
+      "PU-coated neoprene",
+      "Windproof construction"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standard",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/955dd2681f",
+    "priceCzk": 642,
+    "stock": 10,
+    "stockEvidence": "z(e) 10 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 348,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 78
+}
