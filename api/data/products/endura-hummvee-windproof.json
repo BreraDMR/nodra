@@ -1,0 +1,52 @@
+{
+  "slug": "endura-hummvee-windproof",
+  "category": "apparel",
+  "image": "jacket.png",
+  "badge": null,
+  "priceCzk": 189000,
+  "priceEur": 7600,
+  "stock": 3,
+  "name": {
+    "cs": "Pánská bunda Endura Hummvee Windproof Shell",
+    "de": "Endura Hummvee Windproof Shell Herren-Jacke",
+    "en": "Endura Hummvee Windproof Shell Men’s Jacket"
+  },
+  "short": {
+    "cs": "Lehká vrstva proti větru.",
+    "de": "Leichte Schicht gegen Wind.",
+    "en": "Light layer for windy rides."
+  },
+  "details": {
+    "cs": [
+      "Ochrana proti větru",
+      "Černá barva"
+    ],
+    "de": [
+      "Windschutz",
+      "Schwarz"
+    ],
+    "en": [
+      "Windproof shell",
+      "Black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost M",
+        "de": "Größe M",
+        "en": "Size M"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/c2ff33db7e",
+    "priceCzk": 1508,
+    "stock": 3,
+    "stockEvidence": "z(e) 3 kusů",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 382,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 66
+}
