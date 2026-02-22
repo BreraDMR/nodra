@@ -1,0 +1,42 @@
+{
+  "slug": "lezyne-hecto-500-strip-300-set",
+  "category": "lights",
+  "image": "light-set.png",
+  "badge": null,
+  "priceCzk": 219000,
+  "priceEur": 8800,
+  "stock": 1,
+  "name": {
+    "cs": "Lezyne Hecto Drive 500XL / Strip Drive 300+ – sada",
+    "de": "Lezyne Hecto Drive 500XL / Strip Drive 300+ – Set",
+    "en": "Lezyne Hecto Drive 500XL / Strip Drive 300+ Set"
+  },
+  "short": {
+    "cs": "Dvojice světel Lezyne pro přední a zadní část kola.",
+    "de": "Zwei Lezyne Leuchten für vorne und hinten.",
+    "en": "A Lezyne pair for the front and rear of the bike."
+  },
+  "details": {
+    "cs": "Přední světlo 500 lm; zadní světlo 300 lm; zadní světlo se nabíjí přes USB-C.",
+    "de": "Frontlicht 500 lm; Rücklicht 300 lm; Rücklicht lädt per USB-C.",
+    "en": "500 lm front light; 300 lm rear light; rear light charges via USB-C."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/9bf10b159a",
+    "priceCzk": 1765,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 425,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 51
+}
