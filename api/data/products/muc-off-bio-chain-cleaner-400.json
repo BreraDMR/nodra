@@ -1,0 +1,54 @@
+{
+  "slug": "muc-off-bio-chain-cleaner-400",
+  "category": "accessories",
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 59000,
+  "priceEur": 2400,
+  "stock": 6,
+  "name": {
+    "cs": "Muc-Off Bio Chain Cleaner 400 ml",
+    "de": "Muc-Off Bio Chain Cleaner 400 ml",
+    "en": "Muc-Off Bio Chain Cleaner 400 ml"
+  },
+  "short": {
+    "cs": "Odmašťovač určený pro řetěz.",
+    "de": "Entfetter für die Fahrradkette.",
+    "en": "Degreaser for a bicycle chain."
+  },
+  "details": {
+    "cs": [
+      "Model: Muc-Off Bio Chain Cleaner",
+      "Objem: 400 ml",
+      "Použití: řetěz"
+    ],
+    "de": [
+      "Modell: Muc-Off Bio Chain Cleaner",
+      "Volumen: 400 ml",
+      "Anwendung: Kette"
+    ],
+    "en": [
+      "Model: Muc-Off Bio Chain Cleaner",
+      "Volume: 400 ml",
+      "Use: chain"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/4db1e3cbaa",
+    "priceCzk": 252,
+    "stock": 6,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 338,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 36
+}
