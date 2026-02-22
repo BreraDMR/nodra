@@ -1,0 +1,42 @@
+{
+  "slug": "lezyne-strip-drive-pro-300-rear",
+  "category": "lights",
+  "image": "rear-light.png",
+  "badge": null,
+  "priceCzk": 129000,
+  "priceEur": 5200,
+  "stock": 9,
+  "name": {
+    "cs": "Lezyne Strip Drive Pro 300+ – zadní světlo",
+    "de": "Lezyne Strip Drive Pro 300+ – Rücklicht",
+    "en": "Lezyne Strip Drive Pro 300+ Rear Light"
+  },
+  "short": {
+    "cs": "Výkonné zadní světlo Lezyne pro silniční jízdu.",
+    "de": "Ein helles Lezyne Rücklicht für Fahrten auf der Straße.",
+    "en": "A bright Lezyne rear light for road rides."
+  },
+  "details": {
+    "cs": "Zadní světlo; výkon 300 lm; nabíjení přes USB.",
+    "de": "Rücklicht; 300 lm Lichtleistung; Laden per USB.",
+    "en": "Rear light; 300 lm output; USB charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/a8edd1d963",
+    "priceCzk": 934,
+    "stock": 9,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 356,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 63
+}
