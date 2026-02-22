@@ -1,0 +1,42 @@
+{
+  "slug": "lezyne-hecto-drive-500xl-front",
+  "category": "lights",
+  "image": "front-round.png",
+  "badge": null,
+  "priceCzk": 119000,
+  "priceEur": 4800,
+  "stock": 100,
+  "name": {
+    "cs": "Lezyne Hecto Drive 500XL – přední světlo",
+    "de": "Lezyne Hecto Drive 500XL – Frontlicht",
+    "en": "Lezyne Hecto Drive 500XL Front Light"
+  },
+  "short": {
+    "cs": "Přední světlo v hliníkovém těle.",
+    "de": "Ein Frontlicht im Aluminiumgehäuse.",
+    "en": "A front light in an aluminum housing."
+  },
+  "details": {
+    "cs": "Výkon 500 lm; nabíjení přes USB; hliníkové tělo.",
+    "de": "500 lm Lichtleistung; Laden per USB; Aluminiumgehäuse.",
+    "en": "500 lm output; USB charging; aluminum housing."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/9984315235",
+    "priceCzk": 798,
+    "stock": 100,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 392,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 55
+}
