@@ -1,0 +1,52 @@
+{
+  "slug": "endura-hummvee-zip-off",
+  "category": "apparel",
+  "image": "bib-tights.png",
+  "badge": null,
+  "priceCzk": 249000,
+  "priceEur": 10000,
+  "stock": 1,
+  "name": {
+    "cs": "Pánské kalhoty Endura Hummvee Zip Off",
+    "de": "Endura Hummvee Zip Off Herren-Hose",
+    "en": "Endura Hummvee Zip Off Men’s Trousers"
+  },
+  "short": {
+    "cs": "Dlouhé kalhoty s odepínacími nohavicemi.",
+    "de": "Lange Hose mit abnehmbaren Beinen.",
+    "en": "Long trousers with zip-off legs."
+  },
+  "details": {
+    "cs": [
+      "Odepínací nohavice",
+      "Šedá barva"
+    ],
+    "de": [
+      "Abnehmbare Hosenbeine",
+      "Grau"
+    ],
+    "en": [
+      "Zip-off legs",
+      "Grey"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Velikost L",
+        "de": "Größe L",
+        "en": "Size L"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/5344a6807d",
+    "priceCzk": 2132,
+    "stock": 1,
+    "stockEvidence": "z 1 kusu",
+    "checkedAt": "2026-09-27",
+    "markupCzk": 358,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 70
+}
