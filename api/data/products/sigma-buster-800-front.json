@@ -1,0 +1,42 @@
+{
+  "slug": "sigma-buster-800-front",
+  "category": "lights",
+  "image": "light.png",
+  "badge": null,
+  "priceCzk": 159000,
+  "priceEur": 6400,
+  "stock": 6,
+  "name": {
+    "cs": "Sigma Buster 800 – přední světlo",
+    "de": "Sigma Buster 800 – Frontlicht",
+    "en": "Sigma Buster 800 Front Light"
+  },
+  "short": {
+    "cs": "Přední světlo Sigma s držákem na řídítka.",
+    "de": "Ein Sigma Frontlicht mit Lenkerhalterung.",
+    "en": "A Sigma front light with a handlebar mount."
+  },
+  "details": {
+    "cs": "Výkon 800 lm; nabíjení přes USB; držák na řídítka v balení.",
+    "de": "800 lm Lichtleistung; Laden per USB; Lenkerhalterung im Lieferumfang.",
+    "en": "800 lm output; USB charging; handlebar mount included."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/0e40123249",
+    "priceCzk": 1158,
+    "stock": 6,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 432,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 3
+}
