@@ -1,0 +1,42 @@
+{
+  "slug": "sigma-aura-80-nugget-ii-set",
+  "category": "lights",
+  "image": "light-set.png",
+  "badge": null,
+  "priceCzk": 149000,
+  "priceEur": 6000,
+  "stock": 55,
+  "name": {
+    "cs": "Sigma Aura 80 USB + Nugget II – sada",
+    "de": "Sigma Aura 80 USB + Nugget II – Set",
+    "en": "Sigma Aura 80 USB + Nugget II Set"
+  },
+  "short": {
+    "cs": "Přední a zadní světlo Sigma pro každodenní jízdu.",
+    "de": "Sigma Front- und Rücklicht für tägliche Fahrten.",
+    "en": "Sigma front and rear lights for everyday rides."
+  },
+  "details": {
+    "cs": "Přední světlo 80 lux; dosvit 90 m; přední světlo má čtyři režimy.",
+    "de": "Frontlicht mit 80 Lux; 90 m Leuchtweite; vier Modi am Frontlicht.",
+    "en": "80 lux front light; 90 m beam reach; four front-light modes."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/b847c07a6c",
+    "priceCzk": 1068,
+    "stock": 55,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 422,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 67
+}
