@@ -1,0 +1,42 @@
+{
+  "slug": "sigma-buster-1100-rl150-set",
+  "category": "lights",
+  "image": "light-set.png",
+  "badge": null,
+  "priceCzk": 259000,
+  "priceEur": 10400,
+  "stock": 25,
+  "name": {
+    "cs": "Sigma Buster 1100 + RL150 – sada světel",
+    "de": "Sigma Buster 1100 + RL150 – Lichtset",
+    "en": "Sigma Buster 1100 + RL150 Light Set"
+  },
+  "short": {
+    "cs": "Přední a zadní světlo Sigma v jedné sadě.",
+    "de": "Sigma Front- und Rücklicht als Set.",
+    "en": "A matched Sigma front and rear light set."
+  },
+  "details": {
+    "cs": "Přední světlo 1100 lm; zadní světlo 150 lm; nabíjení přes USB.",
+    "de": "Frontlicht 1100 lm; Rücklicht 150 lm; Laden per USB.",
+    "en": "1100 lm front light; 150 lm rear light; USB charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/aed554bcc4",
+    "priceCzk": 2164,
+    "stock": 25,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 426,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 71
+}
