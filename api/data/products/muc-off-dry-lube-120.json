@@ -1,0 +1,54 @@
+{
+  "slug": "muc-off-dry-lube-120",
+  "category": "accessories",
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 891,
+  "name": {
+    "cs": "Muc-Off Dry Lube 120 ml",
+    "de": "Muc-Off Dry Lube 120 ml",
+    "en": "Muc-Off Dry Lube 120 ml"
+  },
+  "short": {
+    "cs": "Mazivo určené pro cyklistický řetěz.",
+    "de": "Schmiermittel für die Fahrradkette.",
+    "en": "Lubricant for a bicycle chain."
+  },
+  "details": {
+    "cs": [
+      "Model: Muc-Off Dry Lube",
+      "Objem balení: 120 ml",
+      "Použití: řetěz"
+    ],
+    "de": [
+      "Modell: Muc-Off Dry Lube",
+      "Packungsinhalt: 120 ml",
+      "Anwendung: Kette"
+    ],
+    "en": [
+      "Model: Muc-Off Dry Lube",
+      "Pack volume: 120 ml",
+      "Use: chain"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/02b41bda3a",
+    "priceCzk": 328,
+    "stock": 891,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 362,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 40
+}
