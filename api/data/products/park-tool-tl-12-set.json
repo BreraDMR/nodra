@@ -1,0 +1,51 @@
+{
+  "slug": "park-tool-tl-12-set",
+  "category": "accessories",
+  "image": "multitool.png",
+  "badge": null,
+  "priceCzk": 49000,
+  "priceEur": 2000,
+  "stock": 1,
+  "name": {
+    "cs": "Park Tool TL-1.2 sada 3 montpák",
+    "de": "Park Tool TL-1.2 Reifenheber-Set mit 3 Stück",
+    "en": "Park Tool TL-1.2 set of 3 tyre levers"
+  },
+  "short": {
+    "cs": "Sada montpák pro demontáž pláště.",
+    "de": "Reifenheber-Set zum Abnehmen des Reifens.",
+    "en": "Tyre lever set for removing a tyre."
+  },
+  "details": {
+    "cs": [
+      "Model: Park Tool TL-1.2",
+      "Obsah sady: 3 montpáky"
+    ],
+    "de": [
+      "Modell: Park Tool TL-1.2",
+      "Setinhalt: 3 Reifenheber"
+    ],
+    "en": [
+      "Model: Park Tool TL-1.2",
+      "Set contains: 3 tyre levers"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/9d0465c757",
+    "priceCzk": 97,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 393,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 48
+}
