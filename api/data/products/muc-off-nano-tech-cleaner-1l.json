@@ -1,0 +1,54 @@
+{
+  "slug": "muc-off-nano-tech-cleaner-1l",
+  "category": "accessories",
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 69000,
+  "priceEur": 2800,
+  "stock": 50,
+  "name": {
+    "cs": "Muc-Off Nano Tech Bike Cleaner 1 l",
+    "de": "Muc-Off Nano Tech Bike Cleaner 1 l",
+    "en": "Muc-Off Nano Tech Bike Cleaner 1 L"
+  },
+  "short": {
+    "cs": "Čisticí přípravek na jízdní kolo s rozprašovačem.",
+    "de": "Fahrradreiniger mit Sprühkopf.",
+    "en": "Bicycle cleaner with spray nozzle."
+  },
+  "details": {
+    "cs": [
+      "Model: Muc-Off Nano Tech Bike Cleaner",
+      "Objem: 1 l",
+      "Balení: rozprašovač"
+    ],
+    "de": [
+      "Modell: Muc-Off Nano Tech Bike Cleaner",
+      "Volumen: 1 l",
+      "Verpackung: Sprühflasche"
+    ],
+    "en": [
+      "Model: Muc-Off Nano Tech Bike Cleaner",
+      "Volume: 1 L",
+      "Container: spray bottle"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/9419515d1a",
+    "priceCzk": 327,
+    "stock": 50,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 363,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 44
+}
