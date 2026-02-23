@@ -1,0 +1,51 @@
+{
+  "slug": "quad-lock-out-front",
+  "category": "accessories",
+  "image": "phone-mount.png",
+  "badge": null,
+  "priceCzk": 129000,
+  "priceEur": 5200,
+  "stock": 210,
+  "name": {
+    "cs": "Quad Lock Out Front držák telefonu",
+    "de": "Quad Lock Out Front Handyhalterung",
+    "en": "Quad Lock Out Front phone mount"
+  },
+  "short": {
+    "cs": "Držák telefonu na řídítka.",
+    "de": "Handyhalterung für den Lenker.",
+    "en": "Phone mount for a bicycle handlebar."
+  },
+  "details": {
+    "cs": [
+      "Model: Quad Lock Out Front",
+      "Uchycení: řídítka"
+    ],
+    "de": [
+      "Modell: Quad Lock Out Front",
+      "Befestigung: Lenker"
+    ],
+    "en": [
+      "Model: Quad Lock Out Front",
+      "Mount: handlebar"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/2e6ed04bcf",
+    "priceCzk": 971,
+    "stock": 210,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 319,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 4
+}
