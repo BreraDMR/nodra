@@ -1,0 +1,42 @@
+{
+  "slug": "sigma-buster-300-front",
+  "category": "lights",
+  "image": "light.png",
+  "badge": null,
+  "priceCzk": 79000,
+  "priceEur": 3200,
+  "stock": 0,
+  "name": {
+    "cs": "Sigma Buster 300 – přední světlo",
+    "de": "Sigma Buster 300 – Frontlicht",
+    "en": "Sigma Buster 300 Front Light"
+  },
+  "short": {
+    "cs": "Přední světlo pro městské i delší jízdy.",
+    "de": "Ein Frontlicht für Stadtfahrten und längere Strecken.",
+    "en": "A front light for city rides and longer routes."
+  },
+  "details": {
+    "cs": "Výkon 300 lm; dosah světla 70 m; odolnost IPX4.",
+    "de": "300 lm Lichtleistung; 70 m Leuchtweite; Schutzart IPX4.",
+    "en": "300 lm output; 70 m beam reach; IPX4 rating."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/8046e91df5",
+    "priceCzk": 436,
+    "stock": 10,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 354,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 75
+}
