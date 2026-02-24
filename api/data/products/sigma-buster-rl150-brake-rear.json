@@ -1,0 +1,42 @@
+{
+  "slug": "sigma-buster-rl150-brake-rear",
+  "category": "lights",
+  "image": "rear-light.png",
+  "badge": null,
+  "priceCzk": 99000,
+  "priceEur": 4000,
+  "stock": 149,
+  "name": {
+    "cs": "Sigma Buster RL150 Brake – zadní světlo",
+    "de": "Sigma Buster RL150 Brake – Rücklicht",
+    "en": "Sigma Buster RL150 Brake Rear Light"
+  },
+  "short": {
+    "cs": "Zadní světlo, které signalizuje brzdění.",
+    "de": "Ein Rücklicht, das Bremsvorgänge signalisiert.",
+    "en": "A rear light that signals braking."
+  },
+  "details": {
+    "cs": "Výkon 150 lm; senzor brzdění; nabíjení přes USB-C.",
+    "de": "150 lm Lichtleistung; Bremssensor; Laden per USB-C.",
+    "en": "150 lm output; brake sensor; USB-C charging."
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní",
+        "de": "Standard",
+        "en": "Standard"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/381ddc5fab",
+    "priceCzk": 549,
+    "stock": 149,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 441,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 79
+}
