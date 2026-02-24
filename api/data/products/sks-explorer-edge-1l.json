@@ -1,0 +1,54 @@
+{
+  "slug": "sks-explorer-edge-1l",
+  "category": "bags",
+  "image": "top-tube-bag.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 998,
+  "name": {
+    "cs": "SKS Explorer Edge 1 l",
+    "de": "SKS Explorer Edge 1 l",
+    "en": "SKS Explorer Edge 1 L"
+  },
+  "short": {
+    "cs": "Trojúhelníková brašna do rámu.",
+    "de": "Dreieckige Rahmentasche.",
+    "en": "Triangle bag for the bike frame."
+  },
+  "details": {
+    "cs": [
+      "Model: Explorer Edge",
+      "Objem: 1 l",
+      "Uchycení: popruhy se suchým zipem"
+    ],
+    "de": [
+      "Modell: Explorer Edge",
+      "Volumen: 1 l",
+      "Befestigung: Klettgurte"
+    ],
+    "en": [
+      "Model: Explorer Edge",
+      "Capacity: 1 L",
+      "Mount: hook-and-loop straps"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/b56d17e1f3",
+    "priceCzk": 536,
+    "stock": 998,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 354,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 5
+}
