@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-backloader-15",
+  "category": "bags",
+  "image": "seatpack.png",
+  "badge": null,
+  "priceCzk": 179000,
+  "priceEur": 7200,
+  "stock": 4,
+  "name": {
+    "cs": "Topeak BackLoader 15 l",
+    "de": "Topeak BackLoader 15 l",
+    "en": "Topeak BackLoader 15 L"
+  },
+  "short": {
+    "cs": "Velká podsedlová brašna s rolovacím uzávěrem.",
+    "de": "Große Satteltasche mit Rollverschluss.",
+    "en": "Large saddle bag with roll-top closure."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak BackLoader",
+      "Objem: 15 l",
+      "Uchycení: sedlovka"
+    ],
+    "de": [
+      "Modell: Topeak BackLoader",
+      "Volumen: 15 l",
+      "Befestigung: Sattelstütze"
+    ],
+    "en": [
+      "Model: Topeak BackLoader",
+      "Capacity: 15 L",
+      "Mount: seatpost"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/d59b7a2322",
+    "priceCzk": 1398,
+    "stock": 4,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 392,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 21
+}
