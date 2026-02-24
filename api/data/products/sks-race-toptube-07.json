@@ -1,0 +1,54 @@
+{
+  "slug": "sks-race-toptube-07",
+  "category": "bags",
+  "image": "top-tube-bag.png",
+  "badge": null,
+  "priceCzk": 109000,
+  "priceEur": 4400,
+  "stock": 150,
+  "name": {
+    "cs": "SKS Germany Race TopTube Bag 0,7 l",
+    "de": "SKS Germany Race TopTube Bag 0,7 l",
+    "en": "SKS Germany Race TopTube Bag 0.7 L"
+  },
+  "short": {
+    "cs": "Malá brašna na horní rámovou trubku.",
+    "de": "Kleine Tasche für das Oberrohr.",
+    "en": "Small top-tube storage."
+  },
+  "details": {
+    "cs": [
+      "Model: SKS Germany Race TopTube Bag",
+      "Objem: 0,7 l",
+      "Umístění: horní rámová trubka"
+    ],
+    "de": [
+      "Modell: SKS Germany Race TopTube Bag",
+      "Volumen: 0,7 l",
+      "Position: Oberrohr"
+    ],
+    "en": [
+      "Model: SKS Germany Race TopTube Bag",
+      "Capacity: 0.7 L",
+      "Position: top tube"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/437aab66d5",
+    "priceCzk": 738,
+    "stock": 150,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 352,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 17
+}
