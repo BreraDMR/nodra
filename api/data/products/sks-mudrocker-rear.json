@@ -1,0 +1,54 @@
+{
+  "slug": "sks-mudrocker-rear",
+  "category": "accessories",
+  "image": "mudguards.png",
+  "badge": null,
+  "priceCzk": 109000,
+  "priceEur": 4400,
+  "stock": 998,
+  "name": {
+    "cs": "SKS Mudrocker Rear",
+    "de": "SKS Mudrocker Rear",
+    "en": "SKS Mudrocker Rear"
+  },
+  "short": {
+    "cs": "Zadní blatník pro horské kolo.",
+    "de": "Hinterradschutzblech für Mountainbikes.",
+    "en": "Rear mudguard for mountain bikes."
+  },
+  "details": {
+    "cs": [
+      "Model: Mudrocker Rear",
+      "Umístění: zadní kolo",
+      "Barva: černá"
+    ],
+    "de": [
+      "Modell: Mudrocker Rear",
+      "Position: Hinterrad",
+      "Farbe: schwarz"
+    ],
+    "en": [
+      "Model: Mudrocker Rear",
+      "Position: rear wheel",
+      "Colour: black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/237f619975",
+    "priceCzk": 695,
+    "stock": 998,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 395,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 56
+}
