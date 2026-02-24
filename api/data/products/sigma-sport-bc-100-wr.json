@@ -1,0 +1,54 @@
+{
+  "slug": "sigma-sport-bc-100-wr",
+  "category": "accessories",
+  "image": "bike-computer.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 19,
+  "name": {
+    "cs": "Sigma Sport BC 10.0 WR",
+    "de": "Sigma Sport BC 10.0 WR",
+    "en": "Sigma Sport BC 10.0 WR"
+  },
+  "short": {
+    "cs": "Drátový cyklopočítač pro základní údaje o jízdě.",
+    "de": "Kabelgebundener Fahrradcomputer für Fahrdaten.",
+    "en": "Wired cycle computer for essential ride data."
+  },
+  "details": {
+    "cs": [
+      "Model: BC 10.0 WR",
+      "Připojení: drátové",
+      "Typ: cyklopočítač"
+    ],
+    "de": [
+      "Modell: BC 10.0 WR",
+      "Verbindung: kabelgebunden",
+      "Typ: Fahrradcomputer"
+    ],
+    "en": [
+      "Model: BC 10.0 WR",
+      "Connection: wired",
+      "Type: cycle computer"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/586ae65f89",
+    "priceCzk": 539,
+    "stock": 19,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 351,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 52
+}
