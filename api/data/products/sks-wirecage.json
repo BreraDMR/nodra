@@ -1,0 +1,54 @@
+{
+  "slug": "sks-wirecage",
+  "category": "accessories",
+  "image": "bottle-cage.png",
+  "badge": null,
+  "priceCzk": 59000,
+  "priceEur": 2400,
+  "stock": 50,
+  "name": {
+    "cs": "SKS Wirecage černý",
+    "de": "SKS Wirecage schwarz",
+    "en": "SKS Wirecage black"
+  },
+  "short": {
+    "cs": "Hliníkový košík na láhev.",
+    "de": "Flaschenhalter aus Aluminium.",
+    "en": "Aluminium bottle cage."
+  },
+  "details": {
+    "cs": [
+      "Model: SKS Wirecage",
+      "Materiál: hliník",
+      "Barva: černá"
+    ],
+    "de": [
+      "Modell: SKS Wirecage",
+      "Material: Aluminium",
+      "Farbe: schwarz"
+    ],
+    "en": [
+      "Model: SKS Wirecage",
+      "Material: aluminium",
+      "Colour: black"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/badcdfc996",
+    "priceCzk": 230,
+    "stock": 50,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 360,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 64
+}
