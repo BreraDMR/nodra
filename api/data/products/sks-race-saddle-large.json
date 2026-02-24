@@ -1,0 +1,54 @@
+{
+  "slug": "sks-race-saddle-large",
+  "category": "bags",
+  "image": "saddle-bag.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 999,
+  "name": {
+    "cs": "SKS Race Saddle Bag",
+    "de": "SKS Race Saddle Bag",
+    "en": "SKS Race Saddle Bag"
+  },
+  "short": {
+    "cs": "Podsedlová brašna s reflexními prvky.",
+    "de": "Satteltasche mit reflektierenden Details.",
+    "en": "Saddle bag with reflective details."
+  },
+  "details": {
+    "cs": [
+      "Model: SKS Race Saddle Bag",
+      "Uchycení: pod sedlem",
+      "Reflexní prvky"
+    ],
+    "de": [
+      "Modell: SKS Race Saddle Bag",
+      "Befestigung: unter dem Sattel",
+      "Reflektierende Details"
+    ],
+    "en": [
+      "Model: SKS Race Saddle Bag",
+      "Mount: under saddle",
+      "Reflective details"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/47b3315a8d",
+    "priceCzk": 547,
+    "stock": 999,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 343,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 13
+}
