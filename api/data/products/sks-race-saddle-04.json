@@ -1,0 +1,54 @@
+{
+  "slug": "sks-race-saddle-04",
+  "category": "bags",
+  "image": "saddle-bag.png",
+  "badge": null,
+  "priceCzk": 79000,
+  "priceEur": 3200,
+  "stock": 999,
+  "name": {
+    "cs": "SKS Race Saddle Bag 0,4 l",
+    "de": "SKS Race Saddle Bag 0,4 l",
+    "en": "SKS Race Saddle Bag 0.4 L"
+  },
+  "short": {
+    "cs": "Drobná brašna pod sedlo.",
+    "de": "Kleine Tasche unter dem Sattel.",
+    "en": "Small storage under the saddle."
+  },
+  "details": {
+    "cs": [
+      "Model: SKS Race Saddle Bag",
+      "Objem: 0,4 l",
+      "Uchycení: pod sedlem"
+    ],
+    "de": [
+      "Modell: SKS Race Saddle Bag",
+      "Volumen: 0,4 l",
+      "Befestigung: unter dem Sattel"
+    ],
+    "en": [
+      "Model: SKS Race Saddle Bag",
+      "Capacity: 0.4 L",
+      "Mount: under saddle"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/5e321c16db",
+    "priceCzk": 463,
+    "stock": 999,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 327,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 9
+}
