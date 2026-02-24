@@ -1,0 +1,54 @@
+{
+  "slug": "sks-speedrocker-28",
+  "category": "accessories",
+  "image": "mudguards.png",
+  "badge": null,
+  "priceCzk": 119000,
+  "priceEur": 4800,
+  "stock": 148,
+  "name": {
+    "cs": "SKS Speedrocker sada blatníků 28″",
+    "de": "SKS Speedrocker Schutzblechset 28″",
+    "en": "SKS Speedrocker fender set 28″"
+  },
+  "short": {
+    "cs": "Sada blatníků pro 28palcová kola.",
+    "de": "Schutzblechset für 28-Zoll-Räder.",
+    "en": "Fender set for 28-inch wheels."
+  },
+  "details": {
+    "cs": [
+      "Model: SKS Speedrocker",
+      "Pro kola: 28″",
+      "Šířka: 42 mm"
+    ],
+    "de": [
+      "Modell: SKS Speedrocker",
+      "Für Räder: 28″",
+      "Breite: 42 mm"
+    ],
+    "en": [
+      "Model: SKS Speedrocker",
+      "Wheel size: 28″",
+      "Width: 42 mm"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/dbedfd3266",
+    "priceCzk": 882,
+    "stock": 148,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 308,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 60
+}
