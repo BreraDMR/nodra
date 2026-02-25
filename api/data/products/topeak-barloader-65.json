@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-barloader-65",
+  "category": "bags",
+  "image": "handlebar-bag.png",
+  "badge": null,
+  "priceCzk": 149000,
+  "priceEur": 6000,
+  "stock": 20,
+  "name": {
+    "cs": "Topeak BarLoader 6,5 l",
+    "de": "Topeak BarLoader 6,5 l",
+    "en": "Topeak BarLoader 6.5 L"
+  },
+  "short": {
+    "cs": "Brašna na řídítka o objemu 6,5 l.",
+    "de": "Lenkertasche mit 6,5 l Volumen.",
+    "en": "Handlebar bag with 6.5 L capacity."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak BarLoader",
+      "Objem: 6,5 l",
+      "Uchycení: řídítka"
+    ],
+    "de": [
+      "Modell: Topeak BarLoader",
+      "Volumen: 6,5 l",
+      "Befestigung: Lenker"
+    ],
+    "en": [
+      "Model: Topeak BarLoader",
+      "Capacity: 6.5 L",
+      "Mount: handlebar"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/d2673c1bf8",
+    "priceCzk": 1168,
+    "stock": 20,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 322,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 29
+}
