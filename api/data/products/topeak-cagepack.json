@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-cagepack",
+  "category": "bags",
+  "image": "top-tube-bag.png",
+  "badge": null,
+  "priceCzk": 159000,
+  "priceEur": 6400,
+  "stock": 2,
+  "name": {
+    "cs": "Topeak CagePack",
+    "de": "Topeak CagePack",
+    "en": "Topeak CagePack"
+  },
+  "short": {
+    "cs": "Pouzdro na nářadí do košíku na láhev.",
+    "de": "Werkzeugtasche für den Flaschenhalter.",
+    "en": "Tool case that fits a bottle cage."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak CagePack",
+      "Uchycení: košík na láhev",
+      "Materiál: EVA foam"
+    ],
+    "de": [
+      "Modell: Topeak CagePack",
+      "Befestigung: Flaschenhalter",
+      "Material: EVA foam"
+    ],
+    "en": [
+      "Model: Topeak CagePack",
+      "Mount: bottle cage",
+      "Material: EVA foam"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/d2791c1e9f",
+    "priceCzk": 1265,
+    "stock": 2,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 325,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 33
+}
