@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-compact-handlebar-2",
+  "category": "bags",
+  "image": "handlebar-bag.png",
+  "badge": null,
+  "priceCzk": 129000,
+  "priceEur": 5200,
+  "stock": 100,
+  "name": {
+    "cs": "Topeak Compact Handlebar Bag 2 l",
+    "de": "Topeak Compact Handlebar Bag 2 l",
+    "en": "Topeak Compact Handlebar Bag 2 L"
+  },
+  "short": {
+    "cs": "Kompaktní úložný prostor na řídítkách.",
+    "de": "Kompakter Stauraum am Lenker.",
+    "en": "Compact storage at the handlebar."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak Compact Handlebar Bag",
+      "Objem: 2 l",
+      "Uchycení: řídítka"
+    ],
+    "de": [
+      "Modell: Topeak Compact Handlebar Bag",
+      "Volumen: 2 l",
+      "Befestigung: Lenker"
+    ],
+    "en": [
+      "Model: Topeak Compact Handlebar Bag",
+      "Capacity: 2 L",
+      "Mount: handlebar"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/910a209ee7",
+    "priceCzk": 988,
+    "stock": 100,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 302,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 37
+}
