@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-midloader-45",
+  "category": "bags",
+  "image": "frame-bag.png",
+  "badge": null,
+  "priceCzk": 129000,
+  "priceEur": 5200,
+  "stock": 1,
+  "name": {
+    "cs": "Topeak MidLoader 4,5 l",
+    "de": "Topeak MidLoader 4,5 l",
+    "en": "Topeak MidLoader 4.5 L"
+  },
+  "short": {
+    "cs": "Rámová brašna s uchycením na suchý zip.",
+    "de": "Rahmentasche mit Klettbefestigung.",
+    "en": "Frame bag with hook-and-loop mounting."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak MidLoader",
+      "Objem: 4,5 l",
+      "Uchycení: uvnitř rámu, pásky na suchý zip"
+    ],
+    "de": [
+      "Modell: Topeak MidLoader",
+      "Volumen: 4,5 l",
+      "Befestigung: im Rahmendreieck mit Klettgurten"
+    ],
+    "en": [
+      "Model: Topeak MidLoader",
+      "Capacity: 4.5 L",
+      "Mount: inside frame with hook-and-loop straps"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/f0da5b854b",
+    "priceCzk": 920,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 370,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 57
+}
