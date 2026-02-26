@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-mini-morph",
+  "category": "accessories",
+  "image": "pump.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 4,
+  "name": {
+    "cs": "Topeak Mini Morph černá",
+    "de": "Topeak Mini Morph schwarz",
+    "en": "Topeak Mini Morph black"
+  },
+  "short": {
+    "cs": "Ruční pumpa s výklopnou opěrkou.",
+    "de": "Handpumpe mit ausklappbarer Fußstütze.",
+    "en": "Manual pump with fold-out foot support."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak Mini Morph",
+      "Maximální tlak: 160 psi / 11 bar",
+      "Ohebná hadice"
+    ],
+    "de": [
+      "Modell: Topeak Mini Morph",
+      "Maximaldruck: 160 psi / 11 bar",
+      "Flexibler Schlauch"
+    ],
+    "en": [
+      "Model: Topeak Mini Morph",
+      "Maximum pressure: 160 psi / 11 bar",
+      "Flexible hose"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/fe58124dd2",
+    "priceCzk": 557,
+    "stock": 4,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 333,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 72
+}
