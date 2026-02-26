@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-mondopack-12",
+  "category": "bags",
+  "image": "saddle-bag.png",
+  "badge": null,
+  "priceCzk": 99000,
+  "priceEur": 4000,
+  "stock": 100,
+  "name": {
+    "cs": "Topeak MondoPack 1,2 l",
+    "de": "Topeak MondoPack 1,2 l",
+    "en": "Topeak MondoPack 1.2 L"
+  },
+  "short": {
+    "cs": "Podsedlová brašna na drobnou výbavu.",
+    "de": "Satteltasche für kleine Ausrüstung.",
+    "en": "Saddle storage for small essentials."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak MondoPack",
+      "Objem: 1,2 l",
+      "Materiál: 1200D polyester"
+    ],
+    "de": [
+      "Modell: Topeak MondoPack",
+      "Volumen: 1,2 l",
+      "Material: 1200D polyester"
+    ],
+    "en": [
+      "Model: Topeak MondoPack",
+      "Capacity: 1.2 L",
+      "Material: 1200D polyester"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/47df775e48",
+    "priceCzk": 649,
+    "stock": 100,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 341,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 61
+}
