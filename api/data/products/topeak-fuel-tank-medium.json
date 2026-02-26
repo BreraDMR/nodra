@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-fuel-tank-medium",
+  "category": "bags",
+  "image": "top-tube-bag.png",
+  "badge": null,
+  "priceCzk": 109000,
+  "priceEur": 4400,
+  "stock": 29,
+  "name": {
+    "cs": "Topeak Fuel Tank Medium 0,5 l",
+    "de": "Topeak Fuel Tank Medium 0,5 l",
+    "en": "Topeak Fuel Tank Medium 0.5 L"
+  },
+  "short": {
+    "cs": "Kompaktní brašna na horní rámovou trubku.",
+    "de": "Kompakte Tasche für das Oberrohr.",
+    "en": "Compact storage on the top tube."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak Fuel Tank Medium",
+      "Objem: 0,5 l",
+      "Uchycení: popruhy na horní rámové trubce"
+    ],
+    "de": [
+      "Modell: Topeak Fuel Tank Medium",
+      "Volumen: 0,5 l",
+      "Befestigung: Gurte am Oberrohr"
+    ],
+    "en": [
+      "Model: Topeak Fuel Tank Medium",
+      "Capacity: 0.5 L",
+      "Mount: top-tube straps"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/bb6f3f5260",
+    "priceCzk": 713,
+    "stock": 29,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 377,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 49
+}
