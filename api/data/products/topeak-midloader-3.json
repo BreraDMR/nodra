@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-midloader-3",
+  "category": "bags",
+  "image": "frame-bag.png",
+  "badge": null,
+  "priceCzk": 119000,
+  "priceEur": 4800,
+  "stock": 1,
+  "name": {
+    "cs": "Topeak MidLoader 3 l",
+    "de": "Topeak MidLoader 3 l",
+    "en": "Topeak MidLoader 3 L"
+  },
+  "short": {
+    "cs": "Rámová brašna o objemu 3 l.",
+    "de": "Rahmentasche mit 3 l Volumen.",
+    "en": "Frame bag with 3 L capacity."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak MidLoader",
+      "Objem: 3 l",
+      "Umístění: uvnitř rámu"
+    ],
+    "de": [
+      "Modell: Topeak MidLoader",
+      "Volumen: 3 l",
+      "Position: im Rahmendreieck"
+    ],
+    "en": [
+      "Model: Topeak MidLoader",
+      "Capacity: 3 L",
+      "Position: inside frame"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/c5b231ed31",
+    "priceCzk": 877,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 313,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 53
+}
