@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-mtx-trunkbag-dxp-20-226l",
+  "category": "bags",
+  "image": "trunk-bag.png",
+  "badge": null,
+  "priceCzk": 289000,
+  "priceEur": 11600,
+  "stock": 100,
+  "name": {
+    "cs": "Topeak MTX TrunkBag DXP 2.0 22,6 l",
+    "de": "Topeak MTX TrunkBag DXP 2.0 22,6 l",
+    "en": "Topeak MTX TrunkBag DXP 2.0 22.6 L"
+  },
+  "short": {
+    "cs": "Prostorná brašna na zadní nosič.",
+    "de": "Geräumige Tasche für den hinteren Gepäckträger.",
+    "en": "Roomy bag for a rear rack."
+  },
+  "details": {
+    "cs": [
+      "Model: MTX TrunkBag DXP 2.0",
+      "Objem: 22,6 l",
+      "Umístění: zadní nosič"
+    ],
+    "de": [
+      "Modell: MTX TrunkBag DXP 2.0",
+      "Volumen: 22,6 l",
+      "Position: hinterer Gepäckträger"
+    ],
+    "en": [
+      "Model: MTX TrunkBag DXP 2.0",
+      "Capacity: 22.6 L",
+      "Position: rear rack"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/ec1b7a80cd",
+    "priceCzk": 2569,
+    "stock": 100,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 321,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 65
+}
