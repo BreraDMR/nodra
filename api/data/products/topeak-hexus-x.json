@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-hexus-x",
+  "category": "accessories",
+  "image": "multitool.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 149,
+  "name": {
+    "cs": "Topeak Hexus X-21",
+    "de": "Topeak Hexus X-21",
+    "en": "Topeak Hexus X-21"
+  },
+  "short": {
+    "cs": "Cyklistické nářadí s 21 funkcemi.",
+    "de": "Fahrradwerkzeug mit 21 Funktionen.",
+    "en": "Bicycle multitool with 21 functions."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak Hexus X-21",
+      "Funkce: 21",
+      "Hmotnost v nabídce: 170 g"
+    ],
+    "de": [
+      "Modell: Topeak Hexus X-21",
+      "Funktionen: 21",
+      "Gewicht im Angebot: 170 g"
+    ],
+    "en": [
+      "Model: Topeak Hexus X-21",
+      "Functions: 21",
+      "Listed weight: 170 g"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/2a1d338d37",
+    "priceCzk": 569,
+    "stock": 149,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 321,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 68
+}
