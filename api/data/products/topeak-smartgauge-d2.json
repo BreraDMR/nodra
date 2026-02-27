@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-smartgauge-d2",
+  "category": "accessories",
+  "image": "pump.png",
+  "badge": null,
+  "priceCzk": 99000,
+  "priceEur": 4000,
+  "stock": 6,
+  "name": {
+    "cs": "Topeak SmartGauge D2",
+    "de": "Topeak SmartGauge D2",
+    "en": "Topeak SmartGauge D2"
+  },
+  "short": {
+    "cs": "Digitální měřič tlaku v pneumatikách.",
+    "de": "Digitales Messgerät für Reifendruck.",
+    "en": "Digital gauge for tire pressure."
+  },
+  "details": {
+    "cs": [
+      "Model: SmartGauge D2",
+      "Typ: digitální tlakoměr",
+      "Použití: pneumatiky"
+    ],
+    "de": [
+      "Modell: SmartGauge D2",
+      "Typ: digitales Druckmessgerät",
+      "Einsatz: Reifen"
+    ],
+    "en": [
+      "Model: SmartGauge D2",
+      "Type: digital pressure gauge",
+      "Use: tires"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/2ff2f4e474",
+    "priceCzk": 681,
+    "stock": 6,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 309,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 76
+}
