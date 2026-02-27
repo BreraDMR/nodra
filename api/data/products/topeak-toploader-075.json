@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-toploader-075",
+  "category": "bags",
+  "image": "top-tube-bag.png",
+  "badge": null,
+  "priceCzk": 89000,
+  "priceEur": 3600,
+  "stock": 62,
+  "name": {
+    "cs": "Topeak TopLoader 0,75 l",
+    "de": "Topeak TopLoader 0,75 l",
+    "en": "Topeak TopLoader 0.75 L"
+  },
+  "short": {
+    "cs": "Malá brašna na horní rámovou trubku.",
+    "de": "Kleine Tasche für das Oberrohr.",
+    "en": "Small top-tube storage."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak TopLoader",
+      "Objem: 0,75 l",
+      "Umístění: horní rámová trubka"
+    ],
+    "de": [
+      "Modell: Topeak TopLoader",
+      "Volumen: 0,75 l",
+      "Position: Oberrohr"
+    ],
+    "en": [
+      "Model: Topeak TopLoader",
+      "Capacity: 0.75 L",
+      "Position: top tube"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/b354c8d62d",
+    "priceCzk": 579,
+    "stock": 62,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 311,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 73
+}
