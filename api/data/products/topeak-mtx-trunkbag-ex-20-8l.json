@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-mtx-trunkbag-ex-20-8l",
+  "category": "bags",
+  "image": "trunk-bag.png",
+  "badge": null,
+  "priceCzk": 149000,
+  "priceEur": 6000,
+  "stock": 48,
+  "name": {
+    "cs": "Topeak MTX TrunkBag EX 2.0 8 l",
+    "de": "Topeak MTX TrunkBag EX 2.0 8 l",
+    "en": "Topeak MTX TrunkBag EX 2.0 8 L"
+  },
+  "short": {
+    "cs": "Brašna na zadní nosič pro každodenní převoz věcí.",
+    "de": "Gepäckträgertasche für Dinge des Alltags.",
+    "en": "Rear rack bag for everyday carry."
+  },
+  "details": {
+    "cs": [
+      "Model: MTX TrunkBag EX 2.0",
+      "Objem: 8 l",
+      "Umístění: zadní nosič"
+    ],
+    "de": [
+      "Modell: MTX TrunkBag EX 2.0",
+      "Volumen: 8 l",
+      "Position: hinterer Gepäckträger"
+    ],
+    "en": [
+      "Model: MTX TrunkBag EX 2.0",
+      "Capacity: 8 L",
+      "Position: rear rack"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/5f0760fe06",
+    "priceCzk": 1138,
+    "stock": 48,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 352,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 69
+}
