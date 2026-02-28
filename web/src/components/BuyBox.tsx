@@ -34,6 +34,11 @@ export function BuyBox({
           ? money(variant.price, locale)
           : money(product.fromPrice, locale)}
       </div>
+      <p className="product-availability">
+        {variant?.stock
+          ? `${t.available}: ${variant.stock > 99 ? "99+" : variant.stock}`
+          : t.out}
+      </p>
       <div className="variant-heading">
         <strong>{t.details}</strong>
         <span>{variant?.sku}</span>
@@ -81,7 +86,7 @@ export function BuyBox({
       )}
       <div className="detail-notes">
         <p>↗ &nbsp; {t.demo}</p>
-        <p>✦ &nbsp; NODRA / DESIGNED FOR THE EVERYDAY ESCAPE</p>
+        <p>✦ &nbsp; NODRA / CURATED FOR THE EVERYDAY ESCAPE</p>
       </div>
     </div>
   );
