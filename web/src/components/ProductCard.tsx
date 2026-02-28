@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   badgeName,
   categoryName,
+  copy,
   money,
   type Card,
   type Locale,
@@ -37,6 +38,11 @@ export function ProductCard({
         <div>
           <p className="eyebrow">{categoryName(locale, product.category)}</p>
           <h3>{product.name}</h3>
+          <p className="product-availability">
+            {product.inStock
+              ? `${copy[locale].available}: ${product.availableUnits > 99 ? "99+" : product.availableUnits}`
+              : copy[locale].out}
+          </p>
         </div>
         <span>{money(product.fromPrice, locale)}</span>
       </div>
