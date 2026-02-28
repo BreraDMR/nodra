@@ -46,6 +46,10 @@ class ShopOrder
     #[ORM\Column(length: 180)]
     private string $email;
 
+    #[ORM\ManyToOne(targetEntity: CustomerAccount::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?CustomerAccount $account = null;
+
     #[ORM\Column(length: 2)]
     private string $country;
 
@@ -101,6 +105,7 @@ class ShopOrder
     public function getCurrency(): string { return $this->currency; }
     public function getCustomerName(): string { return $this->customerName; }
     public function getEmail(): string { return $this->email; }
+    public function getAccount(): ?CustomerAccount { return $this->account; }
     public function getCountry(): string { return $this->country; }
     public function getAddress(): string { return $this->address; }
     public function getPostalCode(): string { return $this->postalCode; }
@@ -109,6 +114,8 @@ class ShopOrder
     public function getShippingMinor(): int { return $this->shippingMinor; }
     public function getTotalMinor(): int { return $this->totalMinor; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+
+    public function assignAccount(CustomerAccount $account): void { $this->account = $account; }
 
     public function advanceTo(string $next): void
     {
