@@ -1,0 +1,54 @@
+{
+  "slug": "topeak-toploader-drybag-1",
+  "category": "bags",
+  "image": "top-tube-bag.png",
+  "badge": null,
+  "priceCzk": 119000,
+  "priceEur": 4800,
+  "stock": 7,
+  "name": {
+    "cs": "Topeak TopLoader DryBag 1 l",
+    "de": "Topeak TopLoader DryBag 1 l",
+    "en": "Topeak TopLoader DryBag 1 L"
+  },
+  "short": {
+    "cs": "Brašna na horní rámovou trubku pro drobnosti.",
+    "de": "Oberrohrtasche für kleine Dinge.",
+    "en": "Top-tube storage for small items."
+  },
+  "details": {
+    "cs": [
+      "Model: Topeak TopLoader DryBag",
+      "Objem: 1 l",
+      "Umístění: horní rámová trubka"
+    ],
+    "de": [
+      "Modell: Topeak TopLoader DryBag",
+      "Volumen: 1 l",
+      "Position: Oberrohr"
+    ],
+    "en": [
+      "Model: Topeak TopLoader DryBag",
+      "Capacity: 1 L",
+      "Position: top tube"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/236f94233a",
+    "priceCzk": 851,
+    "stock": 7,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 339,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 77
+}
