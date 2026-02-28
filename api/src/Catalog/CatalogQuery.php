@@ -18,5 +18,6 @@ final readonly class CatalogQuery
         public string $sort = 'featured',
         #[Assert\Positive]
         public int $page = 1,
+        public bool $availableOnly = false,
     ) {}
 }
