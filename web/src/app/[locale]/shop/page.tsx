@@ -12,6 +12,7 @@ export default async function Shop({
     q?: string;
     sort?: string;
     page?: string;
+    availableOnly?: string;
   }>;
 }) {
   const { locale } = await params;
@@ -23,6 +24,7 @@ export default async function Shop({
   if (query.q) url.set("q", query.q);
   if (query.sort) url.set("sort", query.sort);
   if (query.page) url.set("page", query.page);
+  if (query.availableOnly === "1") url.set("availableOnly", "1");
   const [catalog, categories] = await Promise.all([
     api<{ items: Card[]; page: number; pages: number; total: number }>(
       `/api/products?${url}`,
@@ -69,7 +71,11 @@ export default async function Shop({
           ))}
         </div>
         <form action={`/${locale}/shop`} className="shop-controls">
+          {query.category && (
+            <input type="hidden" name="category" value={query.category} />
+          )}
           <input
+            type="search"
             name="q"
             defaultValue={query.q || ""}
             placeholder={t.search}
@@ -85,6 +91,15 @@ export default async function Shop({
             <option value="price_desc">{t.high}</option>
             <option value="newest">{t.newest}</option>
           </select>
+          <label className="stock-filter">
+            <input
+              type="checkbox"
+              name="availableOnly"
+              value="1"
+              defaultChecked={query.availableOnly === "1"}
+            />
+            {t.availableOnly}
+          </label>
           <button aria-label={t.search}>↗</button>
         </form>
       </div>
