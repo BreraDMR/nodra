@@ -1,0 +1,54 @@
+{
+  "slug": "zefal-cyclop-mirror",
+  "category": "accessories",
+  "image": "mirror.png",
+  "badge": null,
+  "priceCzk": 59000,
+  "priceEur": 2400,
+  "stock": 1,
+  "name": {
+    "cs": "Zefal Cyclop zrcátko černé",
+    "de": "Zefal Cyclop Spiegel schwarz",
+    "en": "Zefal Cyclop mirror black"
+  },
+  "short": {
+    "cs": "Zrcátko do konce řídítek.",
+    "de": "Spiegel für das Lenkerende.",
+    "en": "Mirror for the handlebar end."
+  },
+  "details": {
+    "cs": [
+      "Model: Zefal Cyclop",
+      "Uchycení: konec řídítek",
+      "Lze umístit vlevo nebo vpravo"
+    ],
+    "de": [
+      "Modell: Zefal Cyclop",
+      "Befestigung: Lenkerende",
+      "Links oder rechts montierbar"
+    ],
+    "en": [
+      "Model: Zefal Cyclop",
+      "Mount: handlebar end",
+      "Can mount left or right"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/f3f9f66edf",
+    "priceCzk": 229,
+    "stock": 1,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 361,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 80
+}
