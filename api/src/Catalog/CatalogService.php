@@ -32,6 +32,9 @@ final class CatalogService
             $where .= " AND (p.copy -> :locale ->> 'name' ILIKE :search OR p.slug ILIKE :search)";
             $params['search'] = '%'.trim($query->q).'%';
         }
+        if ($query->availableOnly) {
+            $where .= ' AND EXISTS (SELECT 1 FROM product_variant stock_variant WHERE stock_variant.product_id = p.id AND stock_variant.active = TRUE AND stock_variant.stock > 0)';
+        }
 
         $sort = match ($query->sort) {
             'price_asc' => 'from_price ASC, p.slug ASC',
@@ -44,7 +47,7 @@ final class CatalogService
         $page = min($query->page, $pages);
         $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.category, p.image, p.badge, p.copy -> :locale ->> 'name' AS name,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.$priceColumn END), MIN(v.$priceColumn)) AS from_price,
-            SUM(CASE WHEN v.stock > 0 THEN 1 ELSE 0 END) AS available
+            COALESCE(SUM(GREATEST(v.stock, 0)), 0) AS available_units
             FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
             WHERE $where GROUP BY p.id ORDER BY $sort LIMIT 12 OFFSET ".(($page - 1) * 12), $params);
 
@@ -61,7 +64,7 @@ final class CatalogService
         $row = $this->db->fetchAssociative("SELECT p.*, p.copy -> :locale ->> 'name' AS name,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_czk END), MIN(v.price_czk)) AS from_czk,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_eur END), MIN(v.price_eur)) AS from_eur,
-            SUM(CASE WHEN v.stock > 0 THEN 1 ELSE 0 END) AS available
+            COALESCE(SUM(GREATEST(v.stock, 0)), 0) AS available_units
             FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
             WHERE p.slug = :slug AND p.status = 'published' GROUP BY p.id", ['slug' => $slug, 'locale' => $locale]);
         if ($row === false) {
@@ -83,7 +86,8 @@ final class CatalogService
             'images' => json_decode($row['images'], true, flags: JSON_THROW_ON_ERROR),
             'badge' => $row['badge'],
             'fromPrice' => ['amount' => (int) $row[$currency === 'CZK' ? 'from_czk' : 'from_eur'], 'currency' => $currency],
-            'inStock' => (int) $row['available'] > 0,
+            'inStock' => (int) $row['available_units'] > 0,
+            'availableUnits' => (int) $row['available_units'],
             'variants' => array_map(static function (array $variant) use ($locale, $currency): array {
                 $labels = json_decode($variant['label'], true, flags: JSON_THROW_ON_ERROR);
 
@@ -113,7 +117,8 @@ final class CatalogService
             'id' => $row['id'], 'slug' => $row['slug'], 'name' => $row['name'],
             'category' => $row['category'], 'image' => $row['image'], 'badge' => $row['badge'],
             'fromPrice' => ['amount' => (int) $row['from_price'], 'currency' => $currency],
-            'inStock' => (int) $row['available'] > 0,
+            'inStock' => (int) $row['available_units'] > 0,
+            'availableUnits' => (int) $row['available_units'],
         ];
     }
 }
