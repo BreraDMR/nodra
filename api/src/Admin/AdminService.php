@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Admin;
 
+use App\Catalog\CatalogSeed;
 use App\Checkout\CheckoutService;
 use App\Entity\OrderItem;
+use App\Entity\LoyaltyEntry;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\ShopOrder;
@@ -24,13 +26,13 @@ final class AdminService
             COUNT(*) FILTER (WHERE status IN ('placed', 'processing')) AS open_orders FROM shop_order");
         $lowStock = $this->db->fetchAllAssociative("SELECT v.id, v.sku, v.stock, p.copy -> 'en' ->> 'name' AS product
             FROM product_variant v JOIN product p ON p.id = v.product_id
-            WHERE v.active = TRUE AND v.stock <= 5 ORDER BY v.stock ASC, v.sku ASC LIMIT 8");
+            WHERE p.status = 'published' AND v.active = TRUE AND v.stock <= 5 ORDER BY v.stock ASC, v.sku ASC LIMIT 8");
 
         return [
             'orders' => (int) $stats['orders'],
             'openOrders' => (int) $stats['open_orders'],
             'revenueEurMinor' => (int) $this->db->fetchOne("SELECT COALESCE(SUM(total_minor), 0) FROM shop_order WHERE currency = 'EUR' AND status != 'cancelled'"),
-            'products' => (int) $this->db->fetchOne('SELECT COUNT(*) FROM product'),
+            'products' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM product WHERE status = 'published'"),
             'lowStock' => array_map(static fn (array $row): array => ['id' => $row['id'], 'sku' => $row['sku'], 'stock' => (int) $row['stock'], 'product' => $row['product']], $lowStock),
             'recentOrders' => array_slice($this->orders(), 0, 5),
         ];
@@ -39,14 +41,16 @@ final class AdminService
     public function products(): array
     {
         $rows = $this->db->fetchAllAssociative("SELECT p.*, p.copy -> 'en' ->> 'name' AS name FROM product p ORDER BY p.featured_rank, p.slug");
+        $sources = array_column(CatalogSeed::items(), 'source', 'slug');
 
-        return array_map(function (array $row): array {
+        return array_map(function (array $row) use ($sources): array {
             $variants = $this->db->fetchAllAssociative('SELECT id, sku, label, price_czk, price_eur, stock, active, color, size FROM product_variant WHERE product_id = :id ORDER BY sku', ['id' => $row['id']]);
 
             return [
                 'id' => $row['id'], 'slug' => $row['slug'], 'category' => $row['category'],
                 'status' => $row['status'], 'name' => $row['name'], 'copy' => json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR),
                 'image' => $row['image'], 'badge' => $row['badge'], 'featuredRank' => (int) $row['featured_rank'],
+                'source' => $sources[$row['slug']] ?? null,
                 'variants' => array_map(static fn (array $v): array => [
                     'id' => $v['id'], 'sku' => $v['sku'], 'label' => json_decode($v['label'], true, flags: JSON_THROW_ON_ERROR),
                     'priceCzk' => (int) $v['price_czk'], 'priceEur' => (int) $v['price_eur'], 'stock' => (int) $v['stock'],
@@ -167,6 +171,11 @@ final class AdminService
                 return null;
             }
             $order->advanceTo($status);
+            if ($status === 'completed' && $order->getAccount() !== null) {
+                $step = $order->getCurrency() === 'CZK' ? 10000 : 400;
+                $points = max(1, intdiv($order->getSubtotalMinor(), $step));
+                $this->em->persist(new LoyaltyEntry($order->getAccount(), $order, $points));
+            }
             if ($status === 'cancelled') {
                 foreach ($this->em->getRepository(OrderItem::class)->findBy(['order' => $order]) as $item) {
                     $variant = $item->getVariant();
