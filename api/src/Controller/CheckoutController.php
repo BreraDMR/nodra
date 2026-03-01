@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Account\AccountService;
 use App\Checkout\CheckoutRequest;
 use App\Checkout\CheckoutService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,13 +16,13 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api')]
 final class CheckoutController extends AbstractController
 {
-    public function __construct(private CheckoutService $checkout) {}
+    public function __construct(private CheckoutService $checkout, private AccountService $accounts) {}
 
     #[Route('/checkout', methods: ['POST'])]
     public function place(#[MapRequestPayload] CheckoutRequest $payload, Request $request): JsonResponse
     {
         try {
-            return $this->json($this->checkout->place($payload, $request->headers->get('Idempotency-Key', '')), 201);
+            return $this->json($this->checkout->place($payload, $request->headers->get('Idempotency-Key', ''), $this->accounts->current($request)), 201);
         } catch (\InvalidArgumentException $error) {
             return $this->json(['message' => $error->getMessage()], 422);
         } catch (\DomainException $error) {

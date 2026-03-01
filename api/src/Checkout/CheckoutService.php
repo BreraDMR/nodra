@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Checkout;
 
 use App\Entity\OrderItem;
+use App\Entity\CustomerAccount;
 use App\Entity\ProductVariant;
 use App\Entity\ShopOrder;
 use Doctrine\DBAL\Connection;
@@ -16,21 +17,24 @@ final class CheckoutService
 {
     public function __construct(private EntityManagerInterface $em, private Connection $db) {}
 
-    public function place(CheckoutRequest $request, string $key): array
+    public function place(CheckoutRequest $request, string $key, ?CustomerAccount $account = null): array
     {
         if (strlen($key) < 16 || strlen($key) > 80) {
             throw new \InvalidArgumentException('Idempotency-Key must contain 16 to 80 characters');
         }
         $customer = $this->customer($request->customer);
+        if ($account !== null && strcasecmp($customer['email'], $account->getEmail()) !== 0) {
+            throw new \InvalidArgumentException('Use your account email for loyalty points');
+        }
         $quantities = $this->quantities($request->items);
         if ($request->promotionCode !== null) {
             throw new \InvalidArgumentException('Promotion codes are not available in this demo');
         }
-        $requestHash = hash('sha256', json_encode([$request->locale, $customer, $quantities], JSON_THROW_ON_ERROR));
+        $requestHash = hash('sha256', json_encode([$request->locale, $customer, $quantities, $account?->getId()->toRfc4122()], JSON_THROW_ON_ERROR));
         $currency = $request->locale === 'cs' ? 'CZK' : 'EUR';
 
         try {
-            $order = $this->db->transactional(function () use ($request, $key, $requestHash, $customer, $quantities, $currency): ShopOrder {
+            $order = $this->db->transactional(function () use ($request, $key, $requestHash, $customer, $quantities, $currency, $account): ShopOrder {
                 $this->db->fetchOne('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))', ['key' => $key]);
                 $existing = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key]);
                 if ($existing !== null) {
@@ -61,6 +65,9 @@ final class CheckoutService
 
                 $shipping = $currency === 'CZK' ? 8900 : 390;
                 $order = new ShopOrder($key, $requestHash, $request->locale, $currency, $customer['name'], $customer['email'], $customer['country'], $customer['address'], $customer['postalCode'], $customer['district'], $subtotal, $shipping);
+                if ($account !== null) {
+                    $order->assignAccount($account);
+                }
                 $this->em->persist($order);
 
                 foreach ($lines as [$id, $quantity, $price, $name, $label]) {
