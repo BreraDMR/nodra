@@ -353,6 +353,82 @@ p {
   letter-spacing: -0.045em;
   margin: 0;
 }
+.product-availability {
+  color: #4d6a32;
+  font-size: 12px;
+  font-weight: 650;
+  margin: 8px 0 0;
+}
+.account-page {
+  max-width: 1240px;
+  min-height: 65vh;
+  margin: 0 auto;
+  padding: 44px 5vw 120px;
+}
+.account-intro {
+  max-width: 660px;
+  margin: 58px 0 48px;
+}
+.account-intro h1 {
+  font-size: clamp(56px, 8vw, 104px);
+  letter-spacing: -0.07em;
+  margin: 12px 0 16px;
+}
+.account-intro > p:last-child {
+  color: #5e675d;
+  line-height: 1.6;
+}
+.account-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  padding: 42px;
+  background: #ecf0e5;
+}
+.account-panel h2 {
+  font-size: 32px;
+  letter-spacing: -0.045em;
+}
+.account-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.points-panel {
+  padding: 28px;
+  background: white;
+}
+.points-panel > strong {
+  display: block;
+  font-size: 80px;
+  line-height: 1;
+}
+.points-panel ul {
+  padding: 0;
+  list-style: none;
+}
+.points-panel li {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #dce2d4;
+  padding: 14px 0;
+}
+.text-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #315d21;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+@media (max-width: 700px) {
+  .account-panel {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+}
 .product-meta > span {
   font-size: 13px;
   font-weight: 700;
@@ -482,8 +558,9 @@ p {
   align-items: center;
   gap: 10px;
   padding-bottom: 8px;
+  flex-wrap: wrap;
 }
-.shop-controls input,
+.shop-controls input[type="search"],
 .shop-controls select {
   border: 0;
   background: transparent;
@@ -493,8 +570,19 @@ p {
   color: var(--ink);
   font-size: 12px;
 }
-.shop-controls input {
+.shop-controls input[type="search"] {
   width: 170px;
+}
+.stock-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-size: 12px;
+  cursor: pointer;
+}
+.stock-filter input[type="checkbox"] {
+  accent-color: #30582b;
 }
 .shop-controls button {
   border: 0;
@@ -988,7 +1076,7 @@ p {
   .shop-controls {
     padding: 18px 0 14px;
   }
-  .shop-controls input {
+  .shop-controls input[type="search"] {
     width: 50%;
   }
   .shop-controls select {
