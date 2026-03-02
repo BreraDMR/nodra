@@ -26,8 +26,7 @@ export function StoreHeader({ locale }: { locale: Locale }) {
   return (
     <>
       <div className="announcement">
-        NODRA / DESIGNED FOR THE EVERYDAY ESCAPE <span>✦</span> PRAGUE ·
-        EVERYWHERE
+        NODRA / CURATED FOR THE EVERYDAY ESCAPE <span>✦</span> PRAGUE · CZECHIA
       </div>
       <header className="site-header">
         <div className="header-inner">
@@ -56,6 +55,9 @@ export function StoreHeader({ locale }: { locale: Locale }) {
             </div>
             <Link href={`/${locale}/basket`} className="basket-link">
               {t.bag} <span>{count}</span>
+            </Link>
+            <Link href={`/${locale}/account`} className="account-link">
+              {t.account}
             </Link>
           </div>
         </div>
