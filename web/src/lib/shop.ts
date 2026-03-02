@@ -9,6 +9,7 @@ export type Card = {
   badge: string | null;
   fromPrice: Money;
   inStock: boolean;
+  availableUnits: number;
 };
 export type Variant = {
   id: string;
@@ -43,7 +44,19 @@ export const copy = {
   cs: {
     shop: "Obchod",
     story: "Náš příběh",
+    storyTitle: ["Každý den", "je cesta."],
     bag: "Košík",
+    account: "Můj účet",
+    points: "Věrnostní body",
+    pointsRule:
+      "Za každých 100 Kč hodnoty zboží získáte 1 bod po dokončení objednávky. Body zatím nelze utratit.",
+    googleSignIn: "Přihlásit se přes Google",
+    demoSignIn: "Vyzkoušet demo účet",
+    signOut: "Odhlásit se",
+    noPoints: "Body se zobrazí po dokončení objednávky.",
+    googleError:
+      "Přihlášení přes Google zatím není dostupné. Zkontrolujte OAuth nastavení nebo použijte demo účet.",
+    demoError: "Přihlášení k demo účtu se nepodařilo.",
     heroEyebrow: "VYBAVENÍ PRO KAŽDOU CESTU",
     heroTitle: "Město končí. Jízda pokračuje.",
     heroText: "Promyšlené vybavení pro cestu přes město i daleko za něj.",
@@ -59,6 +72,8 @@ export const copy = {
     newest: "Nejnovější",
     add: "Přidat do košíku",
     out: "Vyprodáno",
+    available: "Skladem",
+    availableOnly: "Pouze skladem",
     back: "Zpět do obchodu",
     checkout: "Pokračovat k objednávce",
     empty: "Košík je zatím prázdný.",
@@ -89,12 +104,24 @@ export const copy = {
     shippingPending: "vypočítá se při objednávce",
     promise: "Dobré věci jsou na dlouhé cesty.",
     promiseText:
-      "Méně kompromisů, více kilometrů. Každý kus je navržen pro každodenní pohyb.",
+      "Méně kompromisů, více kilometrů. Vybíráme praktickou výbavu pro každodenní jízdu.",
   },
   de: {
     shop: "Shop",
     story: "Unsere Geschichte",
+    storyTitle: ["Jeder Tag", "ist eine Reise."],
     bag: "Warenkorb",
+    account: "Mein Konto",
+    points: "Treuepunkte",
+    pointsRule:
+      "Für Waren im Wert von je 4 € erhalten Sie nach Abschluss der Bestellung 1 Punkt. Punkte können noch nicht eingelöst werden.",
+    googleSignIn: "Mit Google anmelden",
+    demoSignIn: "Demo-Konto ausprobieren",
+    signOut: "Abmelden",
+    noPoints: "Punkte erscheinen nach Abschluss einer Bestellung.",
+    googleError:
+      "Die Google-Anmeldung ist noch nicht verfügbar. Prüfe die OAuth-Einstellungen oder verwende das Demo-Konto.",
+    demoError: "Die Anmeldung beim Demo-Konto ist fehlgeschlagen.",
     heroEyebrow: "AUSRÜSTUNG FÜR JEDEN WEG",
     heroTitle: "Die Stadt endet. Die Fahrt geht weiter.",
     heroText:
@@ -111,6 +138,8 @@ export const copy = {
     newest: "Neueste",
     add: "In den Warenkorb",
     out: "Ausverkauft",
+    available: "Verfügbar",
+    availableOnly: "Nur verfügbare Artikel",
     back: "Zurück zum Shop",
     checkout: "Zur Kasse",
     empty: "Dein Warenkorb ist noch leer.",
@@ -141,12 +170,24 @@ export const copy = {
     shippingPending: "wird bei Bestellung berechnet",
     promise: "Gute Dinge bleiben lange unterwegs.",
     promiseText:
-      "Weniger Kompromisse, mehr Kilometer. Jedes Stück ist für die tägliche Fahrt gedacht.",
+      "Weniger Kompromisse, mehr Kilometer. Wir wählen praktische Ausrüstung für tägliche Fahrten aus.",
   },
   en: {
     shop: "Shop",
     story: "Our story",
+    storyTitle: ["Everyday", "is a journey."],
     bag: "Basket",
+    account: "My account",
+    points: "Loyalty points",
+    pointsRule:
+      "Earn 1 point per 4 € of products after an order is completed. Points cannot yet be redeemed.",
+    googleSignIn: "Continue with Google",
+    demoSignIn: "Try the demo account",
+    signOut: "Sign out",
+    noPoints: "Points appear after an order is completed.",
+    googleError:
+      "Google sign-in is not available yet. Check the OAuth setup or use the demo account.",
+    demoError: "Demo sign-in failed.",
     heroEyebrow: "GEAR FOR EVERY WAY THROUGH",
     heroTitle: "The city ends. The ride goes on.",
     heroText:
@@ -163,6 +204,8 @@ export const copy = {
     newest: "Newest",
     add: "Add to basket",
     out: "Sold out",
+    available: "In stock",
+    availableOnly: "In stock only",
     back: "Back to shop",
     checkout: "Continue to checkout",
     empty: "Your basket is empty for now.",
@@ -193,7 +236,7 @@ export const copy = {
     shippingPending: "calculated at checkout",
     promise: "Good things go the long way.",
     promiseText:
-      "Fewer compromises, more kilometers. Every piece is made for everyday movement.",
+      "Fewer compromises, more kilometers. We select practical gear for everyday riding.",
   },
 };
 const categoryLabels: Record<Locale, Record<string, string>> = {
