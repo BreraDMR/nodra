@@ -24,6 +24,13 @@ type Product = {
   image: string;
   badge: string | null;
   featuredRank: number;
+  source: {
+    url: string;
+    priceCzk: number;
+    stock: number | null;
+    checkedAt: string;
+    markupCzk: number;
+  } | null;
   variants: Variant[];
 };
 type Order = {
@@ -374,6 +381,7 @@ export default function AdminPage() {
         </div>
       </main>
     );
+  const editingProduct = products.find((product) => product.id === editing);
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
@@ -775,6 +783,24 @@ export default function AdminPage() {
                   </select>
                 </label>
               </div>
+              {editingProduct?.source && (
+                <div className="source-card">
+                  <strong>Allegro source snapshot</strong>
+                  <p>
+                    Checked {editingProduct.source.checkedAt} · source{" "}
+                    {editingProduct.source.priceCzk} Kč · visible stock{" "}
+                    {editingProduct.source.stock ?? "unconfirmed"} · markup{" "}
+                    {editingProduct.source.markupCzk} Kč
+                  </p>
+                  <a
+                    href={editingProduct.source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open offer ↗
+                  </a>
+                </div>
+              )}
               <button className="admin-primary" disabled={busy}>
                 Save product ↗
               </button>

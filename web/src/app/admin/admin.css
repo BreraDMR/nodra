@@ -528,6 +528,20 @@
 .admin-modal form > .admin-primary {
   margin-top: 25px;
 }
+.source-card {
+  margin-top: 24px;
+  padding: 18px;
+  background: #eaf0e4;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.source-card p {
+  margin: 6px 0;
+}
+.source-card a {
+  color: #24552a;
+  font-weight: 750;
+}
 .order-detail-meta {
   display: grid;
   gap: 10px;
