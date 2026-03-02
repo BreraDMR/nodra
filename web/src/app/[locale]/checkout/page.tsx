@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCartItems, writeCart } from "@/lib/cart";
@@ -13,6 +13,15 @@ export default function Checkout() {
   const keyRef = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [account, setAccount] = useState<{
+    name: string;
+    email: string;
+  } | null>(null);
+  useEffect(() => {
+    void fetch("/api/account/me").then(async (response) => {
+      if (response.ok) setAccount(await response.json());
+    });
+  }, []);
   const total = items.reduce((n, x) => n + x.price.amount * x.quantity, 0);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -76,13 +85,22 @@ export default function Checkout() {
           <div className="form-grid">
             <label>
               {t.name}
-              <input name="name" required autoComplete="name" maxLength={160} />
+              <input
+                key={account?.name}
+                name="name"
+                defaultValue={account?.name}
+                required
+                autoComplete="name"
+                maxLength={160}
+              />
             </label>
             <label>
               {t.email}
               <input
                 type="email"
                 name="email"
+                key={account?.email}
+                defaultValue={account?.email}
                 required
                 autoComplete="email"
                 maxLength={180}
@@ -113,6 +131,15 @@ export default function Checkout() {
               <input name="district" required maxLength={120} />
             </label>
           </div>
+          <p className="delivery-scope">
+            {account ? (
+              t.pointsRule
+            ) : (
+              <Link href={`/${locale}/account`}>
+                {t.googleSignIn} · {t.points}
+              </Link>
+            )}
+          </p>
           <p className="delivery-scope">
             {t.country}:{" "}
             {locale === "cs"
