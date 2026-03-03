@@ -70,7 +70,7 @@ export default async function Landing({
         <div className="story-image">
           <Image
             src="/images/frame-bag.png"
-            alt="NODRA cycling bag detail"
+            alt="Cycling frame bag on a bicycle"
             fill
             sizes="50vw"
           />
@@ -78,9 +78,9 @@ export default async function Landing({
         <div className="story-copy">
           <p className="eyebrow">NODRA / OUR APPROACH</p>
           <h2>
-            Everyday
+            {t.storyTitle[0]}
             <br />
-            <em>is a journey.</em>
+            <em>{t.storyTitle[1]}</em>
           </h2>
           <p>{t.promiseText}</p>
           <Link href={`/${locale}/shop`} className="button button-dark">

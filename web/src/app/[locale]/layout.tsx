@@ -23,7 +23,7 @@ export default async function LocaleLayout({
           <small>{copy[locale].demoFooter}</small>
         </div>
         <div className="footer-languages">
-          PRAGUE / EVERYWHERE
+          PRAGUE / CZECHIA
           <br />© 2026 NODRA
         </div>
       </footer>
