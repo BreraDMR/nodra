@@ -8,8 +8,45 @@ servers:
 tags:
   - name: Catalogue
   - name: Checkout
+  - name: Account
   - name: Administration
 paths:
+  /api/account/google/start:
+    get:
+      tags: [Account]
+      summary: Start Google OpenID Connect sign-in
+      description: Redirects to Google when OAuth credentials are configured. Uses the server session to verify state on return.
+      parameters: [{ name: locale, in: query, schema: { type: string, enum: [cs, de, en] } }]
+      responses:
+        '302': { description: Redirect to Google or to the local account page when credentials are absent. }
+  /api/account/google/callback:
+    get:
+      tags: [Account]
+      summary: Complete Google sign-in
+      description: Verifies OAuth state and Google verified email, then creates or resumes the account.
+      responses:
+        '302': { description: Redirect to the account page. }
+  /api/account/demo-login:
+    post:
+      tags: [Account]
+      summary: Sign in to a local demo account
+      description: Available only in the development environment; first sign-in sends a welcome email to local Mailpit.
+      responses:
+        '200': { description: Demo account summary. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/account/me:
+    get:
+      tags: [Account]
+      summary: Read signed-in account and earned points
+      responses:
+        '200': { description: Account profile, point balance and ledger history. }
+        '401': { description: Sign-in required. }
+  /api/account/logout:
+    post:
+      tags: [Account]
+      summary: Clear customer session
+      responses:
+        '200': { description: Session ended. }
   /api/products:
     get:
       tags: [Catalogue]
@@ -21,6 +58,7 @@ paths:
         - { name: q, in: query, schema: { type: string, maxLength: 80 } }
         - { name: sort, in: query, schema: { type: string, enum: [featured, price_asc, price_desc, newest] } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: availableOnly, in: query, schema: { type: boolean, default: false } }
       responses:
         '200':
           description: Paginated published products.
@@ -60,8 +98,8 @@ paths:
   /api/checkout:
     post:
       tags: [Checkout]
-      summary: Place a guest demo order
-      description: Reprices items and checks stock in a transaction. Czech delivery address is required in every interface locale. Repeating the same idempotency key and payload returns the same order; a changed payload conflicts. No payment or shipment is performed.
+      summary: Place a demo order as a guest or signed-in customer
+      description: Reprices items and checks stock in a transaction. Czech delivery address is required in every interface locale. Signed-in customers must use their account email to earn points on completion. Repeating the same idempotency key and payload returns the same order; a changed payload conflicts. No payment or shipment is performed.
       parameters:
         - name: Idempotency-Key
           in: header
@@ -234,7 +272,7 @@ paths:
     patch:
       tags: [Administration]
       summary: Advance an order
-      description: Permits only valid order state transitions; cancellation restores reserved inventory once. Requires X-CSRF-Token.
+      description: Permits only valid order state transitions; cancellation restores reserved inventory once. Completing an account order earns one point per 100 Kč or 4 € of product subtotal. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -287,7 +325,7 @@ components:
         currency: { type: string, enum: [CZK, EUR] }
     ProductCard:
       type: object
-      required: [id, slug, name, category, image, fromPrice, inStock]
+      required: [id, slug, name, category, image, fromPrice, inStock, availableUnits]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -296,6 +334,7 @@ components:
         image: { type: string }
         fromPrice: { $ref: '#/components/schemas/Price' }
         inStock: { type: boolean }
+        availableUnits: { type: integer, minimum: 0 }
         badge: { type: string, nullable: true }
     Product:
       allOf:
