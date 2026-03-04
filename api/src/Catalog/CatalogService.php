@@ -81,7 +81,7 @@ final class CatalogService
             'name' => $copy['name'],
             'short' => $copy['short'],
             'description' => $copy['description'],
-            'details' => $copy['details'],
+            'details' => $this->details($copy['details']),
             'image' => $row['image'],
             'images' => json_decode($row['images'], true, flags: JSON_THROW_ON_ERROR),
             'badge' => $row['badge'],
@@ -120,5 +120,13 @@ final class CatalogService
             'inStock' => (int) $row['available_units'] > 0,
             'availableUnits' => (int) $row['available_units'],
         ];
+    }
+
+    /** @return list<string> */
+    private function details(array|string $details): array
+    {
+        $parts = is_array($details) ? $details : explode(';', $details);
+
+        return array_values(array_filter(array_map('trim', $parts), static fn (string $part): bool => $part !== ''));
     }
 }
