@@ -1,25 +1,28 @@
 # NODRA
 
-A fictional cycling equipment store built for a full-stack portfolio. The editorial storefront and operations dashboard are React/Next.js 16 applications backed by a Symfony 8 JSON API and PostgreSQL. All products, images and orders are demo material. Checkout does not collect payment or arrange shipment.
+A portfolio cycling equipment store built with React/Next.js 16, Symfony 8 and PostgreSQL. Its 80 demo cards feature real product models researched on Allegro.cz; the retailer, stock and product imagery are illustrative snapshots. Checkout does not collect payment or arrange shipment.
 
 ## Run locally
 
-Requirements: PHP 8.4+, Composer, Node.js 22+, npm and Docker with Compose. Ports 3000, 8000 and 55432 must be available.
+Requirements: PHP 8.4+, Composer, Node.js 22+, npm and Docker with Compose. Ports 3000, 8000, 55432, 1025 and 8025 must be available.
 
 ```bash
 ./scripts/setup.sh
 ./scripts/dev.sh
 ```
 
-Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http://127.0.0.1:3000/de), [English storefront](http://127.0.0.1:3000/en), or [admin](http://127.0.0.1:3000/admin). Demo admin: `admin@nodra.test` / `NodraDemo2026!`. This credential is seeded for local review and must be replaced before any public deployment. Stop the two web servers with Ctrl+C. Stop the database with `cd api && docker compose down`. To reset demo orders and products, run `cd api && php bin/console doctrine:fixtures:load --no-interaction` while the database is running.
+Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http://127.0.0.1:3000/de), [English storefront](http://127.0.0.1:3000/en), [customer account](http://127.0.0.1:3000/cs/account), [admin](http://127.0.0.1:3000/admin), or [local email inbox](http://127.0.0.1:8025). The account page includes a development-only demo sign-in. Demo admin: `admin@nodra.test` / `NodraDemo2026!`. Replace this credential before any public deployment. Stop the web servers with Ctrl+C and containers with `cd api && docker compose down`. To reset all demo orders and products, run `cd api && php bin/console doctrine:fixtures:load --no-interaction` while the database is running. To add catalog cards to an existing local database without resetting orders or edited stock, run `cd api && php bin/console app:catalog:import`.
+
+Google sign-in uses an OAuth 2.0 web application client. Register `http://127.0.0.1:3000/api/account/google/callback` as an authorized redirect URI in Google Cloud, then put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `api/.env.local`. The public account button redirects to Google once these values are set. The local demo sign-in and points work without credentials. Welcome emails are delivered only to Mailpit at port 8025; a real SMTP transport is not configured.
 
 Run verification with `./scripts/check.sh`. The API contract is in [`api/config/api_doc/shop.yaml`](api/config/api_doc/shop.yaml).
 
 ## What works
 
 - Czech, German and English routes, localized product copy and currency formatting
-- Product catalogue with category, search, sorting and pagination; variant selection and inventory availability
-- Browser basket, guest checkout, server-side repricing, inventory reservation, idempotent order creation and private order lookup token
+- 80 sourced demo cards across four categories, with category, search, sorting, pagination, variant selection and available quantities; each source link, observed price and seller quantity is recorded in [`docs/catalog-sources.md`](docs/catalog-sources.md)
+- Browser basket and Czech-only delivery in every locale, with required region/district, server-side repricing, inventory reservation, idempotent order creation and private order lookup token
+- Customer account with Google sign-in integration, local demo sign-in and a welcome email; one loyalty point per 100 Kč or 4 € of product subtotal after a signed-in order reaches `completed`
 - Admin session, dashboard, product and variant editing/creation, stock adjustments, order queue and status workflow
 - Original AI-generated demo imagery and a responsive storefront and admin interface
 
@@ -31,7 +34,7 @@ Next server components render catalogue pages using the Symfony API. Client comp
 
 ## Demo boundaries
 
-NODRA is not a real merchant. Shipping values are illustrative; taxes, real shipping rates, payment processing, email delivery, refunds, promotions, media uploads and legal commerce pages are outside the demo. For other countries the English checkout uses a flat illustrative EUR shipping amount. Images were generated for this project. No customer reviews or transaction history are fabricated in the seeded data.
+NODRA is not a real merchant. Delivery is restricted to Czechia regardless of interface language. Shipping values and Allegro stock snapshots are illustrative; no live supplier or fulfillment integration exists. Payment processing, real email delivery, point redemption, taxes, refunds, media uploads and legal commerce pages are outside the demo. Product images were generated for this project and are not official manufacturer photography. No customer reviews are fabricated in the seeded data.
 
 ## Publication status
 
