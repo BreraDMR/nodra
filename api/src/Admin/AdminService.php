@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Admin;
 
-use App\Catalog\CatalogSeed;
 use App\Checkout\CheckoutService;
 use App\Entity\OrderItem;
 use App\Entity\LoyaltyEntry;
@@ -12,7 +11,9 @@ use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\ShopOrder;
 use App\Entity\StockMovement;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -34,23 +35,60 @@ final class AdminService
             'revenueEurMinor' => (int) $this->db->fetchOne("SELECT COALESCE(SUM(total_minor), 0) FROM shop_order WHERE currency = 'EUR' AND status != 'cancelled'"),
             'products' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM product WHERE status = 'published'"),
             'lowStock' => array_map(static fn (array $row): array => ['id' => $row['id'], 'sku' => $row['sku'], 'stock' => (int) $row['stock'], 'product' => $row['product']], $lowStock),
-            'recentOrders' => array_slice($this->orders(), 0, 5),
+            'recentOrders' => $this->orderRows(5, 0),
         ];
     }
 
-    public function products(): array
+    public function products(AdminProductsQuery $query): array
     {
-        $rows = $this->db->fetchAllAssociative("SELECT p.*, p.copy -> 'en' ->> 'name' AS name FROM product p ORDER BY p.featured_rank, p.slug");
-        $sources = array_column(CatalogSeed::items(), 'source', 'slug');
+        $params = [];
+        $where = '';
+        if ($query->q !== null && trim($query->q) !== '') {
+            $params['search'] = '%'.strtr(trim($query->q), ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
+            $where = " WHERE p.slug ILIKE :search OR p.copy -> 'cs' ->> 'name' ILIKE :search OR p.copy -> 'de' ->> 'name' ILIKE :search OR p.copy -> 'en' ->> 'name' ILIKE :search";
+        }
+        $total = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product p$where", $params);
+        $pages = max(1, (int) ceil($total / 24));
+        $page = min($query->page, $pages);
+        $rows = $this->db->fetchAllAssociative(
+            "SELECT p.*, p.copy -> 'en' ->> 'name' AS name FROM product p$where ORDER BY p.featured_rank, p.slug LIMIT :limit OFFSET :offset",
+            $params + ['limit' => 24, 'offset' => ($page - 1) * 24],
+            ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
+        );
+        $variantsByProduct = [];
+        $offersByProduct = [];
+        if ($rows !== []) {
+            $variants = $this->db->fetchAllAssociative(
+                'SELECT product_id, id, sku, label, price_czk, price_eur, stock, active, color, size FROM product_variant WHERE product_id IN (:ids) ORDER BY sku',
+                ['ids' => array_column($rows, 'id')],
+                ['ids' => ArrayParameterType::STRING],
+            );
+            foreach ($variants as $variant) {
+                $variantsByProduct[$variant['product_id']][] = $variant;
+            }
+            $offers = $this->db->fetchAllAssociative(
+                'SELECT product_id, supplier, url, title, currency, price_minor, reported_quantity, checked_at, verification_status FROM supplier_offer WHERE product_id IN (:ids) ORDER BY checked_at DESC',
+                ['ids' => array_column($rows, 'id')],
+                ['ids' => ArrayParameterType::STRING],
+            );
+            foreach ($offers as $offer) {
+                $offersByProduct[$offer['product_id']][] = [
+                    'supplier' => $offer['supplier'], 'url' => $offer['url'], 'title' => $offer['title'],
+                    'currency' => $offer['currency'], 'priceMinor' => (int) $offer['price_minor'],
+                    'reportedQuantity' => $offer['reported_quantity'] === null ? null : (int) $offer['reported_quantity'],
+                    'checkedAt' => $offer['checked_at'], 'verificationStatus' => $offer['verification_status'],
+                ];
+            }
+        }
 
-        return array_map(function (array $row) use ($sources): array {
-            $variants = $this->db->fetchAllAssociative('SELECT id, sku, label, price_czk, price_eur, stock, active, color, size FROM product_variant WHERE product_id = :id ORDER BY sku', ['id' => $row['id']]);
+        $items = array_map(function (array $row) use ($variantsByProduct, $offersByProduct): array {
+            $variants = $variantsByProduct[$row['id']] ?? [];
 
             return [
                 'id' => $row['id'], 'slug' => $row['slug'], 'category' => $row['category'],
                 'status' => $row['status'], 'name' => $row['name'], 'copy' => json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR),
                 'image' => $row['image'], 'badge' => $row['badge'], 'featuredRank' => (int) $row['featured_rank'],
-                'source' => $sources[$row['slug']] ?? null,
+                'supplierOffers' => $offersByProduct[$row['id']] ?? [],
                 'variants' => array_map(static fn (array $v): array => [
                     'id' => $v['id'], 'sku' => $v['sku'], 'label' => json_decode($v['label'], true, flags: JSON_THROW_ON_ERROR),
                     'priceCzk' => (int) $v['price_czk'], 'priceEur' => (int) $v['price_eur'], 'stock' => (int) $v['stock'],
@@ -58,6 +96,8 @@ final class AdminService
                 ], $variants),
             ];
         }, $rows);
+
+        return ['items' => $items, 'page' => $page, 'pages' => $pages, 'total' => $total];
     }
 
     public function createProduct(ProductWriteRequest $input): array
@@ -138,9 +178,27 @@ final class AdminService
         return ['id' => $id, 'sku' => $variant->getSku()];
     }
 
-    public function orders(): array
+    public function orders(AdminOrdersQuery $query): array
     {
-        $rows = $this->db->fetchAllAssociative('SELECT id, reference, status, customer_name, email, country, currency, total_minor, created_at FROM shop_order ORDER BY created_at DESC, id DESC LIMIT 100');
+        $total = (int) $this->db->fetchOne('SELECT COUNT(*) FROM shop_order');
+        $pages = max(1, (int) ceil($total / 30));
+        $page = min($query->page, $pages);
+
+        return [
+            'items' => $this->orderRows(30, ($page - 1) * 30),
+            'page' => $page,
+            'pages' => $pages,
+            'total' => $total,
+        ];
+    }
+
+    private function orderRows(int $limit, int $offset): array
+    {
+        $rows = $this->db->fetchAllAssociative(
+            'SELECT id, reference, status, customer_name, email, country, currency, total_minor, created_at FROM shop_order ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset',
+            ['limit' => $limit, 'offset' => $offset],
+            ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
+        );
 
         return array_map(static fn (array $row): array => [
             'id' => $row['id'], 'reference' => $row['reference'], 'status' => $row['status'],
