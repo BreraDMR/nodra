@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Catalog;
+
+use App\Catalog\CatalogService;
+use Doctrine\DBAL\Connection;
+use PHPUnit\Framework\TestCase;
+
+final class ProductDetailsTest extends TestCase
+{
+    public function testSemicolonSeparatedDetailsBecomeAListInTheProductApi(): void
+    {
+        $db = $this->createStub(Connection::class);
+        $db->method('fetchAssociative')->willReturn([
+            'id' => 'demo-product',
+            'slug' => 'demo-light',
+            'category' => 'lights',
+            'copy' => json_encode(['cs' => [
+                'name' => 'Demo light',
+                'short' => 'Front light',
+                'description' => 'Front light',
+                'details' => '800 lm; USB charging; handlebar mount',
+            ]], JSON_THROW_ON_ERROR),
+            'image' => '/images/light.png',
+            'images' => '[]',
+            'badge' => null,
+            'from_czk' => 159000,
+            'from_eur' => 6400,
+            'available_units' => 6,
+        ]);
+        $db->method('fetchAllAssociative')->willReturn([]);
+
+        $product = (new CatalogService($db))->product('demo-light', 'cs');
+
+        self::assertSame(['800 lm', 'USB charging', 'handlebar mount'], $product['details']);
+    }
+}
