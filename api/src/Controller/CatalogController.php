@@ -19,7 +19,7 @@ final class CatalogController extends AbstractController
     #[Route('/products', methods: ['GET'])]
     public function browse(#[MapQueryString] CatalogQuery $query): JsonResponse
     {
-        return $this->json($this->catalog->browse($query));
+        return $this->publicCatalog($this->catalog->browse($query));
     }
 
     #[Route('/products/{slug}', methods: ['GET'])]
@@ -27,12 +27,23 @@ final class CatalogController extends AbstractController
     {
         $product = $this->catalog->product($slug, $query->locale);
 
-        return $product === null ? $this->json(['message' => 'Product not found'], 404) : $this->json($product);
+        return $product === null ? $this->json(['message' => 'Product not found'], 404) : $this->publicCatalog($product);
     }
 
     #[Route('/categories', methods: ['GET'])]
     public function categories(#[MapQueryString] CatalogQuery $query): JsonResponse
     {
-        return $this->json($this->catalog->categories($query->locale));
+        return $this->publicCatalog($this->catalog->categories($query->locale));
+    }
+
+    private function publicCatalog(array $payload): JsonResponse
+    {
+        $response = $this->json($payload);
+        $response->setPublic();
+        $response->setMaxAge(0);
+        $response->setSharedMaxAge(15);
+        $response->headers->addCacheControlDirective('stale-while-revalidate', '30');
+
+        return $response;
     }
 }
