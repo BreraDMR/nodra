@@ -20,16 +20,22 @@ final class CatalogService
     public function browse(CatalogQuery $query): array
     {
         $locale = $query->locale;
+        $nameSql = match ($locale) {
+            'cs' => "p.copy -> 'cs' ->> 'name'",
+            'de' => "p.copy -> 'de' ->> 'name'",
+            'en' => "p.copy -> 'en' ->> 'name'",
+            default => throw new \InvalidArgumentException('Unsupported catalog locale'),
+        };
         $currency = $locale === 'cs' ? 'CZK' : 'EUR';
         $priceColumn = $currency === 'CZK' ? 'price_czk' : 'price_eur';
-        $params = ['locale' => $locale];
+        $params = [];
         $where = "p.status = 'published'";
         if ($query->category !== null && $query->category !== '') {
             $where .= ' AND p.category = :category';
             $params['category'] = $query->category;
         }
         if ($query->q !== null && trim($query->q) !== '') {
-            $where .= " AND (p.copy -> :locale ->> 'name' ILIKE :search OR p.slug ILIKE :search)";
+            $where .= " AND ($nameSql ILIKE :search OR p.slug ILIKE :search)";
             $params['search'] = '%'.trim($query->q).'%';
         }
         if ($query->availableOnly) {
@@ -45,7 +51,7 @@ final class CatalogService
         $total = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product p WHERE $where", $params);
         $pages = max(1, (int) ceil($total / 12));
         $page = min($query->page, $pages);
-        $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.category, p.image, p.badge, p.copy -> :locale ->> 'name' AS name,
+        $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.category, p.image, p.badge, $nameSql AS name,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.$priceColumn END), MIN(v.$priceColumn)) AS from_price,
             COALESCE(SUM(GREATEST(v.stock, 0)), 0) AS available_units
             FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
