@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Admin\AdminService;
+use App\Admin\AdminProductsQuery;
+use App\Admin\AdminOrdersQuery;
 use App\Admin\OrderStatusRequest;
 use App\Admin\ProductWriteRequest;
 use App\Admin\StockAdjustmentRequest;
@@ -13,6 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
@@ -26,7 +29,7 @@ final class AdminController extends AbstractController
     public function dashboard(): JsonResponse { return $this->json($this->admin->dashboard()); }
 
     #[Route('/products', methods: ['GET'])]
-    public function products(): JsonResponse { return $this->json(['items' => $this->admin->products()]); }
+    public function products(#[MapQueryString] AdminProductsQuery $query): JsonResponse { return $this->json($this->admin->products($query)); }
 
     #[Route('/products', methods: ['POST'])]
     public function createProduct(#[MapRequestPayload] ProductWriteRequest $payload, Request $request): JsonResponse
@@ -78,7 +81,7 @@ final class AdminController extends AbstractController
     }
 
     #[Route('/orders', methods: ['GET'])]
-    public function orders(): JsonResponse { return $this->json(['items' => $this->admin->orders()]); }
+    public function orders(#[MapQueryString] AdminOrdersQuery $query): JsonResponse { return $this->json($this->admin->orders($query)); }
 
     #[Route('/orders/{id}', methods: ['GET'])]
     public function order(string $id): JsonResponse
