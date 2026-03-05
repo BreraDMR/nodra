@@ -6,6 +6,7 @@ namespace App\Account;
 
 use App\Entity\CustomerAccount;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -60,16 +61,26 @@ final class AccountService
         return $account;
     }
 
-    public function summary(CustomerAccount $account): array
+    public function summary(CustomerAccount $account, int $page = 1): array
     {
         $id = $account->getId()->toRfc4122();
-        $points = (int) $this->db->fetchOne('SELECT COALESCE(SUM(points), 0) FROM loyalty_entry WHERE account_id = :id', ['id' => $id]);
-        $history = $this->db->fetchAllAssociative('SELECT e.points, o.reference, e.created_at FROM loyalty_entry e JOIN shop_order o ON o.id = e.shop_order_id WHERE e.account_id = :id ORDER BY e.created_at DESC', ['id' => $id]);
+        $totals = $this->db->fetchAssociative('SELECT COALESCE(SUM(points), 0) AS points, COUNT(*) AS entries FROM loyalty_entry WHERE account_id = :id', ['id' => $id]);
+        $historyTotal = (int) $totals['entries'];
+        $historyPages = max(1, (int) ceil($historyTotal / 20));
+        $historyPage = min($page, $historyPages);
+        $history = $this->db->fetchAllAssociative(
+            'SELECT e.points, o.reference, e.created_at FROM loyalty_entry e JOIN shop_order o ON o.id = e.shop_order_id WHERE e.account_id = :id ORDER BY e.created_at DESC, e.id DESC LIMIT :limit OFFSET :offset',
+            ['id' => $id, 'limit' => 20, 'offset' => ($historyPage - 1) * 20],
+            ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
+        );
 
         return [
             'name' => $account->getDisplayName(),
             'email' => $account->getEmail(),
-            'points' => $points,
+            'points' => (int) $totals['points'],
+            'historyPage' => $historyPage,
+            'historyPages' => $historyPages,
+            'historyTotal' => $historyTotal,
             'history' => array_map(static fn (array $row): array => ['reference' => $row['reference'], 'points' => (int) $row['points'], 'createdAt' => $row['created_at']], $history),
         ];
     }
