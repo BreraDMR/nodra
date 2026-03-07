@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\DataFixtures;
 
 use App\Catalog\CatalogSeed;
+use App\Catalog\SupplierOfferSeed;
 use App\Entity\AdminUser;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
@@ -41,6 +42,10 @@ final class AppFixtures extends Fixture
             $product = new Product($item['slug'], $item['category'], $copy, $image);
             $product->update($item['slug'], $item['category'], $copy, $image, [$image], $item['badge'], $item['featuredRank'] ?? $rank + 1, 'published');
             $manager->persist($product);
+            $offer = SupplierOfferSeed::fromItem($product, $item);
+            if ($offer !== null) {
+                $manager->persist($offer);
+            }
 
             foreach ($item['variants'] as $index => $option) {
                 $manager->persist(new ProductVariant(
