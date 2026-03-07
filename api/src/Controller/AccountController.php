@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Account\AccountService;
+use App\Account\AccountHistoryQuery;
 use League\OAuth2\Client\Provider\Google;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/account')]
@@ -77,11 +79,11 @@ final class AccountController extends AbstractController
     }
 
     #[Route('/me', methods: ['GET'])]
-    public function me(Request $request): JsonResponse
+    public function me(Request $request, #[MapQueryString] AccountHistoryQuery $query): JsonResponse
     {
         $account = $this->accounts->current($request);
 
-        return $account === null ? $this->json(['message' => 'Sign in required'], 401) : $this->json($this->accounts->summary($account));
+        return $account === null ? $this->json(['message' => 'Sign in required'], 401) : $this->json($this->accounts->summary($account, $query->page));
     }
 
     #[Route('/logout', methods: ['POST'])]
