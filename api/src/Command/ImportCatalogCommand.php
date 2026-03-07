@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Catalog\CatalogSeed;
+use App\Catalog\SupplierOfferSeed;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
+use App\Entity\SupplierOffer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -36,6 +38,13 @@ final class ImportCatalogCommand extends Command
                 if ($existing->getImage() !== $image || $existing->getFeaturedRank() !== $featuredRank) {
                     $existing->update($existing->getSlug(), $existing->getCategory(), $existing->getCopy(), $image, [$image], $existing->getBadge(), $featuredRank, $existing->getStatus());
                 }
+                $source = $item['source'] ?? null;
+                if (is_array($source) && isset($source['url']) && $this->manager->getRepository(SupplierOffer::class)->findOneBy(['product' => $existing, 'url' => $source['url']]) === null) {
+                    $offer = SupplierOfferSeed::fromItem($existing, $item);
+                    if ($offer !== null) {
+                        $this->manager->persist($offer);
+                    }
+                }
                 continue;
             }
 
@@ -53,6 +62,10 @@ final class ImportCatalogCommand extends Command
             $product = new Product($item['slug'], $item['category'], $copy, $image);
             $product->update($item['slug'], $item['category'], $copy, $image, [$image], $item['badge'], $item['featuredRank'] ?? $rank + 1, 'published');
             $this->manager->persist($product);
+            $offer = SupplierOfferSeed::fromItem($product, $item);
+            if ($offer !== null) {
+                $this->manager->persist($offer);
+            }
 
             foreach ($item['variants'] as $index => $option) {
                 $this->manager->persist(new ProductVariant(
