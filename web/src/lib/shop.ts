@@ -54,6 +54,9 @@ export const copy = {
     demoSignIn: "Vyzkoušet demo účet",
     signOut: "Odhlásit se",
     noPoints: "Body se zobrazí po dokončení objednávky.",
+    pointsHistory: "Historie bodů",
+    previous: "Předchozí",
+    next: "Další",
     googleError:
       "Přihlášení přes Google zatím není dostupné. Zkontrolujte OAuth nastavení nebo použijte demo účet.",
     demoError: "Přihlášení k demo účtu se nepodařilo.",
@@ -119,6 +122,9 @@ export const copy = {
     demoSignIn: "Demo-Konto ausprobieren",
     signOut: "Abmelden",
     noPoints: "Punkte erscheinen nach Abschluss einer Bestellung.",
+    pointsHistory: "Punkteverlauf",
+    previous: "Zurück",
+    next: "Weiter",
     googleError:
       "Die Google-Anmeldung ist noch nicht verfügbar. Prüfe die OAuth-Einstellungen oder verwende das Demo-Konto.",
     demoError: "Die Anmeldung beim Demo-Konto ist fehlgeschlagen.",
@@ -185,6 +191,9 @@ export const copy = {
     demoSignIn: "Try the demo account",
     signOut: "Sign out",
     noPoints: "Points appear after an order is completed.",
+    pointsHistory: "Points history",
+    previous: "Previous",
+    next: "Next",
     googleError:
       "Google sign-in is not available yet. Check the OAuth setup or use the demo account.",
     demoError: "Demo sign-in failed.",
@@ -279,7 +288,7 @@ export function money(value: Money, locale: Locale): string {
 export async function api<T>(path: string): Promise<T> {
   const res = await fetch(
     `${process.env.API_INTERNAL_URL || "http://127.0.0.1:8000"}${path}`,
-    { cache: "no-store" },
+    { next: { revalidate: 15 } },
   );
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json() as Promise<T>;
