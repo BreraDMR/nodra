@@ -9,6 +9,9 @@ type Account = {
   name: string;
   email: string;
   points: number;
+  historyPage: number;
+  historyPages: number;
+  historyTotal: number;
   history: { reference: string; points: number; createdAt: string }[];
 };
 
@@ -20,8 +23,10 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function refresh() {
-    const response = await fetch("/api/account/me", { cache: "no-store" });
+  async function refresh(page = 1) {
+    const response = await fetch(`/api/account/me?page=${page}`, {
+      cache: "no-store",
+    });
     setAccount(response.ok ? ((await response.json()) as Account) : null);
     setLoading(false);
   }
@@ -81,14 +86,36 @@ export default function AccountPage() {
             <p className="eyebrow">{t.points}</p>
             <strong>{account.points}</strong>
             {account.history.length ? (
-              <ul>
-                {account.history.map((item) => (
-                  <li key={item.reference}>
-                    <span>{item.reference}</span>
-                    <b>+{item.points}</b>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p>{t.pointsHistory}</p>
+                <ul>
+                  {account.history.map((item) => (
+                    <li key={item.reference}>
+                      <span>{item.reference}</span>
+                      <b>+{item.points}</b>
+                    </li>
+                  ))}
+                </ul>
+                {account.historyPages > 1 && (
+                  <div className="account-history-pages">
+                    <button
+                      disabled={account.historyPage <= 1}
+                      onClick={() => void refresh(account.historyPage - 1)}
+                    >
+                      ← {t.previous}
+                    </button>
+                    <span>
+                      {account.historyPage} / {account.historyPages}
+                    </span>
+                    <button
+                      disabled={account.historyPage >= account.historyPages}
+                      onClick={() => void refresh(account.historyPage + 1)}
+                    >
+                      {t.next} →
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <p>{t.noPoints}</p>
             )}
