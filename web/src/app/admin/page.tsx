@@ -24,13 +24,16 @@ type Product = {
   image: string;
   badge: string | null;
   featuredRank: number;
-  source: {
+  supplierOffers: {
+    supplier: string;
     url: string;
-    priceCzk: number;
-    stock: number | null;
+    title: string;
+    currency: string;
+    priceMinor: number;
+    reportedQuantity: number | null;
     checkedAt: string;
-    markupCzk: number;
-  } | null;
+    verificationStatus: string;
+  }[];
   variants: Variant[];
 };
 type Order = {
@@ -125,7 +128,21 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productPage, setProductPage] = useState(1);
+  const [productSearch, setProductSearch] = useState("");
+  const [productSearchDraft, setProductSearchDraft] = useState("");
+  const [productPagination, setProductPagination] = useState({
+    page: 1,
+    pages: 1,
+    total: 0,
+  });
   const [orders, setOrders] = useState<Order[]>([]);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderPagination, setOrderPagination] = useState({
+    page: 1,
+    pages: 1,
+    total: 0,
+  });
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [orderDetail, setOrderDetail] = useState<Record<
     string,
@@ -141,25 +158,32 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const reload = useCallback(async () => {
-    try {
-      const [d, p, o] = await Promise.all([
-        json("/api/admin/dashboard"),
-        json("/api/admin/products"),
-        json("/api/admin/orders"),
-      ]);
-      setDashboard(d);
-      setProducts(p.items);
-      setOrders(o.items);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load admin data");
-    }
-  }, []);
+  const reload = useCallback(
+    async (page: number, search: string, ordersPage: number) => {
+      try {
+        const query = new URLSearchParams({ page: String(page) });
+        if (search) query.set("q", search);
+        const [d, p, o] = await Promise.all([
+          json("/api/admin/dashboard"),
+          json(`/api/admin/products?${query}`),
+          json(`/api/admin/orders?page=${ordersPage}`),
+        ]);
+        setDashboard(d);
+        setProducts(p.items);
+        setProductPagination({ page: p.page, pages: p.pages, total: p.total });
+        setOrders(o.items);
+        setOrderPagination({ page: o.page, pages: o.pages, total: o.total });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not load admin data");
+      }
+    },
+    [],
+  );
   useEffect(() => {
     json("/api/admin/me")
       .then(async (u: User) => {
         setUser(u);
-        await reload();
+        await reload(1, "", 1);
       })
       .catch(() => {})
       .finally(() => setReady(true));
@@ -179,7 +203,7 @@ export default function AdminPage() {
         }),
       });
       setUser(u);
-      await reload();
+      await reload(1, "", 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
@@ -201,7 +225,7 @@ export default function AdminPage() {
         body: JSON.stringify(body),
       });
       setMessage("Saved successfully.");
-      await reload();
+      await reload(productPage, productSearch, orderPage);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -404,7 +428,7 @@ export default function AdminPage() {
               onClick={() => setTab("products")}
             >
               ▦ <span>Products</span>
-              <small>{products.length}</small>
+              <small>{productPagination.total}</small>
             </button>
             <button
               aria-label="Orders"
@@ -412,7 +436,7 @@ export default function AdminPage() {
               onClick={() => setTab("orders")}
             >
               ▤ <span>Orders</span>
-              <small>{orders.length}</small>
+              <small>{orderPagination.total}</small>
             </button>
           </nav>
         </div>
@@ -578,6 +602,28 @@ export default function AdminPage() {
                   + Add product
                 </button>
               </div>
+              <form
+                className="admin-product-search"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setProductPage(1);
+                  const search = productSearchDraft.trim();
+                  setProductSearch(search);
+                  void reload(1, search, orderPage);
+                }}
+              >
+                <input
+                  type="search"
+                  value={productSearchDraft}
+                  onChange={(event) =>
+                    setProductSearchDraft(event.target.value)
+                  }
+                  placeholder="Search product name or slug"
+                  aria-label="Search products"
+                  maxLength={80}
+                />
+                <button type="submit">Search ↗</button>
+              </form>
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead>
@@ -657,6 +703,34 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+              <div className="admin-pagination">
+                <span>
+                  {productPagination.total} products · Page{" "}
+                  {productPagination.page} of {productPagination.pages}
+                </span>
+                <div>
+                  <button
+                    disabled={productPagination.page <= 1}
+                    onClick={() => {
+                      const page = productPagination.page - 1;
+                      setProductPage(page);
+                      void reload(page, productSearch, orderPage);
+                    }}
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    disabled={productPagination.page >= productPagination.pages}
+                    onClick={() => {
+                      const page = productPagination.page + 1;
+                      setProductPage(page);
+                      void reload(page, productSearch, orderPage);
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
             </>
           )}
           {tab === "orders" && (
@@ -722,6 +796,34 @@ export default function AdminPage() {
                   <p className="admin-empty">No demo orders yet.</p>
                 )}
               </div>
+              <div className="admin-pagination">
+                <span>
+                  {orderPagination.total} orders · Page {orderPagination.page}{" "}
+                  of {orderPagination.pages}
+                </span>
+                <div>
+                  <button
+                    disabled={orderPagination.page <= 1}
+                    onClick={() => {
+                      const page = orderPagination.page - 1;
+                      setOrderPage(page);
+                      void reload(productPage, productSearch, page);
+                    }}
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    disabled={orderPagination.page >= orderPagination.pages}
+                    onClick={() => {
+                      const page = orderPagination.page + 1;
+                      setOrderPage(page);
+                      void reload(productPage, productSearch, page);
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -783,24 +885,22 @@ export default function AdminPage() {
                   </select>
                 </label>
               </div>
-              {editingProduct?.source && (
-                <div className="source-card">
-                  <strong>Allegro source snapshot</strong>
+              {editingProduct?.supplierOffers.map((offer) => (
+                <div className="source-card" key={offer.url}>
+                  <strong>
+                    {offer.supplier.replaceAll("_", " ")} · source snapshot
+                  </strong>
                   <p>
-                    Checked {editingProduct.source.checkedAt} · source{" "}
-                    {editingProduct.source.priceCzk} Kč · visible stock{" "}
-                    {editingProduct.source.stock ?? "unconfirmed"} · markup{" "}
-                    {editingProduct.source.markupCzk} Kč
+                    Checked {offer.checkedAt.slice(0, 10)} · source{" "}
+                    {(offer.priceMinor / 100).toFixed(2)} {offer.currency} ·
+                    reported quantity {offer.reportedQuantity ?? "unconfirmed"}{" "}
+                    · {offer.verificationStatus}
                   </p>
-                  <a
-                    href={editingProduct.source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={offer.url} target="_blank" rel="noopener noreferrer">
                     Open offer ↗
                   </a>
                 </div>
-              )}
+              ))}
               <button className="admin-primary" disabled={busy}>
                 Save product ↗
               </button>
