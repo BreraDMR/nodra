@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: NODRA Commerce API
   version: 0.1.0
-  description: JSON contract for the fictional NODRA cycling equipment storefront and administration.
+  description: JSON contract for the NODRA cycling equipment demo storefront and administration.
 servers:
   - url: http://localhost:8000
 tags:
@@ -38,8 +38,11 @@ paths:
     get:
       tags: [Account]
       summary: Read signed-in account and earned points
+      description: Returns the full point balance and up to 20 ledger entries for the requested history page.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
       responses:
-        '200': { description: Account profile, point balance and ledger history. }
+        '200': { description: 'Account profile, point balance, history page and history totals.' }
         '401': { description: Sign-in required. }
   /api/account/logout:
     post:
@@ -51,7 +54,7 @@ paths:
     get:
       tags: [Catalogue]
       summary: Browse published cycling products
-      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list.
+      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list. Successful responses may be cached by shared caches for 15 seconds; checkout always checks current stock and prices.
       parameters:
         - $ref: '#/components/parameters/Locale'
         - { name: category, in: query, schema: { type: string } }
@@ -171,9 +174,12 @@ paths:
     get:
       tags: [Administration]
       summary: List products for editing
-      description: Includes drafts and inventory data for administration.
+      description: Returns up to 24 products per page, including drafts, dated supplier offer snapshots and separate NODRA inventory data. Reported supplier quantity is not owned stock.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: q, in: query, schema: { type: string, maxLength: 80 } }
       responses:
-        '200': { description: Admin product list. }
+        '200': { description: 'Admin product page with items, page, pages and total.' }
         '401': { description: Authentication required. }
     post:
       tags: [Administration]
@@ -255,9 +261,11 @@ paths:
     get:
       tags: [Administration]
       summary: List orders for fulfillment
-      description: Returns the latest 100 demo orders.
+      description: Returns up to 30 demo orders per page, newest first.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
       responses:
-        '200': { description: Admin order list. }
+        '200': { description: 'Admin order page with items, page, pages and total.' }
         '401': { description: Authentication required. }
   /api/admin/orders/{id}:
     get:
@@ -340,7 +348,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/ProductCard'
         - type: object
-          required: [description, images, variants]
+          required: [description, details, images, variants]
           properties:
             short: { type: string }
             description: { type: string }
