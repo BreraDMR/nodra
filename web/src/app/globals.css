@@ -414,6 +414,23 @@ p {
   border-top: 1px solid #dce2d4;
   padding: 14px 0;
 }
+.account-history-pages {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.account-history-pages button {
+  border: 0;
+  background: none;
+  color: #315d21;
+  font: inherit;
+  font-weight: 700;
+}
+.account-history-pages button:disabled {
+  opacity: 0.4;
+}
 .text-button {
   border: 0;
   background: none;
