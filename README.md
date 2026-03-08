@@ -28,9 +28,13 @@ Run verification with `./scripts/check.sh`. The API contract is in [`api/config/
 
 ## Architecture
 
-Next server components render catalogue pages using the Symfony API. Client components handle basket, checkout and admin interactions. Next rewrites same-origin `/api/*` calls to the local Symfony server so browser sessions work without cross-origin cookies. The basket is stored in browser local storage, but prices and stock are always checked again by the API at checkout. PostgreSQL transactions lock selected variants before reserving stock. Money is stored as integer minor units; order items preserve the purchased name, variant and price.
+Next server components render catalogue pages using the Symfony API. Client components handle basket, checkout and admin interactions. Next rewrites same-origin `/api/*` calls to the local Symfony server so browser sessions work without cross-origin cookies. Public catalogue data has a 15-second cache lifetime; prices and stock are always checked again by the API at checkout. PostgreSQL transactions lock selected variants before reserving stock. Money is stored as integer minor units; order items preserve the purchased name, variant and price. Admin products and orders are paginated, and product variants and supplier offers are fetched in batches.
+
+For a future image CDN, set `MEDIA_ORIGIN` to its HTTPS origin or path when building `web/`, then store media URLs from that origin in product images. Local images continue to work without this variable. See [`docs/architecture.md`](docs/architecture.md) for the growth baseline and deployment work that remains.
 
 `api/` contains entities, migrations, fixtures, controllers and services. `web/` contains React routes and components. `docs/architecture.md` records the main decisions and demo boundaries.
+
+The [80 Allegro → NODRA link pairs](docs/allegro-nodra-links.md) let you compare every sourced card. The [real-commerce roadmap](docs/real-commerce-roadmap.md) describes the supplier-backed order flow and the work required before accepting actual sales.
 
 ## Demo boundaries
 
