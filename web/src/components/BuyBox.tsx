@@ -35,9 +35,7 @@ export function BuyBox({
           : money(product.fromPrice, locale)}
       </div>
       <p className="product-availability">
-        {variant?.stock
-          ? `${t.available}: ${variant.stock > 99 ? "99+" : variant.stock}`
-          : t.out}
+        {variant?.stock ? t.available : t.out}
       </p>
       <div className="variant-heading">
         <strong>{t.details}</strong>
