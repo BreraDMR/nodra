@@ -36,6 +36,8 @@ For a future image CDN, set `MEDIA_ORIGIN` to its HTTPS origin or path when buil
 
 The [80 Allegro → NODRA link pairs](docs/allegro-nodra-links.md) let you compare every sourced card. The [real-commerce roadmap](docs/real-commerce-roadmap.md) describes the supplier-backed order flow and the work required before accepting actual sales.
 
+The [commerce concept and implementation sequence](docs/commerce-concept.md) record the owner's retailer positioning, planned delivery and installation services, pricing, reviews and the decisions still pending.
+
 ## Demo boundaries
 
 NODRA is not a real merchant. Delivery is restricted to Czechia regardless of interface language. Shipping values and Allegro stock snapshots are illustrative; no live supplier or fulfillment integration exists. Payment processing, real email delivery, point redemption, taxes, refunds, media uploads and legal commerce pages are outside the demo. Product images were generated for this project and are not official manufacturer photography. No customer reviews are fabricated in the seeded data.
