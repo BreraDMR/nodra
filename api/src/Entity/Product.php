@@ -11,7 +11,8 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'product')]
-#[ORM\Index(columns: ['status', 'category', 'featured_rank'], name: 'idx_product_browse')]
+#[ORM\Index(columns: ['category_id', 'status', 'featured_rank'], name: 'idx_product_browse')]
+#[ORM\Index(columns: ['brand'], name: 'idx_product_brand')]
 class Product
 {
     #[ORM\Id]
@@ -21,13 +22,21 @@ class Product
     #[ORM\Column(length: 120, unique: true)]
     private string $slug;
 
-    #[ORM\Column(length: 40)]
-    private string $category;
+    #[ORM\ManyToOne(targetEntity: Category::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
+    private Category $category;
+
+    #[ORM\Column(length: 80, nullable: true)]
+    private ?string $brand = null;
+
+    /** @var array<string, string> attribute values keyed by definition key */
+    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '{}'])]
+    private array $attributes = [];
 
     #[ORM\Column(length: 16)]
     private string $status = 'draft';
 
-    /** @var array<string, array{name: string, short: string, description: string, details: list<string>}> */
+    /** @var array<string, array{name: string, short: string, description: string, details: list<string>, inBox?: string}> */
     #[ORM\Column(type: Types::JSON, options: ['jsonb' => true])]
     private array $copy = [];
 
@@ -47,7 +56,7 @@ class Product
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(string $slug, string $category, array $copy, string $image)
+    public function __construct(string $slug, Category $category, array $copy, string $image)
     {
         $this->id = Uuid::v7();
         $this->slug = $slug;
@@ -60,7 +69,9 @@ class Product
 
     public function getId(): Uuid { return $this->id; }
     public function getSlug(): string { return $this->slug; }
-    public function getCategory(): string { return $this->category; }
+    public function getCategory(): Category { return $this->category; }
+    public function getBrand(): ?string { return $this->brand; }
+    public function getAttributes(): array { return $this->attributes; }
     public function getStatus(): string { return $this->status; }
     public function getCopy(): array { return $this->copy; }
     public function getImage(): string { return $this->image; }
@@ -69,7 +80,7 @@ class Product
     public function getFeaturedRank(): int { return $this->featuredRank; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 
-    public function update(string $slug, string $category, array $copy, string $image, array $images, ?string $badge, int $featuredRank, string $status): void
+    public function update(string $slug, Category $category, array $copy, string $image, array $images, ?string $badge, int $featuredRank, string $status): void
     {
         $this->slug = $slug;
         $this->category = $category;
@@ -79,5 +90,11 @@ class Product
         $this->badge = $badge;
         $this->featuredRank = $featuredRank;
         $this->status = $status;
+    }
+
+    public function describe(?string $brand, array $attributes): void
+    {
+        $this->brand = $brand;
+        $this->attributes = $attributes;
     }
 }
