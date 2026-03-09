@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.1.0
+  version: 0.2.0
   description: JSON contract for the NODRA cycling equipment demo storefront and administration.
 servers:
   - url: http://localhost:8000
@@ -54,10 +54,17 @@ paths:
     get:
       tags: [Catalogue]
       summary: Browse published cycling products
-      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list. Successful responses may be cached by shared caches for 15 seconds; checkout always checks current stock and prices.
+      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list. A category filter includes products from its subcategories. Attribute filters match when at least one active variant has the value, a variant value taking precedence over the product value. Search matches the localized name, brand, slug, variant MPN and exact EAN. Successful responses may be cached by shared caches for 15 seconds; checkout always checks current stock and prices.
       parameters:
         - $ref: '#/components/parameters/Locale'
         - { name: category, in: query, schema: { type: string } }
+        - { name: brand, in: query, schema: { type: string, maxLength: 80 } }
+        - name: attr
+          in: query
+          style: deepObject
+          explode: true
+          description: 'Attribute filters, for example attr[speeds]=11,12. Several comma-separated values mean any of them; several keys must all match.'
+          schema: { type: object, additionalProperties: { type: string, maxLength: 200 } }
         - { name: q, in: query, schema: { type: string, maxLength: 80 } }
         - { name: sort, in: query, schema: { type: string, enum: [featured, price_asc, price_desc, newest] } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
@@ -92,12 +99,25 @@ paths:
     get:
       tags: [Catalogue]
       summary: List catalogue categories
-      description: Returns localized category labels and product counts for public navigation.
+      description: Returns the active category tree with localized labels. Each count includes published products of its active subcategories.
       parameters: [{ $ref: '#/components/parameters/Locale' }]
       responses:
         '200':
-          description: Public categories.
+          description: Root categories with nested children.
           content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } }
+  /api/categories/{slug}/facets:
+    get:
+      tags: [Catalogue]
+      summary: List filter values for one category
+      description: Returns brands and filterable attribute values found among published products of the category and its subcategories, with product counts. Counts ignore other active filters.
+      parameters:
+        - $ref: '#/components/parameters/Locale'
+        - { name: slug, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Available filter values.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Facets' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/checkout:
     post:
       tags: [Checkout]
@@ -174,7 +194,7 @@ paths:
     get:
       tags: [Administration]
       summary: List products for editing
-      description: Returns up to 24 products per page, including drafts, dated supplier offer snapshots and separate NODRA inventory data. Reported supplier quantity is not owned stock.
+      description: Returns up to 24 products per page, including drafts, category, brand, attributes, variant identifiers, dated supplier offers and separate NODRA inventory data. Reported supplier quantity is not owned stock. Search also matches brand, variant MPN and EAN.
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: q, in: query, schema: { type: string, maxLength: 80 } }
@@ -198,7 +218,7 @@ paths:
     put:
       tags: [Administration]
       summary: Update a product
-      description: Changes localized copy, status, image, merchandising order and the first variant's base prices. Requires X-CSRF-Token.
+      description: Changes localized copy, category, brand, attributes, status, image, merchandising order and the first variant's base prices. Long descriptions, details and gallery images are kept. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -247,7 +267,7 @@ paths:
     put:
       tags: [Administration]
       summary: Update a variant
-      description: Updates labels, prices and active status. SKU is immutable. Requires X-CSRF-Token.
+      description: Updates labels, identifiers, attributes, prices and active status. SKU is immutable. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -256,6 +276,73 @@ paths:
         '200': { description: Variant updated. }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/categories:
+    get:
+      tags: [Administration]
+      summary: List all categories
+      description: Returns every category, including inactive ones, as a flat list ordered for tree display. Attribute definitions are the category's own; the effective set also includes its ancestors' definitions.
+      responses:
+        '200':
+          description: Categories.
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AdminCategory' } } } }
+        '401': { description: Authentication required. }
+    post:
+      tags: [Administration]
+      summary: Create a category
+      description: Requires X-CSRF-Token. Attribute keys must be unique across the category and its ancestors.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CategoryWriteRequest' } } }
+      responses:
+        '201': { description: Category created. }
+        '403': { description: Invalid CSRF token. }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/categories/{id}:
+    put:
+      tags: [Administration]
+      summary: Update a category
+      description: Changes labels, parent, position, active state and own attribute definitions. A category cannot move under itself or a descendant, and it cannot be deactivated while its subtree holds published products. Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CategoryWriteRequest' } } }
+      responses:
+        '200': { description: Category updated. }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/products/{id}/supplier-offers:
+    post:
+      tags: [Administration]
+      summary: Record a supplier offer
+      description: Stores a dated supplier listing for the product. Status `matched` needs the exact variant; the variant must belong to the product. Supplier data never appears in public responses. Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SupplierOfferWriteRequest' } } }
+      responses:
+        '201': { description: Offer recorded. }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/supplier-offers/{id}:
+    put:
+      tags: [Administration]
+      summary: Update a supplier offer
+      description: Updates the check result, lead time, variant match and status. Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SupplierOfferWriteRequest' } } }
+      responses:
+        '200': { description: Offer updated. }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/orders:
     get:
@@ -320,11 +407,42 @@ components:
         message: { type: string }
     Category:
       type: object
-      required: [slug, name, count]
+      required: [id, slug, name, count, children]
       properties:
+        id: { type: string, format: uuid }
         slug: { type: string }
         name: { type: string }
-        count: { type: integer }
+        count: { type: integer, description: Published products in this category and its active subcategories. }
+        children: { type: array, items: { $ref: '#/components/schemas/Category' } }
+    Facets:
+      type: object
+      required: [category, brands, attributes]
+      properties:
+        category: { type: string }
+        brands:
+          type: array
+          items: { type: object, required: [value, count], properties: { value: { type: string }, count: { type: integer } } }
+        attributes:
+          type: array
+          items:
+            type: object
+            required: [key, label, type, values]
+            properties:
+              key: { type: string }
+              label: { type: string }
+              type: { type: string, enum: [text, number, choice] }
+              unit: { type: [string, 'null'] }
+              values:
+                type: array
+                items: { type: object, required: [value, label, count], properties: { value: { type: string }, label: { type: string }, count: { type: integer } } }
+    Spec:
+      type: object
+      required: [key, label, value]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        value: { type: string, description: 'Display value, localized for choice attributes.' }
+        unit: { type: [string, 'null'] }
     Price:
       type: object
       required: [amount, currency]
@@ -333,12 +451,14 @@ components:
         currency: { type: string, enum: [CZK, EUR] }
     ProductCard:
       type: object
-      required: [id, slug, name, category, image, fromPrice, inStock, availableUnits]
+      required: [id, slug, name, brand, category, categoryName, image, fromPrice, inStock, availableUnits]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
         name: { type: string }
-        category: { type: string }
+        brand: { type: [string, 'null'] }
+        category: { type: string, description: Category slug. }
+        categoryName: { type: string }
         image: { type: string }
         fromPrice: { $ref: '#/components/schemas/Price' }
         inStock: { type: boolean }
@@ -348,23 +468,32 @@ components:
       allOf:
         - $ref: '#/components/schemas/ProductCard'
         - type: object
-          required: [description, details, images, variants]
+          required: [description, details, images, breadcrumbs, specs, inBox, variants]
           properties:
             short: { type: string }
             description: { type: string }
             details: { type: array, items: { type: string } }
             images: { type: array, items: { type: string } }
+            breadcrumbs:
+              type: array
+              description: Category path from the root to the product's category.
+              items: { type: object, required: [slug, name], properties: { slug: { type: string }, name: { type: string } } }
+            specs: { type: array, description: Product-level attribute values., items: { $ref: '#/components/schemas/Spec' } }
+            inBox: { type: [string, 'null'], description: Localized package contents. }
             variants:
               type: array
               items:
                 type: object
-                required: [id, sku, label, price, stock]
+                required: [id, sku, label, price, stock, mpn, ean, specs]
                 properties:
                   id: { type: string, format: uuid }
                   sku: { type: string }
                   label: { type: string }
                   price: { $ref: '#/components/schemas/Price' }
                   stock: { type: integer }
+                  mpn: { type: [string, 'null'] }
+                  ean: { type: [string, 'null'] }
+                  specs: { type: array, description: Values set on this variant; they override product values with the same key., items: { $ref: '#/components/schemas/Spec' } }
     CheckoutRequest:
       type: object
       required: [locale, customer, items]
@@ -394,7 +523,12 @@ components:
       required: [slug, category, nameCs, nameDe, nameEn, shortCs, shortDe, shortEn, image, status, priceCzk, priceEur]
       properties:
         slug: { type: string, maxLength: 120 }
-        category: { type: string, enum: [bags, apparel, lights, accessories] }
+        category: { type: string, description: Slug of an active category. }
+        brand: { type: [string, 'null'], maxLength: 80 }
+        attributes: { $ref: '#/components/schemas/AttributeValues' }
+        inBoxCs: { type: [string, 'null'], maxLength: 500 }
+        inBoxDe: { type: [string, 'null'], maxLength: 500 }
+        inBoxEn: { type: [string, 'null'], maxLength: 500 }
         nameCs: { type: string }
         nameDe: { type: string }
         nameEn: { type: string }
@@ -420,6 +554,76 @@ components:
         active: { type: boolean }
         color: { type: [string, 'null'] }
         size: { type: [string, 'null'] }
+        mpn: { type: [string, 'null'], maxLength: 64, description: Manufacturer part number. }
+        ean: { type: [string, 'null'], pattern: '^(\d{8}|\d{12,14})$', description: 'GTIN-8/12/13/14 with a valid check digit, unique across variants.' }
+        attributes: { $ref: '#/components/schemas/AttributeValues' }
+    AttributeValues:
+      type: object
+      description: Values keyed by attribute key from the category's effective definitions. Values are strings; number attributes hold a decimal string and choice attributes one option value. An empty value removes the key.
+      additionalProperties: { type: string, maxLength: 80 }
+    AttributeDefinition:
+      type: object
+      required: [key, type, labelCs, labelDe, labelEn, filterable]
+      properties:
+        key: { type: string, pattern: '^[a-z][a-z0-9_]{1,39}$' }
+        type: { type: string, enum: [text, number, choice] }
+        unit: { type: [string, 'null'], maxLength: 12 }
+        labelCs: { type: string }
+        labelDe: { type: string }
+        labelEn: { type: string }
+        filterable: { type: boolean }
+        options:
+          type: array
+          description: Required for choice attributes.
+          items:
+            type: object
+            required: [value]
+            properties:
+              value: { type: string, maxLength: 80 }
+              labelCs: { type: [string, 'null'] }
+              labelDe: { type: [string, 'null'] }
+              labelEn: { type: [string, 'null'] }
+    AdminCategory:
+      type: object
+      required: [id, slug, parentId, names, position, active, attributes, effectiveAttributes, productCount]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        parentId: { type: [string, 'null'], format: uuid }
+        names: { type: object, properties: { cs: { type: string }, de: { type: string }, en: { type: string } } }
+        position: { type: integer }
+        active: { type: boolean }
+        attributes: { type: array, items: { $ref: '#/components/schemas/AttributeDefinition' } }
+        effectiveAttributes: { type: array, items: { $ref: '#/components/schemas/AttributeDefinition' } }
+        productCount: { type: integer, description: 'Products directly in this category, any status.' }
+    CategoryWriteRequest:
+      type: object
+      required: [slug, nameCs, nameDe, nameEn]
+      properties:
+        slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 60 }
+        parentId: { type: [string, 'null'], format: uuid }
+        nameCs: { type: string }
+        nameDe: { type: string }
+        nameEn: { type: string }
+        position: { type: integer, default: 0 }
+        active: { type: boolean, default: true }
+        attributes: { type: array, items: { $ref: '#/components/schemas/AttributeDefinition' } }
+    SupplierOfferWriteRequest:
+      type: object
+      required: [supplier, url, title, currency, priceMinor, checkedAt, verificationStatus]
+      properties:
+        supplier: { type: string, enum: [allegro_cz, allegro_pl, bikeinn, bike24, bike_discount, other] }
+        url: { type: string, format: uri, maxLength: 2048 }
+        title: { type: string, maxLength: 200 }
+        seller: { type: [string, 'null'], maxLength: 120 }
+        currency: { type: string, enum: [CZK, EUR, PLN] }
+        priceMinor: { type: integer, minimum: 0 }
+        reportedQuantity: { type: [integer, 'null'], minimum: 0 }
+        checkedAt: { type: string, format: date-time }
+        leadTimeMinDays: { type: [integer, 'null'], minimum: 0, maximum: 365 }
+        leadTimeMaxDays: { type: [integer, 'null'], minimum: 0, maximum: 365 }
+        variantId: { type: [string, 'null'], format: uuid }
+        verificationStatus: { type: string, enum: [snapshot, matched, rejected], description: 'snapshot: not checked against a variant; matched: confirmed exact variant; rejected: listing does not match.' }
     OrderReceipt:
       type: object
       required: [reference, status, items, subtotal, shipping, total, lookupToken]
