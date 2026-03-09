@@ -121,8 +121,9 @@ final class AdminService
             return null;
         }
         $this->validateSlug($input->slug, $id);
-        $copy = $this->copy($input);
-        $product->update($input->slug, $input->category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
+        $copy = $this->copy($input, $product->getCopy());
+        $images = array_values(array_unique([$input->image, ...$product->getImages()]));
+        $product->update($input->slug, $input->category, $copy, $input->image, $images, $input->badge, $input->featuredRank, $input->status);
         $baseId = $this->db->fetchOne('SELECT id FROM product_variant WHERE product_id = :id ORDER BY (active AND stock > 0) DESC, active DESC, sku ASC LIMIT 1', ['id' => $id]);
         $variant = $baseId === false ? null : $this->em->find(ProductVariant::class, Uuid::fromString($baseId));
         if ($variant !== null) {
@@ -250,11 +251,11 @@ final class AdminService
         });
     }
 
-    private function copy(ProductWriteRequest $input): array
+    private function copy(ProductWriteRequest $input, array $existing = []): array
     {
         $copy = [];
         foreach (['cs' => ['nameCs', 'shortCs'], 'de' => ['nameDe', 'shortDe'], 'en' => ['nameEn', 'shortEn']] as $locale => [$name, $short]) {
-            $copy[$locale] = ['name' => trim($input->$name), 'short' => trim($input->$short), 'description' => trim($input->$short), 'details' => []];
+            $copy[$locale] = ['name' => trim($input->$name), 'short' => trim($input->$short), 'description' => $existing[$locale]['description'] ?? trim($input->$short), 'details' => $existing[$locale]['details'] ?? []];
         }
 
         return $copy;
