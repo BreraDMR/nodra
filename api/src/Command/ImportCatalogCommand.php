@@ -27,17 +27,11 @@ final class ImportCatalogCommand extends Command
     {
         $items = CatalogSeed::items();
         $catalog = $this->manager->getRepository(Product::class);
-        $slugs = array_column($items, 'slug');
         $added = 0;
 
         foreach ($items as $rank => $item) {
             $existing = $catalog->findOneBy(['slug' => $item['slug']]);
             if ($existing !== null) {
-                $image = '/images/'.$item['image'];
-                $featuredRank = $item['featuredRank'] ?? $rank + 1;
-                if ($existing->getImage() !== $image || $existing->getFeaturedRank() !== $featuredRank) {
-                    $existing->update($existing->getSlug(), $existing->getCategory(), $existing->getCopy(), $image, [$image], $existing->getBadge(), $featuredRank, $existing->getStatus());
-                }
                 $source = $item['source'] ?? null;
                 if (is_array($source) && isset($source['url']) && $this->manager->getRepository(SupplierOffer::class)->findOneBy(['product' => $existing, 'url' => $source['url']]) === null) {
                     $offer = SupplierOfferSeed::fromItem($existing, $item);
@@ -83,16 +77,7 @@ final class ImportCatalogCommand extends Command
         }
 
         $this->manager->flush();
-        $archived = 0;
-        foreach ($catalog->findBy(['status' => 'published']) as $product) {
-            if (in_array($product->getSlug(), $slugs, true)) {
-                continue;
-            }
-            $product->update($product->getSlug(), $product->getCategory(), $product->getCopy(), $product->getImage(), $product->getImages(), $product->getBadge(), $product->getFeaturedRank(), 'archived');
-            ++$archived;
-        }
-        $this->manager->flush();
-        $output->writeln(sprintf('Added %d products; archived %d superseded demo products.', $added, $archived));
+        $output->writeln(sprintf('Added %d products; existing products and editorial changes preserved.', $added));
 
         return Command::SUCCESS;
     }
