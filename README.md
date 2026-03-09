@@ -38,6 +38,8 @@ The [80 Allegro → NODRA link pairs](docs/allegro-nodra-links.md) let you compa
 
 The [commerce concept and implementation sequence](docs/commerce-concept.md) record the owner's retailer positioning, planned delivery and installation services, pricing, reviews and the decisions still pending.
 
+The [active development plan](docs/development-plan.md) is the ordered backlog for turning the demo into a supplier-backed Czech merchant. It includes dependencies, delivery milestones and acceptance gates; completed demo work remains in `PLAN.md`.
+
 ## Demo boundaries
 
 NODRA is not a real merchant. Delivery is restricted to Czechia regardless of interface language. Shipping values and Allegro stock snapshots are illustrative; no live supplier or fulfillment integration exists. Payment processing, real email delivery, point redemption, taxes, refunds, media uploads and legal commerce pages are outside the demo. Product images were generated for this project and are not official manufacturer photography. No customer reviews are fabricated in the seeded data.
