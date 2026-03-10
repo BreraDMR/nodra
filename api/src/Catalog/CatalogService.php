@@ -4,39 +4,57 @@ declare(strict_types=1);
 
 namespace App\Catalog;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 final class CatalogService
 {
-    private const CATEGORIES = [
-        'bags' => ['cs' => 'Brašny', 'de' => 'Taschen', 'en' => 'Bags'],
-        'apparel' => ['cs' => 'Oblečení', 'de' => 'Bekleidung', 'en' => 'Apparel'],
-        'lights' => ['cs' => 'Světla', 'de' => 'Beleuchtung', 'en' => 'Lights'],
-        'accessories' => ['cs' => 'Doplňky', 'de' => 'Zubehör', 'en' => 'Accessories'],
-    ];
-
     public function __construct(private Connection $db) {}
 
     public function browse(CatalogQuery $query): array
     {
         $locale = $query->locale;
-        $nameSql = match ($locale) {
-            'cs' => "p.copy -> 'cs' ->> 'name'",
-            'de' => "p.copy -> 'de' ->> 'name'",
-            'en' => "p.copy -> 'en' ->> 'name'",
-            default => throw new \InvalidArgumentException('Unsupported catalog locale'),
-        };
+        $nameSql = $this->nameSql($locale);
         $currency = $locale === 'cs' ? 'CZK' : 'EUR';
         $priceColumn = $currency === 'CZK' ? 'price_czk' : 'price_eur';
-        $params = [];
+        $params = ['locale' => $locale];
+        $types = [];
         $where = "p.status = 'published'";
         if ($query->category !== null && $query->category !== '') {
-            $where .= ' AND p.category = :category';
-            $params['category'] = $query->category;
+            $index = CategoryIndex::load($this->db);
+            $category = $index->bySlug($query->category);
+            $ids = $category === null || !$index->isVisible($category['id']) ? [] : $index->subtreeIds($category['id'], true);
+            if ($ids === []) {
+                return ['items' => [], 'page' => 1, 'pages' => 1, 'total' => 0];
+            }
+            $where .= ' AND p.category_id IN (:categoryIds)';
+            $params['categoryIds'] = $ids;
+            $types['categoryIds'] = ArrayParameterType::STRING;
+        }
+        if ($query->brand !== null && trim($query->brand) !== '') {
+            $where .= ' AND p.brand = :brand';
+            $params['brand'] = trim($query->brand);
+        }
+        $filter = 0;
+        foreach ($query->attr as $key => $accepted) {
+            $values = array_values(array_filter(array_map('trim', explode(',', (string) $accepted)), static fn (string $v): bool => $v !== ''));
+            if ($values === []) {
+                continue;
+            }
+            // the variant value wins over the product value, same rule as on the product page
+            $where .= " AND EXISTS (SELECT 1 FROM product_variant fv WHERE fv.product_id = p.id AND fv.active = TRUE
+                AND COALESCE(fv.attributes ->> :attrKey$filter, p.attributes ->> :attrKey$filter) IN (:attrValues$filter))";
+            $params['attrKey'.$filter] = (string) $key;
+            $params['attrValues'.$filter] = array_slice($values, 0, 20);
+            $types['attrValues'.$filter] = ArrayParameterType::STRING;
+            ++$filter;
         }
         if ($query->q !== null && trim($query->q) !== '') {
-            $where .= " AND ($nameSql ILIKE :search OR p.slug ILIKE :search)";
-            $params['search'] = '%'.trim($query->q).'%';
+            $term = trim($query->q);
+            $where .= " AND ($nameSql ILIKE :search OR p.slug ILIKE :search OR p.brand ILIKE :search
+                OR EXISTS (SELECT 1 FROM product_variant sv WHERE sv.product_id = p.id AND sv.active = TRUE AND (sv.mpn ILIKE :search OR sv.ean = :exact)))";
+            $params['search'] = '%'.strtr($term, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
+            $params['exact'] = preg_replace('/[\s-]/', '', $term);
         }
         if ($query->availableOnly) {
             $where .= ' AND EXISTS (SELECT 1 FROM product_variant stock_variant WHERE stock_variant.product_id = p.id AND stock_variant.active = TRUE AND stock_variant.stock > 0)';
@@ -48,14 +66,17 @@ final class CatalogService
             'newest' => 'p.created_at DESC, p.slug ASC',
             default => 'p.featured_rank ASC, p.slug ASC',
         };
-        $total = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product p WHERE $where", $params);
+        $countParams = array_diff_key($params, ['locale' => true]);
+        $total = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product p WHERE $where", $countParams, $types);
         $pages = max(1, (int) ceil($total / 12));
         $page = min($query->page, $pages);
-        $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.category, p.image, p.badge, $nameSql AS name,
+        $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.brand, c.slug AS category, c.names ->> :locale AS category_name,
+            p.image, p.badge, $nameSql AS name,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.$priceColumn END), MIN(v.$priceColumn)) AS from_price,
             COALESCE(SUM(GREATEST(v.stock, 0)), 0) AS available_units
-            FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
-            WHERE $where GROUP BY p.id ORDER BY $sort LIMIT 12 OFFSET ".(($page - 1) * 12), $params);
+            FROM product p JOIN category c ON c.id = p.category_id
+            JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
+            WHERE $where GROUP BY p.id, c.id ORDER BY $sort LIMIT 12 OFFSET ".(($page - 1) * 12), $params, $types);
 
         return [
             'items' => array_map(fn (array $row): array => $this->card($row, $currency), $rows),
@@ -67,23 +88,31 @@ final class CatalogService
 
     public function product(string $slug, string $locale): ?array
     {
-        $row = $this->db->fetchAssociative("SELECT p.*, p.copy -> :locale ->> 'name' AS name,
+        $row = $this->db->fetchAssociative("SELECT p.*, p.copy -> :locale ->> 'name' AS name, c.slug AS category_slug,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_czk END), MIN(v.price_czk)) AS from_czk,
             COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_eur END), MIN(v.price_eur)) AS from_eur,
             COALESCE(SUM(GREATEST(v.stock, 0)), 0) AS available_units
-            FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
-            WHERE p.slug = :slug AND p.status = 'published' GROUP BY p.id", ['slug' => $slug, 'locale' => $locale]);
+            FROM product p JOIN category c ON c.id = p.category_id
+            JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
+            WHERE p.slug = :slug AND p.status = 'published' GROUP BY p.id, c.id", ['slug' => $slug, 'locale' => $locale]);
         if ($row === false) {
             return null;
         }
         $currency = $locale === 'cs' ? 'CZK' : 'EUR';
         $copy = json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR)[$locale];
+        $index = CategoryIndex::load($this->db);
+        $path = $index->path($row['category_id']);
+        $definitions = $index->effectiveAttributes($row['category_id']);
+        $attributes = json_decode($row['attributes'], true, flags: JSON_THROW_ON_ERROR);
         $variants = $this->db->fetchAllAssociative('SELECT * FROM product_variant WHERE product_id = :id AND active = TRUE ORDER BY sku', ['id' => $row['id']]);
+        $inBox = trim((string) ($copy['inBox'] ?? ''));
 
         return [
             'id' => $row['id'],
             'slug' => $row['slug'],
-            'category' => $row['category'],
+            'brand' => $row['brand'],
+            'category' => $row['category_slug'],
+            'categoryName' => end($path)['names'][$locale],
             'name' => $copy['name'],
             'short' => $copy['short'],
             'description' => $copy['description'],
@@ -91,15 +120,20 @@ final class CatalogService
             'image' => $row['image'],
             'images' => json_decode($row['images'], true, flags: JSON_THROW_ON_ERROR),
             'badge' => $row['badge'],
+            'breadcrumbs' => array_map(static fn (array $category): array => ['slug' => $category['slug'], 'name' => $category['names'][$locale]], $path),
+            'specs' => AttributeSchema::specs($attributes, $definitions, $locale),
+            'inBox' => $inBox === '' ? null : $inBox,
             'fromPrice' => ['amount' => (int) $row[$currency === 'CZK' ? 'from_czk' : 'from_eur'], 'currency' => $currency],
             'inStock' => (int) $row['available_units'] > 0,
             'availableUnits' => (int) $row['available_units'],
-            'variants' => array_map(static function (array $variant) use ($locale, $currency): array {
+            'variants' => array_map(static function (array $variant) use ($locale, $currency, $definitions): array {
                 $labels = json_decode($variant['label'], true, flags: JSON_THROW_ON_ERROR);
 
                 return [
                     'id' => $variant['id'], 'sku' => $variant['sku'], 'label' => $labels[$locale],
                     'color' => $variant['color'], 'size' => $variant['size'], 'stock' => (int) $variant['stock'],
+                    'mpn' => $variant['mpn'], 'ean' => $variant['ean'],
+                    'specs' => AttributeSchema::specs(json_decode($variant['attributes'], true, flags: JSON_THROW_ON_ERROR), $definitions, $locale),
                     'price' => ['amount' => (int) $variant[$currency === 'CZK' ? 'price_czk' : 'price_eur'], 'currency' => $currency],
                 ];
             }, $variants),
@@ -108,20 +142,80 @@ final class CatalogService
 
     public function categories(string $locale): array
     {
-        $counts = $this->db->fetchAllKeyValue("SELECT category, COUNT(*) FROM product WHERE status = 'published' GROUP BY category");
-        $categories = [];
-        foreach (self::CATEGORIES as $slug => $labels) {
-            $categories[] = ['slug' => $slug, 'name' => $labels[$locale], 'count' => (int) ($counts[$slug] ?? 0)];
+        $counts = $this->db->fetchAllKeyValue("SELECT category_id, COUNT(*) FROM product WHERE status = 'published' GROUP BY category_id");
+
+        return CategoryIndex::load($this->db)->publicTree($locale, array_map('intval', $counts));
+    }
+
+    public function facets(string $slug, string $locale): ?array
+    {
+        $index = CategoryIndex::load($this->db);
+        $category = $index->bySlug($slug);
+        if ($category === null || !$index->isVisible($category['id'])) {
+            return null;
+        }
+        $ids = $index->subtreeIds($category['id'], true);
+        $brands = $this->db->fetchAllAssociative(
+            "SELECT brand AS value, COUNT(*) AS count FROM product WHERE status = 'published' AND brand IS NOT NULL AND category_id IN (:ids) GROUP BY brand ORDER BY brand",
+            ['ids' => $ids],
+            ['ids' => ArrayParameterType::STRING],
+        );
+        $definitions = array_values(array_filter($index->effectiveAttributes($category['id']), static fn (array $d): bool => $d['filterable']));
+        $counts = [];
+        if ($definitions !== []) {
+            // p.attributes || v.attributes lets the variant value replace the product value
+            $rows = $this->db->fetchAllAssociative(
+                "SELECT e.key, e.value, COUNT(DISTINCT p.id) AS count
+                FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
+                CROSS JOIN LATERAL jsonb_each_text(p.attributes || v.attributes) e
+                WHERE p.status = 'published' AND p.category_id IN (:ids) AND e.key IN (:keys)
+                GROUP BY e.key, e.value",
+                ['ids' => $ids, 'keys' => array_column($definitions, 'key')],
+                ['ids' => ArrayParameterType::STRING, 'keys' => ArrayParameterType::STRING],
+            );
+            foreach ($rows as $row) {
+                $counts[$row['key']][$row['value']] = (int) $row['count'];
+            }
+        }
+        $attributes = [];
+        foreach ($definitions as $definition) {
+            $values = [];
+            foreach ($counts[$definition['key']] ?? [] as $value => $count) {
+                $value = (string) $value;
+                $values[] = ['value' => $value, 'label' => AttributeSchema::valueLabel($definition, $value, $locale), 'count' => $count];
+            }
+            if ($values === []) {
+                continue;
+            }
+            usort($values, $definition['type'] === 'number'
+                ? static fn (array $a, array $b): int => (float) $a['value'] <=> (float) $b['value']
+                : static fn (array $a, array $b): int => strnatcasecmp($a['label'], $b['label']));
+            $attributes[] = ['key' => $definition['key'], 'label' => $definition['labels'][$locale], 'type' => $definition['type'], 'unit' => $definition['unit'], 'values' => $values];
         }
 
-        return $categories;
+        return [
+            'category' => $category['slug'],
+            'brands' => array_map(static fn (array $row): array => ['value' => $row['value'], 'count' => (int) $row['count']], $brands),
+            'attributes' => $attributes,
+        ];
+    }
+
+    private function nameSql(string $locale): string
+    {
+        return match ($locale) {
+            'cs' => "p.copy -> 'cs' ->> 'name'",
+            'de' => "p.copy -> 'de' ->> 'name'",
+            'en' => "p.copy -> 'en' ->> 'name'",
+            default => throw new \InvalidArgumentException('Unsupported catalog locale'),
+        };
     }
 
     private function card(array $row, string $currency): array
     {
         return [
-            'id' => $row['id'], 'slug' => $row['slug'], 'name' => $row['name'],
-            'category' => $row['category'], 'image' => $row['image'], 'badge' => $row['badge'],
+            'id' => $row['id'], 'slug' => $row['slug'], 'name' => $row['name'], 'brand' => $row['brand'],
+            'category' => $row['category'], 'categoryName' => $row['category_name'],
+            'image' => $row['image'], 'badge' => $row['badge'],
             'fromPrice' => ['amount' => (int) $row['from_price'], 'currency' => $currency],
             'inStock' => (int) $row['available_units'] > 0,
             'availableUnits' => (int) $row['available_units'],
