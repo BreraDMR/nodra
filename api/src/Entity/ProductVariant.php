@@ -12,6 +12,8 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity]
 #[ORM\Table(name: 'product_variant')]
 #[ORM\Index(columns: ['product_id', 'active'], name: 'idx_variant_product')]
+#[ORM\Index(columns: ['mpn'], name: 'idx_variant_mpn')]
+#[ORM\UniqueConstraint(name: 'uniq_variant_ean', columns: ['ean'], options: ['where' => '(ean IS NOT NULL)'])]
 class ProductVariant
 {
     #[ORM\Id]
@@ -47,6 +49,16 @@ class ProductVariant
     #[ORM\Column]
     private bool $active = true;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $mpn = null;
+
+    #[ORM\Column(length: 14, nullable: true)]
+    private ?string $ean = null;
+
+    /** @var array<string, string> values that override the product's attributes for this variant */
+    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '{}'])]
+    private array $attributes = [];
+
     public function __construct(Product $product, string $sku, array $label, int $priceCzk, int $priceEur, int $stock, ?string $color = null, ?string $size = null)
     {
         $this->id = Uuid::v7();
@@ -70,6 +82,9 @@ class ProductVariant
     public function getPriceEur(): int { return $this->priceEur; }
     public function getStock(): int { return $this->stock; }
     public function isActive(): bool { return $this->active; }
+    public function getMpn(): ?string { return $this->mpn; }
+    public function getEan(): ?string { return $this->ean; }
+    public function getAttributes(): array { return $this->attributes; }
 
     public function adjustStock(int $delta): void
     {
@@ -87,5 +102,12 @@ class ProductVariant
         $this->active = $active;
         $this->color = $color;
         $this->size = $size;
+    }
+
+    public function identify(?string $mpn, ?string $ean, array $attributes): void
+    {
+        $this->mpn = $mpn;
+        $this->ean = $ean;
+        $this->attributes = $attributes;
     }
 }
