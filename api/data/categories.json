@@ -1,0 +1,785 @@
+[
+  {
+    "slug": "components",
+    "parent": null,
+    "position": 10,
+    "names": {
+      "cs": "Komponenty",
+      "de": "Komponenten",
+      "en": "Components"
+    },
+    "attributes": []
+  },
+  {
+    "slug": "tyres",
+    "parent": "components",
+    "position": 10,
+    "names": {
+      "cs": "Pláště",
+      "de": "Reifen",
+      "en": "Tyres"
+    },
+    "attributes": [
+      {
+        "key": "wheel_size",
+        "type": "choice",
+        "labels": {
+          "cs": "Velikost kola",
+          "de": "Laufradgröße",
+          "en": "Wheel size"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "622",
+            "labels": {
+              "cs": "622 (700C / 29″)",
+              "de": "622 (700C / 29″)",
+              "en": "622 (700C / 29″)"
+            }
+          },
+          {
+            "value": "584",
+            "labels": {
+              "cs": "584 (27,5″ / 650B)",
+              "de": "584 (27,5″ / 650B)",
+              "en": "584 (27.5″ / 650B)"
+            }
+          },
+          {
+            "value": "559",
+            "labels": {
+              "cs": "559 (26″)",
+              "de": "559 (26″)",
+              "en": "559 (26″)"
+            }
+          },
+          {
+            "value": "406",
+            "labels": {
+              "cs": "406 (20″)",
+              "de": "406 (20″)",
+              "en": "406 (20″)"
+            }
+          }
+        ]
+      },
+      {
+        "key": "width_mm",
+        "type": "number",
+        "labels": {
+          "cs": "Šířka",
+          "de": "Breite",
+          "en": "Width"
+        },
+        "filterable": true,
+        "unit": "mm"
+      },
+      {
+        "key": "tubeless",
+        "type": "choice",
+        "labels": {
+          "cs": "Tubeless ready",
+          "de": "Tubeless-ready",
+          "en": "Tubeless ready"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "yes",
+            "labels": {
+              "cs": "Ano",
+              "de": "Ja",
+              "en": "Yes"
+            }
+          },
+          {
+            "value": "no",
+            "labels": {
+              "cs": "Ne",
+              "de": "Nein",
+              "en": "No"
+            }
+          }
+        ]
+      },
+      {
+        "key": "bead",
+        "type": "choice",
+        "labels": {
+          "cs": "Patka",
+          "de": "Wulst",
+          "en": "Bead"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "folding",
+            "labels": {
+              "cs": "Skládací",
+              "de": "Faltreifen",
+              "en": "Folding"
+            }
+          },
+          {
+            "value": "wire",
+            "labels": {
+              "cs": "Drátová",
+              "de": "Drahtreifen",
+              "en": "Wire"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "tubes",
+    "parent": "components",
+    "position": 20,
+    "names": {
+      "cs": "Duše",
+      "de": "Schläuche",
+      "en": "Inner tubes"
+    },
+    "attributes": [
+      {
+        "key": "wheel_size",
+        "type": "choice",
+        "labels": {
+          "cs": "Velikost kola",
+          "de": "Laufradgröße",
+          "en": "Wheel size"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "622",
+            "labels": {
+              "cs": "622 (700C / 29″)",
+              "de": "622 (700C / 29″)",
+              "en": "622 (700C / 29″)"
+            }
+          },
+          {
+            "value": "584",
+            "labels": {
+              "cs": "584 (27,5″ / 650B)",
+              "de": "584 (27,5″ / 650B)",
+              "en": "584 (27.5″ / 650B)"
+            }
+          },
+          {
+            "value": "559",
+            "labels": {
+              "cs": "559 (26″)",
+              "de": "559 (26″)",
+              "en": "559 (26″)"
+            }
+          },
+          {
+            "value": "406",
+            "labels": {
+              "cs": "406 (20″)",
+              "de": "406 (20″)",
+              "en": "406 (20″)"
+            }
+          }
+        ]
+      },
+      {
+        "key": "width_range",
+        "type": "text",
+        "labels": {
+          "cs": "Rozsah šířky",
+          "de": "Breitenbereich",
+          "en": "Width range"
+        },
+        "filterable": true,
+        "unit": "mm"
+      },
+      {
+        "key": "valve",
+        "type": "choice",
+        "labels": {
+          "cs": "Ventilek",
+          "de": "Ventil",
+          "en": "Valve"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "presta",
+            "labels": {
+              "cs": "Presta (galuskový)",
+              "de": "Presta (Sclaverand)",
+              "en": "Presta"
+            }
+          },
+          {
+            "value": "schrader",
+            "labels": {
+              "cs": "Schrader (auto)",
+              "de": "Schrader (Auto)",
+              "en": "Schrader"
+            }
+          },
+          {
+            "value": "dunlop",
+            "labels": {
+              "cs": "Dunlop (klasický)",
+              "de": "Dunlop (Blitz)",
+              "en": "Dunlop"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "chains",
+    "parent": "components",
+    "position": 30,
+    "names": {
+      "cs": "Řetězy",
+      "de": "Ketten",
+      "en": "Chains"
+    },
+    "attributes": [
+      {
+        "key": "speeds",
+        "type": "choice",
+        "labels": {
+          "cs": "Počet rychlostí",
+          "de": "Gänge",
+          "en": "Speeds"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "1"
+          },
+          {
+            "value": "8"
+          },
+          {
+            "value": "9"
+          },
+          {
+            "value": "10"
+          },
+          {
+            "value": "11"
+          },
+          {
+            "value": "12"
+          },
+          {
+            "value": "13"
+          }
+        ]
+      },
+      {
+        "key": "links",
+        "type": "number",
+        "labels": {
+          "cs": "Počet článků",
+          "de": "Glieder",
+          "en": "Links"
+        },
+        "filterable": false
+      }
+    ]
+  },
+  {
+    "slug": "cassettes",
+    "parent": "components",
+    "position": 40,
+    "names": {
+      "cs": "Kazety",
+      "de": "Kassetten",
+      "en": "Cassettes"
+    },
+    "attributes": [
+      {
+        "key": "speeds",
+        "type": "choice",
+        "labels": {
+          "cs": "Počet rychlostí",
+          "de": "Gänge",
+          "en": "Speeds"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "1"
+          },
+          {
+            "value": "8"
+          },
+          {
+            "value": "9"
+          },
+          {
+            "value": "10"
+          },
+          {
+            "value": "11"
+          },
+          {
+            "value": "12"
+          },
+          {
+            "value": "13"
+          }
+        ]
+      },
+      {
+        "key": "range",
+        "type": "text",
+        "labels": {
+          "cs": "Rozsah",
+          "de": "Abstufung",
+          "en": "Range"
+        },
+        "filterable": true,
+        "unit": "T"
+      },
+      {
+        "key": "freehub",
+        "type": "choice",
+        "labels": {
+          "cs": "Ořech",
+          "de": "Freilaufkörper",
+          "en": "Freehub body"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "hg",
+            "labels": {
+              "cs": "Shimano HG",
+              "de": "Shimano HG",
+              "en": "Shimano HG"
+            }
+          },
+          {
+            "value": "microspline",
+            "labels": {
+              "cs": "Shimano Micro Spline",
+              "de": "Shimano Micro Spline",
+              "en": "Shimano Micro Spline"
+            }
+          },
+          {
+            "value": "xd",
+            "labels": {
+              "cs": "SRAM XD",
+              "de": "SRAM XD",
+              "en": "SRAM XD"
+            }
+          },
+          {
+            "value": "xdr",
+            "labels": {
+              "cs": "SRAM XDR",
+              "de": "SRAM XDR",
+              "en": "SRAM XDR"
+            }
+          },
+          {
+            "value": "campagnolo",
+            "labels": {
+              "cs": "Campagnolo",
+              "de": "Campagnolo",
+              "en": "Campagnolo"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "brake-pads",
+    "parent": "components",
+    "position": 50,
+    "names": {
+      "cs": "Brzdové destičky",
+      "de": "Bremsbeläge",
+      "en": "Brake pads"
+    },
+    "attributes": [
+      {
+        "key": "compound",
+        "type": "choice",
+        "labels": {
+          "cs": "Směs",
+          "de": "Mischung",
+          "en": "Compound"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "organic",
+            "labels": {
+              "cs": "Organické",
+              "de": "Organisch",
+              "en": "Organic"
+            }
+          },
+          {
+            "value": "sintered",
+            "labels": {
+              "cs": "Sintrované",
+              "de": "Gesintert",
+              "en": "Sintered"
+            }
+          },
+          {
+            "value": "semi_metallic",
+            "labels": {
+              "cs": "Polokovové",
+              "de": "Semi-metallisch",
+              "en": "Semi-metallic"
+            }
+          }
+        ]
+      },
+      {
+        "key": "fits",
+        "type": "text",
+        "labels": {
+          "cs": "Kompatibilita",
+          "de": "Passend für",
+          "en": "Fits"
+        },
+        "filterable": false
+      }
+    ]
+  },
+  {
+    "slug": "cables",
+    "parent": "components",
+    "position": 60,
+    "names": {
+      "cs": "Lanka a bowdeny",
+      "de": "Züge und Hüllen",
+      "en": "Cables and housing"
+    },
+    "attributes": [
+      {
+        "key": "cable_type",
+        "type": "choice",
+        "labels": {
+          "cs": "Typ",
+          "de": "Typ",
+          "en": "Type"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "shift",
+            "labels": {
+              "cs": "Řadicí",
+              "de": "Schaltung",
+              "en": "Shift"
+            }
+          },
+          {
+            "value": "brake",
+            "labels": {
+              "cs": "Brzdové",
+              "de": "Bremse",
+              "en": "Brake"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "shifting",
+    "parent": "components",
+    "position": 70,
+    "names": {
+      "cs": "Řazení",
+      "de": "Schaltung",
+      "en": "Shifting"
+    },
+    "attributes": [
+      {
+        "key": "part",
+        "type": "choice",
+        "labels": {
+          "cs": "Díl",
+          "de": "Teil",
+          "en": "Part"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "rear_derailleur",
+            "labels": {
+              "cs": "Přehazovačka",
+              "de": "Schaltwerk",
+              "en": "Rear derailleur"
+            }
+          },
+          {
+            "value": "front_derailleur",
+            "labels": {
+              "cs": "Přesmykač",
+              "de": "Umwerfer",
+              "en": "Front derailleur"
+            }
+          },
+          {
+            "value": "shifter",
+            "labels": {
+              "cs": "Řadicí páčka",
+              "de": "Schalthebel",
+              "en": "Shifter"
+            }
+          }
+        ]
+      },
+      {
+        "key": "speeds",
+        "type": "choice",
+        "labels": {
+          "cs": "Počet rychlostí",
+          "de": "Gänge",
+          "en": "Speeds"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "1"
+          },
+          {
+            "value": "8"
+          },
+          {
+            "value": "9"
+          },
+          {
+            "value": "10"
+          },
+          {
+            "value": "11"
+          },
+          {
+            "value": "12"
+          },
+          {
+            "value": "13"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "other-parts",
+    "parent": "components",
+    "position": 80,
+    "names": {
+      "cs": "Ostatní díly",
+      "de": "Weitere Teile",
+      "en": "Other parts"
+    },
+    "attributes": []
+  },
+  {
+    "slug": "accessories",
+    "parent": null,
+    "position": 20,
+    "names": {
+      "cs": "Doplňky",
+      "de": "Zubehör",
+      "en": "Accessories"
+    },
+    "attributes": []
+  },
+  {
+    "slug": "lights",
+    "parent": null,
+    "position": 30,
+    "names": {
+      "cs": "Světla",
+      "de": "Beleuchtung",
+      "en": "Lights"
+    },
+    "attributes": [
+      {
+        "key": "position",
+        "type": "choice",
+        "labels": {
+          "cs": "Umístění",
+          "de": "Position",
+          "en": "Position"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "front",
+            "labels": {
+              "cs": "Přední",
+              "de": "Vorne",
+              "en": "Front"
+            }
+          },
+          {
+            "value": "rear",
+            "labels": {
+              "cs": "Zadní",
+              "de": "Hinten",
+              "en": "Rear"
+            }
+          }
+        ]
+      },
+      {
+        "key": "lumens",
+        "type": "number",
+        "labels": {
+          "cs": "Svítivost",
+          "de": "Lichtstrom",
+          "en": "Output"
+        },
+        "filterable": true,
+        "unit": "lm"
+      }
+    ]
+  },
+  {
+    "slug": "bags",
+    "parent": null,
+    "position": 40,
+    "names": {
+      "cs": "Brašny",
+      "de": "Taschen",
+      "en": "Bags"
+    },
+    "attributes": [
+      {
+        "key": "mount",
+        "type": "choice",
+        "labels": {
+          "cs": "Uchycení",
+          "de": "Montage",
+          "en": "Mount"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "saddle",
+            "labels": {
+              "cs": "Pod sedlo",
+              "de": "Satteltasche",
+              "en": "Saddle"
+            }
+          },
+          {
+            "value": "frame",
+            "labels": {
+              "cs": "Do rámu",
+              "de": "Rahmen",
+              "en": "Frame"
+            }
+          },
+          {
+            "value": "top_tube",
+            "labels": {
+              "cs": "Na horní trubku",
+              "de": "Oberrohr",
+              "en": "Top tube"
+            }
+          },
+          {
+            "value": "handlebar",
+            "labels": {
+              "cs": "Na řídítka",
+              "de": "Lenker",
+              "en": "Handlebar"
+            }
+          },
+          {
+            "value": "rack",
+            "labels": {
+              "cs": "Na nosič",
+              "de": "Gepäckträger",
+              "en": "Rack"
+            }
+          },
+          {
+            "value": "bottle_cage",
+            "labels": {
+              "cs": "Do košíku na láhev",
+              "de": "Flaschenhalter",
+              "en": "Bottle cage"
+            }
+          }
+        ]
+      },
+      {
+        "key": "volume_l",
+        "type": "number",
+        "labels": {
+          "cs": "Objem",
+          "de": "Volumen",
+          "en": "Volume"
+        },
+        "filterable": true,
+        "unit": "l"
+      }
+    ]
+  },
+  {
+    "slug": "apparel",
+    "parent": null,
+    "position": 50,
+    "names": {
+      "cs": "Oblečení",
+      "de": "Bekleidung",
+      "en": "Apparel"
+    },
+    "attributes": [
+      {
+        "key": "gender",
+        "type": "choice",
+        "labels": {
+          "cs": "Střih",
+          "de": "Schnitt",
+          "en": "Fit"
+        },
+        "filterable": true,
+        "options": [
+          {
+            "value": "men",
+            "labels": {
+              "cs": "Pánský",
+              "de": "Herren",
+              "en": "Men"
+            }
+          },
+          {
+            "value": "women",
+            "labels": {
+              "cs": "Dámský",
+              "de": "Damen",
+              "en": "Women"
+            }
+          },
+          {
+            "value": "unisex",
+            "labels": {
+              "cs": "Unisex",
+              "de": "Unisex",
+              "en": "Unisex"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
