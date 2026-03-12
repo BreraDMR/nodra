@@ -10,7 +10,7 @@ final readonly class ProductWriteRequest
 {
     public function __construct(
         #[Assert\NotBlank, Assert\Length(max: 120)] public string $slug,
-        #[Assert\Choice(choices: ['bags', 'apparel', 'lights', 'accessories'])] public string $category,
+        #[Assert\NotBlank, Assert\Length(max: 60)] public string $category,
         #[Assert\NotBlank] public string $nameCs,
         #[Assert\NotBlank] public string $nameDe,
         #[Assert\NotBlank] public string $nameEn,
@@ -23,5 +23,10 @@ final readonly class ProductWriteRequest
         #[Assert\PositiveOrZero] public int $priceEur,
         public ?string $badge = null,
         public int $featuredRank = 100,
+        #[Assert\Length(max: 80)] public ?string $brand = null,
+        #[Assert\Count(max: 40)] public array $attributes = [],
+        #[Assert\Length(max: 500)] public ?string $inBoxCs = null,
+        #[Assert\Length(max: 500)] public ?string $inBoxDe = null,
+        #[Assert\Length(max: 500)] public ?string $inBoxEn = null,
     ) {}
 }
