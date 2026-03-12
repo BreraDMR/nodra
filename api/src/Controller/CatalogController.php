@@ -36,6 +36,14 @@ final class CatalogController extends AbstractController
         return $this->publicCatalog($this->catalog->categories($query->locale));
     }
 
+    #[Route('/categories/{slug}/facets', methods: ['GET'])]
+    public function facets(string $slug, #[MapQueryString] CatalogQuery $query): JsonResponse
+    {
+        $facets = $this->catalog->facets($slug, $query->locale);
+
+        return $facets === null ? $this->json(['message' => 'Category not found'], 404) : $this->publicCatalog($facets);
+    }
+
     private function publicCatalog(array $payload): JsonResponse
     {
         $response = $this->json($payload);
