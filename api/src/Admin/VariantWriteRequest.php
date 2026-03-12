@@ -18,5 +18,8 @@ final readonly class VariantWriteRequest
         public bool $active = true,
         public ?string $color = null,
         public ?string $size = null,
+        #[Assert\Length(max: 64)] public ?string $mpn = null,
+        #[Assert\Length(max: 20)] public ?string $ean = null,
+        #[Assert\Count(max: 40)] public array $attributes = [],
     ) {}
 }
