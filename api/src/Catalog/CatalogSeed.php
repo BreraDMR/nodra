@@ -23,4 +23,19 @@ final class CatalogSeed
 
         return $items;
     }
+
+    /** @return list<array> categories with parents listed before their children */
+    public static function categories(): array
+    {
+        $categories = json_decode(file_get_contents(__DIR__.'/../../data/categories.json'), true, flags: JSON_THROW_ON_ERROR);
+        $known = [];
+        foreach ($categories as $category) {
+            if ($category['parent'] !== null && !isset($known[$category['parent']])) {
+                throw new \RuntimeException(sprintf('Seed category "%s" is listed before its parent', $category['slug']));
+            }
+            $known[$category['slug']] = true;
+        }
+
+        return $categories;
+    }
 }
