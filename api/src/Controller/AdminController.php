@@ -78,6 +78,7 @@ final class AdminController extends AbstractController
             $result = $this->admin->updateVariant($id, $payload);
             return $result === null ? $this->json(['message' => 'Variant not found'], 404) : $this->json($result);
         } catch (\InvalidArgumentException $error) { return $this->json(['message' => $error->getMessage()], 422); }
+        catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
     }
 
     #[Route('/orders', methods: ['GET'])]
