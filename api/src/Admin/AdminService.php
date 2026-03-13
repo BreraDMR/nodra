@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Admin;
 
+use App\Catalog\AttributeSchema;
+use App\Catalog\CategoryIndex;
+use App\Catalog\Gtin;
 use App\Checkout\CheckoutService;
+use App\Entity\Category;
 use App\Entity\OrderItem;
 use App\Entity\LoyaltyEntry;
 use App\Entity\Product;
@@ -45,13 +49,15 @@ final class AdminService
         $where = '';
         if ($query->q !== null && trim($query->q) !== '') {
             $params['search'] = '%'.strtr(trim($query->q), ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
-            $where = " WHERE p.slug ILIKE :search OR p.copy -> 'cs' ->> 'name' ILIKE :search OR p.copy -> 'de' ->> 'name' ILIKE :search OR p.copy -> 'en' ->> 'name' ILIKE :search";
+            $params['exact'] = preg_replace('/[\s-]/', '', trim($query->q));
+            $where = " WHERE p.slug ILIKE :search OR p.brand ILIKE :search OR p.copy -> 'cs' ->> 'name' ILIKE :search OR p.copy -> 'de' ->> 'name' ILIKE :search OR p.copy -> 'en' ->> 'name' ILIKE :search
+                OR EXISTS (SELECT 1 FROM product_variant sv WHERE sv.product_id = p.id AND (sv.mpn ILIKE :search OR sv.ean = :exact))";
         }
         $total = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product p$where", $params);
         $pages = max(1, (int) ceil($total / 24));
         $page = min($query->page, $pages);
         $rows = $this->db->fetchAllAssociative(
-            "SELECT p.*, p.copy -> 'en' ->> 'name' AS name FROM product p$where ORDER BY p.featured_rank, p.slug LIMIT :limit OFFSET :offset",
+            "SELECT p.*, p.copy -> 'en' ->> 'name' AS name, c.slug AS category_slug FROM product p JOIN category c ON c.id = p.category_id$where ORDER BY p.featured_rank, p.slug LIMIT :limit OFFSET :offset",
             $params + ['limit' => 24, 'offset' => ($page - 1) * 24],
             ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
         );
@@ -59,7 +65,7 @@ final class AdminService
         $offersByProduct = [];
         if ($rows !== []) {
             $variants = $this->db->fetchAllAssociative(
-                'SELECT product_id, id, sku, label, price_czk, price_eur, stock, active, color, size FROM product_variant WHERE product_id IN (:ids) ORDER BY sku',
+                'SELECT product_id, id, sku, label, price_czk, price_eur, stock, active, color, size, mpn, ean, attributes FROM product_variant WHERE product_id IN (:ids) ORDER BY sku',
                 ['ids' => array_column($rows, 'id')],
                 ['ids' => ArrayParameterType::STRING],
             );
@@ -67,12 +73,15 @@ final class AdminService
                 $variantsByProduct[$variant['product_id']][] = $variant;
             }
             $offers = $this->db->fetchAllAssociative(
-                'SELECT product_id, supplier, url, title, currency, price_minor, reported_quantity, checked_at, verification_status FROM supplier_offer WHERE product_id IN (:ids) ORDER BY checked_at DESC',
+                'SELECT id, product_id, variant_id, supplier, seller, url, title, currency, price_minor, reported_quantity, checked_at, lead_time_min_days, lead_time_max_days, verification_status FROM supplier_offer WHERE product_id IN (:ids) ORDER BY checked_at DESC, id',
                 ['ids' => array_column($rows, 'id')],
                 ['ids' => ArrayParameterType::STRING],
             );
             foreach ($offers as $offer) {
                 $offersByProduct[$offer['product_id']][] = [
+                    'id' => $offer['id'], 'variantId' => $offer['variant_id'], 'seller' => $offer['seller'],
+                    'leadTimeMinDays' => $offer['lead_time_min_days'] === null ? null : (int) $offer['lead_time_min_days'],
+                    'leadTimeMaxDays' => $offer['lead_time_max_days'] === null ? null : (int) $offer['lead_time_max_days'],
                     'supplier' => $offer['supplier'], 'url' => $offer['url'], 'title' => $offer['title'],
                     'currency' => $offer['currency'], 'priceMinor' => (int) $offer['price_minor'],
                     'reportedQuantity' => $offer['reported_quantity'] === null ? null : (int) $offer['reported_quantity'],
@@ -85,7 +94,8 @@ final class AdminService
             $variants = $variantsByProduct[$row['id']] ?? [];
 
             return [
-                'id' => $row['id'], 'slug' => $row['slug'], 'category' => $row['category'],
+                'id' => $row['id'], 'slug' => $row['slug'], 'category' => $row['category_slug'], 'categoryId' => $row['category_id'],
+                'brand' => $row['brand'], 'attributes' => json_decode($row['attributes'], true, flags: JSON_THROW_ON_ERROR),
                 'status' => $row['status'], 'name' => $row['name'], 'copy' => json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR),
                 'image' => $row['image'], 'badge' => $row['badge'], 'featuredRank' => (int) $row['featured_rank'],
                 'supplierOffers' => $offersByProduct[$row['id']] ?? [],
@@ -93,6 +103,7 @@ final class AdminService
                     'id' => $v['id'], 'sku' => $v['sku'], 'label' => json_decode($v['label'], true, flags: JSON_THROW_ON_ERROR),
                     'priceCzk' => (int) $v['price_czk'], 'priceEur' => (int) $v['price_eur'], 'stock' => (int) $v['stock'],
                     'active' => (bool) $v['active'], 'color' => $v['color'], 'size' => $v['size'],
+                    'mpn' => $v['mpn'], 'ean' => $v['ean'], 'attributes' => json_decode($v['attributes'], true, flags: JSON_THROW_ON_ERROR),
                 ], $variants),
             ];
         }, $rows);
@@ -103,9 +114,11 @@ final class AdminService
     public function createProduct(ProductWriteRequest $input): array
     {
         $this->validateSlug($input->slug);
+        $category = $this->category($input->category);
         $copy = $this->copy($input);
-        $product = new Product($input->slug, $input->category, $copy, $input->image);
-        $product->update($input->slug, $input->category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
+        $product = new Product($input->slug, $category, $copy, $input->image);
+        $product->update($input->slug, $category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
+        $product->describe($this->brand($input->brand), $this->productAttributes($input->attributes, $category));
         $variant = new ProductVariant($product, 'ND-'.strtoupper(bin2hex(random_bytes(4))), ['cs' => 'Standardní', 'de' => 'Standard', 'en' => 'Standard'], $input->priceCzk, $input->priceEur, 0);
         $this->em->persist($product);
         $this->em->persist($variant);
@@ -121,9 +134,11 @@ final class AdminService
             return null;
         }
         $this->validateSlug($input->slug, $id);
+        $category = $this->category($input->category, $product->getCategory());
         $copy = $this->copy($input, $product->getCopy());
         $images = array_values(array_unique([$input->image, ...$product->getImages()]));
-        $product->update($input->slug, $input->category, $copy, $input->image, $images, $input->badge, $input->featuredRank, $input->status);
+        $product->update($input->slug, $category, $copy, $input->image, $images, $input->badge, $input->featuredRank, $input->status);
+        $product->describe($this->brand($input->brand), $this->productAttributes($input->attributes, $category));
         $baseId = $this->db->fetchOne('SELECT id FROM product_variant WHERE product_id = :id ORDER BY (active AND stock > 0) DESC, active DESC, sku ASC LIMIT 1', ['id' => $id]);
         $variant = $baseId === false ? null : $this->em->find(ProductVariant::class, Uuid::fromString($baseId));
         if ($variant !== null) {
@@ -158,6 +173,7 @@ final class AdminService
         $this->validateSku($input->sku);
         $variant = new ProductVariant($product, trim($input->sku), $this->variantLabels($input), $input->priceCzk, $input->priceEur, 0, $input->color, $input->size);
         $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
+        $this->identify($variant, $input);
         $this->em->persist($variant);
         $this->em->flush();
 
@@ -174,6 +190,7 @@ final class AdminService
             throw new \InvalidArgumentException('SKU cannot be changed after creation');
         }
         $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
+        $this->identify($variant, $input);
         $this->em->flush();
 
         return ['id' => $id, 'sku' => $variant->getSku()];
@@ -254,8 +271,12 @@ final class AdminService
     private function copy(ProductWriteRequest $input, array $existing = []): array
     {
         $copy = [];
-        foreach (['cs' => ['nameCs', 'shortCs'], 'de' => ['nameDe', 'shortDe'], 'en' => ['nameEn', 'shortEn']] as $locale => [$name, $short]) {
+        foreach (['cs' => ['nameCs', 'shortCs', 'inBoxCs'], 'de' => ['nameDe', 'shortDe', 'inBoxDe'], 'en' => ['nameEn', 'shortEn', 'inBoxEn']] as $locale => [$name, $short, $inBox]) {
             $copy[$locale] = ['name' => trim($input->$name), 'short' => trim($input->$short), 'description' => $existing[$locale]['description'] ?? trim($input->$short), 'details' => $existing[$locale]['details'] ?? []];
+            $contents = trim((string) $input->$inBox);
+            if ($contents !== '') {
+                $copy[$locale]['inBox'] = $contents;
+            }
         }
 
         return $copy;
@@ -280,6 +301,47 @@ final class AdminService
         if ($this->db->fetchOne('SELECT id FROM product_variant WHERE sku = :sku', ['sku' => $sku]) !== false) {
             throw new \DomainException('A variant with this SKU already exists');
         }
+    }
+
+    /** Active category by slug; a product may keep its current category even after it was deactivated. */
+    private function category(string $slug, ?Category $current = null): Category
+    {
+        $category = $this->em->getRepository(Category::class)->findOneBy(['slug' => $slug]);
+        if ($category === null) {
+            throw new \InvalidArgumentException('Unknown category');
+        }
+        if ($category !== $current && !CategoryIndex::load($this->db)->isVisible($category->getId()->toRfc4122())) {
+            throw new \InvalidArgumentException('Choose an active category');
+        }
+
+        return $category;
+    }
+
+    private function brand(?string $brand): ?string
+    {
+        $brand = trim((string) $brand);
+
+        return $brand === '' ? null : $brand;
+    }
+
+    private function productAttributes(array $values, Category $category): array
+    {
+        return AttributeSchema::normalizeValues($values, CategoryIndex::load($this->db)->effectiveAttributes($category->getId()->toRfc4122()));
+    }
+
+    private function identify(ProductVariant $variant, VariantWriteRequest $input): void
+    {
+        $ean = trim((string) $input->ean) === '' ? null : Gtin::normalize((string) $input->ean);
+        if ($ean !== null) {
+            $owner = $this->db->fetchOne('SELECT id FROM product_variant WHERE ean = :ean', ['ean' => $ean]);
+            if ($owner !== false && $owner !== $variant->getId()->toRfc4122()) {
+                throw new \DomainException('Another variant already has this EAN');
+            }
+        }
+        $mpn = trim((string) $input->mpn);
+        $categoryId = $variant->getProduct()->getCategory()->getId()->toRfc4122();
+        $attributes = AttributeSchema::normalizeValues($input->attributes, CategoryIndex::load($this->db)->effectiveAttributes($categoryId));
+        $variant->identify($mpn === '' ? null : $mpn, $ean, $attributes);
     }
 
     private function variantLabels(VariantWriteRequest $input): array
