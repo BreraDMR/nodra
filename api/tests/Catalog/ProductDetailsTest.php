@@ -16,7 +16,10 @@ final class ProductDetailsTest extends TestCase
         $db->method('fetchAssociative')->willReturn([
             'id' => 'demo-product',
             'slug' => 'demo-light',
-            'category' => 'lights',
+            'category_id' => 'category-1',
+            'category_slug' => 'lights',
+            'brand' => null,
+            'attributes' => '{}',
             'copy' => json_encode(['cs' => [
                 'name' => 'Demo light',
                 'short' => 'Front light',
@@ -30,10 +33,14 @@ final class ProductDetailsTest extends TestCase
             'from_eur' => 6400,
             'available_units' => 6,
         ]);
-        $db->method('fetchAllAssociative')->willReturn([]);
+        $db->method('fetchAllAssociative')->willReturnCallback(static fn (string $sql): array => str_contains($sql, 'FROM category') ? [[
+            'id' => 'category-1', 'parent_id' => null, 'slug' => 'lights', 'names' => '{"cs":"Světla","de":"Beleuchtung","en":"Lights"}',
+            'position' => 30, 'active' => true, 'attributes' => '[]',
+        ]] : []);
 
         $product = (new CatalogService($db))->product('demo-light', 'cs');
 
         self::assertSame(['800 lm', 'USB charging', 'handlebar mount'], $product['details']);
+        self::assertSame([['slug' => 'lights', 'name' => 'Světla']], $product['breadcrumbs']);
     }
 }
