@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\Category;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\ShopOrder;
@@ -13,7 +14,7 @@ final class CommerceInvariantTest extends TestCase
 {
     private function variant(): ProductVariant
     {
-        $product = new Product('sample-bag', 'bags', ['en' => ['name' => 'Sample', 'short' => 'Sample', 'description' => 'Sample', 'details' => []]], '/images/pannier.png');
+        $product = new Product('sample-bag', new Category('bags', ['cs' => 'Brašny', 'de' => 'Taschen', 'en' => 'Bags']), ['en' => ['name' => 'Sample', 'short' => 'Sample', 'description' => 'Sample', 'details' => []]], '/images/pannier.png');
         return new ProductVariant($product, 'ND-SAMPLE', ['en' => '12 L'], 329000, 13900, 2);
     }
 
