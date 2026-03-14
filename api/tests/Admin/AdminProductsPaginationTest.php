@@ -24,7 +24,8 @@ final class AdminProductsPaginationTest extends TestCase
                     self::assertSame(24, $params['offset']);
 
                     return [[
-                        'id' => 'product-2', 'slug' => 'demo-light', 'category' => 'lights',
+                        'id' => 'product-2', 'slug' => 'demo-light', 'category_id' => 'category-1', 'category_slug' => 'lights',
+                        'brand' => 'Demo', 'attributes' => '{}',
                         'status' => 'published', 'name' => 'Demo light', 'copy' => '{"en":{"name":"Demo light"}}',
                         'image' => '/images/light.png', 'badge' => null, 'featured_rank' => 25,
                     ]];
@@ -39,7 +40,7 @@ final class AdminProductsPaginationTest extends TestCase
                     'product_id' => 'product-2', 'id' => 'variant-2', 'sku' => 'DEMO-2',
                     'label' => '{"en":"Standard"}', 'price_czk' => 100000,
                     'price_eur' => 4000, 'stock' => 4, 'active' => true,
-                    'color' => null, 'size' => null,
+                    'color' => null, 'size' => null, 'mpn' => null, 'ean' => null, 'attributes' => '{}',
                 ]];
             },
         );
@@ -51,5 +52,6 @@ final class AdminProductsPaginationTest extends TestCase
         self::assertSame(['page' => 2, 'pages' => 4, 'total' => 92], array_intersect_key($result, array_flip(['page', 'pages', 'total'])));
         self::assertSame('DEMO-2', $result['items'][0]['variants'][0]['sku']);
         self::assertSame([], $result['items'][0]['supplierOffers']);
+        self::assertSame('lights', $result['items'][0]['category']);
     }
 }
