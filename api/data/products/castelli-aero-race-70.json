@@ -1,6 +1,10 @@
 {
   "slug": "castelli-aero-race-70",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "jersey.png",
   "badge": null,
   "priceCzk": 299000,
