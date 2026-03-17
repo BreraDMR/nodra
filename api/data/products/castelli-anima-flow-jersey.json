@@ -1,6 +1,10 @@
 {
   "slug": "castelli-anima-flow-jersey",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "women"
+  },
   "image": "jersey.png",
   "badge": null,
   "priceCzk": 269000,
