@@ -1,6 +1,10 @@
 {
   "slug": "castelli-espresso-thermal-tights",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "bib-tights.png",
   "badge": null,
   "priceCzk": 409000,
