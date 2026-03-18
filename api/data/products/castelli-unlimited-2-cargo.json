@@ -1,6 +1,10 @@
 {
   "slug": "castelli-unlimited-2-cargo",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "bib-shorts.png",
   "badge": null,
   "priceCzk": 289000,
