@@ -1,6 +1,10 @@
 {
   "slug": "castelli-unlimited-endurance",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "jersey.png",
   "badge": null,
   "priceCzk": 209000,
