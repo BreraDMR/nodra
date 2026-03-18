@@ -1,6 +1,10 @@
 {
   "slug": "castelli-pro-thermal-skully",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "women"
+  },
   "image": "skull-cap.png",
   "badge": null,
   "priceCzk": 89000,
