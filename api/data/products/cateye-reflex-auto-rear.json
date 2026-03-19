@@ -1,6 +1,10 @@
 {
   "slug": "cateye-reflex-auto-rear",
   "category": "lights",
+  "brand": "CatEye",
+  "attributes": {
+    "position": "rear"
+  },
   "image": "rear-round.png",
   "badge": null,
   "priceCzk": 89000,
