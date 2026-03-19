@@ -1,6 +1,10 @@
 {
   "slug": "cateye-ampp-400s-front",
   "category": "lights",
+  "brand": "CatEye",
+  "attributes": {
+    "position": "front"
+  },
   "image": "front-round.png",
   "badge": null,
   "priceCzk": 99000,
