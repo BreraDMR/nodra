@@ -1,6 +1,10 @@
 {
   "slug": "castelli-velocissima-3-shorts",
   "category": "apparel",
+  "brand": "Castelli",
+  "attributes": {
+    "gender": "women"
+  },
   "image": "bib-shorts.png",
   "badge": null,
   "priceCzk": 199000,
