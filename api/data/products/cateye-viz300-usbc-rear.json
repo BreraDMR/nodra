@@ -1,6 +1,10 @@
 {
   "slug": "cateye-viz300-usbc-rear",
   "category": "lights",
+  "brand": "CatEye",
+  "attributes": {
+    "position": "rear"
+  },
   "image": "rear-light.png",
   "badge": null,
   "priceCzk": 109000,
