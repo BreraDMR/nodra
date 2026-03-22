@@ -1,6 +1,10 @@
 {
   "slug": "endura-hummvee-lite-shorts",
   "category": "apparel",
+  "brand": "Endura",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "bib-shorts.png",
   "badge": null,
   "priceCzk": 169000,
