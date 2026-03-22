@@ -1,6 +1,10 @@
 {
   "slug": "knog-blinder-road-r150-rear",
   "category": "lights",
+  "brand": "Knog",
+  "attributes": {
+    "position": "rear"
+  },
   "image": "rear-light.png",
   "badge": null,
   "priceCzk": 159000,
