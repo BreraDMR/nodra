@@ -1,6 +1,10 @@
 {
   "slug": "endura-hummvee-ii-trousers",
   "category": "apparel",
+  "brand": "Endura",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "bib-tights.png",
   "badge": null,
   "priceCzk": 209000,
