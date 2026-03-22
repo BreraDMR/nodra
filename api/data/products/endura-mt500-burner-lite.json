@@ -1,6 +1,10 @@
 {
   "slug": "endura-mt500-burner-lite",
   "category": "apparel",
+  "brand": "Endura",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "jersey.png",
   "badge": null,
   "priceCzk": 169000,
