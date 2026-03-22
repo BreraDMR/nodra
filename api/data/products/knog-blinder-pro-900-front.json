@@ -1,6 +1,10 @@
 {
   "slug": "knog-blinder-pro-900-front",
   "category": "lights",
+  "brand": "Knog",
+  "attributes": {
+    "position": "front"
+  },
   "image": "light.png",
   "badge": null,
   "priceCzk": 199000,
