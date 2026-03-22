@@ -1,6 +1,10 @@
 {
   "slug": "knog-blinder-square-rear",
   "category": "lights",
+  "brand": "Knog",
+  "attributes": {
+    "position": "rear"
+  },
   "image": "rear-round.png",
   "badge": null,
   "priceCzk": 119000,
