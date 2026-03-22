@@ -1,6 +1,10 @@
 {
   "slug": "endura-hummvee-ray-women",
   "category": "apparel",
+  "brand": "Endura",
+  "attributes": {
+    "gender": "women"
+  },
   "image": "jersey.png",
   "badge": null,
   "priceCzk": 79000,
