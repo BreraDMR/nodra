@@ -1,6 +1,10 @@
 {
   "slug": "endura-hummvee-windproof",
   "category": "apparel",
+  "brand": "Endura",
+  "attributes": {
+    "gender": "men"
+  },
   "image": "jacket.png",
   "badge": null,
   "priceCzk": 189000,
