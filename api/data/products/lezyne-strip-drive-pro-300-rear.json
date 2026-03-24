@@ -1,6 +1,10 @@
 {
   "slug": "lezyne-strip-drive-pro-300-rear",
   "category": "lights",
+  "brand": "Lezyne",
+  "attributes": {
+    "position": "rear"
+  },
   "image": "rear-light.png",
   "badge": null,
   "priceCzk": 129000,
