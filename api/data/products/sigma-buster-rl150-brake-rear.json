@@ -1,6 +1,10 @@
 {
   "slug": "sigma-buster-rl150-brake-rear",
   "category": "lights",
+  "brand": "Sigma",
+  "attributes": {
+    "position": "rear"
+  },
   "image": "rear-light.png",
   "badge": null,
   "priceCzk": 99000,
