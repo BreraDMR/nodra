@@ -1,6 +1,10 @@
 {
   "slug": "sigma-buster-800-front",
   "category": "lights",
+  "brand": "Sigma",
+  "attributes": {
+    "position": "front"
+  },
   "image": "light.png",
   "badge": null,
   "priceCzk": 159000,
