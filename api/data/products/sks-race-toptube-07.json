@@ -1,6 +1,11 @@
 {
   "slug": "sks-race-toptube-07",
   "category": "bags",
+  "brand": "SKS",
+  "attributes": {
+    "volume_l": "0.7",
+    "mount": "top_tube"
+  },
   "image": "top-tube-bag.png",
   "badge": null,
   "priceCzk": 109000,
