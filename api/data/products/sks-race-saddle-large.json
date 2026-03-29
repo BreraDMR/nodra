@@ -1,6 +1,10 @@
 {
   "slug": "sks-race-saddle-large",
   "category": "bags",
+  "brand": "SKS",
+  "attributes": {
+    "mount": "saddle"
+  },
   "image": "saddle-bag.png",
   "badge": null,
   "priceCzk": 89000,
