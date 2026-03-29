@@ -1,6 +1,11 @@
 {
   "slug": "topeak-backloader-10",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "volume_l": "10",
+    "mount": "saddle"
+  },
   "image": "seatpack.png",
   "badge": null,
   "priceCzk": 169000,
