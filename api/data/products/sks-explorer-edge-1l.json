@@ -1,6 +1,11 @@
 {
   "slug": "sks-explorer-edge-1l",
   "category": "bags",
+  "brand": "SKS",
+  "attributes": {
+    "volume_l": "1",
+    "mount": "frame"
+  },
   "image": "top-tube-bag.png",
   "badge": null,
   "priceCzk": 89000,
