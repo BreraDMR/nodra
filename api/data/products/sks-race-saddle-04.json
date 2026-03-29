@@ -1,6 +1,11 @@
 {
   "slug": "sks-race-saddle-04",
   "category": "bags",
+  "brand": "SKS",
+  "attributes": {
+    "volume_l": "0.4",
+    "mount": "saddle"
+  },
   "image": "saddle-bag.png",
   "badge": null,
   "priceCzk": 79000,
