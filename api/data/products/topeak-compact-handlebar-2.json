@@ -1,6 +1,11 @@
 {
   "slug": "topeak-compact-handlebar-2",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "volume_l": "2",
+    "mount": "handlebar"
+  },
   "image": "handlebar-bag.png",
   "badge": null,
   "priceCzk": 129000,
