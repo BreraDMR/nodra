@@ -1,6 +1,11 @@
 {
   "slug": "topeak-fuel-tank-medium",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "volume_l": "0.5",
+    "mount": "top_tube"
+  },
   "image": "top-tube-bag.png",
   "badge": null,
   "priceCzk": 109000,
