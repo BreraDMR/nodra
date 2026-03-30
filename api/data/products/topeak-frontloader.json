@@ -1,6 +1,10 @@
 {
   "slug": "topeak-frontloader",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "mount": "handlebar"
+  },
   "image": "handlebar-bag.png",
   "badge": null,
   "priceCzk": 169000,
