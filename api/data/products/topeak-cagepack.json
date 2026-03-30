@@ -1,6 +1,10 @@
 {
   "slug": "topeak-cagepack",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "mount": "bottle_cage"
+  },
   "image": "top-tube-bag.png",
   "badge": null,
   "priceCzk": 159000,
