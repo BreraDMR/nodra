@@ -1,6 +1,11 @@
 {
   "slug": "topeak-midloader-45",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "volume_l": "4.5",
+    "mount": "frame"
+  },
   "image": "frame-bag.png",
   "badge": null,
   "priceCzk": 129000,
