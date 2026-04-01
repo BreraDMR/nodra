@@ -1,6 +1,11 @@
 {
   "slug": "topeak-mtx-trunkbag-ex-20-8l",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "volume_l": "8",
+    "mount": "rack"
+  },
   "image": "trunk-bag.png",
   "badge": null,
   "priceCzk": 149000,
