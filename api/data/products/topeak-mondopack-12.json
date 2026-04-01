@@ -1,6 +1,11 @@
 {
   "slug": "topeak-mondopack-12",
   "category": "bags",
+  "brand": "Topeak",
+  "attributes": {
+    "volume_l": "1.2",
+    "mount": "saddle"
+  },
   "image": "saddle-bag.png",
   "badge": null,
   "priceCzk": 99000,
