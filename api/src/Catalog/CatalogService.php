@@ -163,11 +163,14 @@ final class CatalogService
         $definitions = array_values(array_filter($index->effectiveAttributes($category['id']), static fn (array $d): bool => $d['filterable']));
         $counts = [];
         if ($definitions !== []) {
-            // p.attributes || v.attributes lets the variant value replace the product value
+            // p.attributes || v.attributes lets the variant value replace the product value.
+            // Doctrine writes an empty PHP array as [] rather than {}, and object || array is an array, so treat [] as {}
             $rows = $this->db->fetchAllAssociative(
                 "SELECT e.key, e.value, COUNT(DISTINCT p.id) AS count
                 FROM product p JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
-                CROSS JOIN LATERAL jsonb_each_text(p.attributes || v.attributes) e
+                CROSS JOIN LATERAL jsonb_each_text(
+                    (CASE WHEN jsonb_typeof(p.attributes) = 'object' THEN p.attributes ELSE '{}'::jsonb END)
+                    || (CASE WHEN jsonb_typeof(v.attributes) = 'object' THEN v.attributes ELSE '{}'::jsonb END)) e
                 WHERE p.status = 'published' AND p.category_id IN (:ids) AND e.key IN (:keys)
                 GROUP BY e.key, e.value",
                 ['ids' => $ids, 'keys' => array_column($definitions, 'key')],
