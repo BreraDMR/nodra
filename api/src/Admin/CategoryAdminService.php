@@ -92,13 +92,13 @@ final class CategoryAdminService
         $inherited = $parent === null ? [] : array_column($index->effectiveAttributes($parent->getId()->toRfc4122()), 'key');
         $definitions = AttributeSchema::normalizeDefinitions($input->attributes, $inherited);
         if ($selfId !== null) {
-            // a key added here must not already exist further down the tree either
-            $own = array_column($definitions, 'key');
+            // a key added here, or inherited from a new parent, must not already exist further down the tree either
+            $taken = [...$inherited, ...array_column($definitions, 'key')];
             foreach ($index->subtreeIds($selfId) as $childId) {
                 if ($childId === $selfId) {
                     continue;
                 }
-                $clash = array_intersect($own, array_column($index->get($childId)['attributes'], 'key'));
+                $clash = array_intersect($taken, array_column($index->get($childId)['attributes'], 'key'));
                 if ($clash !== []) {
                     throw new \InvalidArgumentException(sprintf('Attribute "%s" is already defined in subcategory "%s"', reset($clash), $index->get($childId)['slug']));
                 }
