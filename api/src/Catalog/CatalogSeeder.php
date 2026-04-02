@@ -59,11 +59,20 @@ final class CatalogSeeder
         foreach (CatalogSeed::items() as $rank => $item) {
             $category = $bySlug[$item['category']] ?? throw new \RuntimeException(sprintf('Product "%s" uses unknown category "%s"', $item['slug'], $item['category']));
             $brand = isset($item['brand']) ? trim($item['brand']) : null;
-            $attributes = AttributeSchema::normalizeValues($item['attributes'] ?? [], $this->effectiveAttributes($category));
             $existing = $products->findOneBy(['slug' => $item['slug']]);
             if ($existing !== null) {
+                // seed values only matter when they fill a blank; the admin may have changed the category since
+                $attributes = [];
+                if ($existing->getAttributes() === []) {
+                    try {
+                        $attributes = AttributeSchema::normalizeValues($item['attributes'] ?? [], $this->effectiveAttributes($existing->getCategory()));
+                    } catch (\InvalidArgumentException) {
+                        // they no longer fit, leave the blank to the admin
+                    }
+                }
                 $source = $item['source'] ?? null;
-                if (is_array($source) && isset($source['url']) && $offers->findOneBy(['product' => $existing, 'url' => $source['url'], 'variant' => null]) === null) {
+                // any row with this listing counts, also one the admin has since matched to a variant
+                if (is_array($source) && isset($source['url']) && $offers->findOneBy(['product' => $existing, 'url' => $source['url']]) === null) {
                     $offer = SupplierOfferSeed::fromItem($existing, $item);
                     if ($offer !== null) {
                         $this->em->persist($offer);
@@ -77,6 +86,7 @@ final class CatalogSeeder
                 continue;
             }
 
+            $attributes = AttributeSchema::normalizeValues($item['attributes'] ?? [], $this->effectiveAttributes($category));
             $copy = [];
             foreach (['cs', 'de', 'en'] as $locale) {
                 $copy[$locale] = [
