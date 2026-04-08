@@ -1,13 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  badgeName,
-  categoryName,
-  copy,
-  money,
-  type Card,
-  type Locale,
-} from "@/lib/shop";
+import { badgeName, copy, money, type Card, type Locale } from "@/lib/shop";
 export function ProductCard({
   product,
   locale,
@@ -36,7 +29,8 @@ export function ProductCard({
       </div>
       <div className="product-meta">
         <div>
-          <p className="eyebrow">{categoryName(locale, product.category)}</p>
+          <p className="eyebrow">{product.categoryName}</p>
+          {product.brand && <p className="product-brand">{product.brand}</p>}
           <h3>{product.name}</h3>
           <p className="product-availability">
             {product.inStock ? copy[locale].available : copy[locale].out}
