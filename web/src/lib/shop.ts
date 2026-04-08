@@ -4,12 +4,20 @@ export type Card = {
   id: string;
   slug: string;
   name: string;
+  brand: string | null;
   category: string;
+  categoryName: string;
   image: string;
   badge: string | null;
   fromPrice: Money;
   inStock: boolean;
   availableUnits: number;
+};
+export type Spec = {
+  key: string;
+  label: string;
+  value: string;
+  unit: string | null;
 };
 export type Variant = {
   id: string;
@@ -19,13 +27,37 @@ export type Variant = {
   size: string | null;
   stock: number;
   price: Money;
+  mpn: string | null;
+  ean: string | null;
+  specs: Spec[];
 };
 export type Product = Card & {
   short: string;
   description: string;
   details: string[];
   images: string[];
+  breadcrumbs: { slug: string; name: string }[];
+  specs: Spec[];
+  inBox: string | null;
   variants: Variant[];
+};
+export type CategoryNode = {
+  id: string;
+  slug: string;
+  name: string;
+  count: number;
+  children: CategoryNode[];
+};
+export type Facets = {
+  category: string;
+  brands: { value: string; count: number }[];
+  attributes: {
+    key: string;
+    label: string;
+    type: "text" | "number" | "choice";
+    unit: string | null;
+    values: { value: string; label: string; count: number }[];
+  }[];
 };
 export type CartItem = {
   variantId: string;
@@ -105,6 +137,19 @@ export const copy = {
     notesLabel: "O PRODUKTU",
     demoFooter: "Ukázkový obchod · Bez skutečných objednávek a plateb",
     shippingPending: "vypočítá se při objednávce",
+    filters: "Filtry",
+    brand: "Značka",
+    anyBrand: "Všechny značky",
+    anyValue: "Nezáleží",
+    applyFilters: "Filtrovat",
+    resetFilters: "Zrušit filtry",
+    specs: "Technické parametry",
+    inBox: "Obsah balení",
+    mpn: "Kód výrobce",
+    ean: "EAN",
+    breadcrumb: "Drobečková navigace",
+    pagination: "Stránkování",
+    subcategories: "Podkategorie",
     promise: "Dobré věci jsou na dlouhé cesty.",
     promiseText:
       "Méně kompromisů, více kilometrů. Vybíráme praktickou výbavu pro každodenní jízdu.",
@@ -174,6 +219,19 @@ export const copy = {
     notesLabel: "PRODUKTDETAILS",
     demoFooter: "Demo-Shop · Keine echten Bestellungen oder Zahlungen",
     shippingPending: "wird bei Bestellung berechnet",
+    filters: "Filter",
+    brand: "Marke",
+    anyBrand: "Alle Marken",
+    anyValue: "Beliebig",
+    applyFilters: "Filtern",
+    resetFilters: "Filter zurücksetzen",
+    specs: "Technische Daten",
+    inBox: "Lieferumfang",
+    mpn: "Herstellernummer",
+    ean: "EAN",
+    breadcrumb: "Brotkrümelnavigation",
+    pagination: "Seitennavigation",
+    subcategories: "Unterkategorien",
     promise: "Gute Dinge bleiben lange unterwegs.",
     promiseText:
       "Weniger Kompromisse, mehr Kilometer. Wir wählen praktische Ausrüstung für tägliche Fahrten aus.",
@@ -243,34 +301,24 @@ export const copy = {
     notesLabel: "PRODUCT NOTES",
     demoFooter: "Fictional portfolio store · No real orders or payments",
     shippingPending: "calculated at checkout",
+    filters: "Filters",
+    brand: "Brand",
+    anyBrand: "All brands",
+    anyValue: "Any",
+    applyFilters: "Apply",
+    resetFilters: "Reset filters",
+    specs: "Specifications",
+    inBox: "In the box",
+    mpn: "MPN",
+    ean: "EAN",
+    breadcrumb: "Breadcrumb",
+    pagination: "Pagination",
+    subcategories: "Subcategories",
     promise: "Good things go the long way.",
     promiseText:
       "Fewer compromises, more kilometers. We select practical gear for everyday riding.",
   },
 };
-const categoryLabels: Record<Locale, Record<string, string>> = {
-  cs: {
-    bags: "Brašny",
-    apparel: "Oblečení",
-    lights: "Světla",
-    accessories: "Doplňky",
-  },
-  de: {
-    bags: "Taschen",
-    apparel: "Bekleidung",
-    lights: "Beleuchtung",
-    accessories: "Zubehör",
-  },
-  en: {
-    bags: "Bags",
-    apparel: "Apparel",
-    lights: "Lights",
-    accessories: "Accessories",
-  },
-};
-export function categoryName(locale: Locale, category: string): string {
-  return categoryLabels[locale][category] || category;
-}
 export function badgeName(locale: Locale, badge: string): string {
   const labels: Record<Locale, Record<string, string>> = {
     cs: { New: "Novinka", Limited: "Limitovaná", Bestseller: "Bestseller" },
