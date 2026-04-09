@@ -31,11 +31,29 @@ export default async function ProductPage({
   } catch {
     notFound();
   }
+  const t = copy[locale];
+  // JSON-LD describes the first variant, same one the sku always came from
+  const first = product.variants[0];
+  const ean = first?.ean || undefined;
   return (
     <main className="detail-page">
-      <Link href={`/${locale}/shop`} className="back-link">
-        ← {copy[locale].back}
-      </Link>
+      <nav aria-label={t.breadcrumb}>
+        <ol className="breadcrumbs">
+          <li>
+            <Link href={`/${locale}/shop`}>{t.shop}</Link>
+          </li>
+          {product.breadcrumbs.map((crumb) => (
+            <li key={crumb.slug}>
+              <Link
+                href={`/${locale}/shop?category=${encodeURIComponent(crumb.slug)}`}
+              >
+                {crumb.name}
+              </Link>
+            </li>
+          ))}
+          <li aria-current="page">{product.name}</li>
+        </ol>
+      </nav>
       <div className="detail-layout">
         <div className="detail-visual">
           <Image
@@ -49,7 +67,7 @@ export default async function ProductPage({
         <BuyBox product={product} locale={locale} />
       </div>
       <div className="detail-description">
-        <span className="eyebrow">NODRA / {copy[locale].notesLabel}</span>
+        <span className="eyebrow">NODRA / {t.notesLabel}</span>
         <p>{product.description}</p>
         <ul>
           {product.details.map((d, i) => (
@@ -66,7 +84,13 @@ export default async function ProductPage({
             name: product.name,
             description: product.short,
             image: product.image,
-            sku: product.variants[0]?.sku,
+            brand: product.brand
+              ? { "@type": "Brand", name: product.brand }
+              : undefined,
+            sku: first?.sku,
+            mpn: first?.mpn || undefined,
+            // 13 digits is an EAN-13, anything else valid goes out as plain gtin
+            ...(ean ? { [ean.length === 13 ? "gtin13" : "gtin"]: ean } : {}),
             offers: {
               "@type": "Offer",
               priceCurrency: product.fromPrice.currency,
