@@ -2,6 +2,19 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { AttributeFields } from "./AttributeFields";
+import { CategoriesPanel } from "./CategoriesPanel";
+import { SupplierOffersPanel } from "./SupplierOffersPanel";
+import {
+  attributePayload,
+  attributeValues,
+  indent,
+  isVisible,
+  json,
+  type AdminCategory,
+  type AttributeValues,
+  type SupplierOffer,
+} from "./shared";
 type User = { email: string; name: string; csrfToken: string };
 type Variant = {
   id: string;
@@ -13,27 +26,24 @@ type Variant = {
   active: boolean;
   color: string | null;
   size: string | null;
+  mpn: string | null;
+  ean: string | null;
+  attributes: unknown;
 };
 type Product = {
   id: string;
   slug: string;
   category: string;
+  categoryId: string;
+  brand: string | null;
+  attributes: unknown;
   status: string;
   name: string;
-  copy: Record<string, { name: string; short: string }>;
+  copy: Record<string, { name: string; short: string; inBox?: string }>;
   image: string;
   badge: string | null;
   featuredRank: number;
-  supplierOffers: {
-    supplier: string;
-    url: string;
-    title: string;
-    currency: string;
-    priceMinor: number;
-    reportedQuantity: number | null;
-    checkedAt: string;
-    verificationStatus: string;
-  }[];
+  supplierOffers: SupplierOffer[];
   variants: Variant[];
 };
 type Order = {
@@ -54,7 +64,7 @@ type Dashboard = {
   lowStock: { sku: string; stock: number; product: string }[];
   recentOrders: Order[];
 };
-type Tab = "overview" | "products" | "orders";
+type Tab = "overview" | "products" | "categories" | "orders";
 const fresh = {
   slug: "",
   category: "bags",
@@ -70,8 +80,20 @@ const fresh = {
   priceEur: 0,
   badge: "",
   featuredRank: 100,
+  brand: "",
+  inBoxCs: "",
+  inBoxDe: "",
+  inBoxEn: "",
+  attributes: {} as AttributeValues,
 };
 type Form = typeof fresh;
+const optionalFields: (keyof Form)[] = [
+  "badge",
+  "brand",
+  "inBoxCs",
+  "inBoxDe",
+  "inBoxEn",
+];
 const variantFresh = {
   sku: "",
   labelCs: "",
@@ -82,6 +104,9 @@ const variantFresh = {
   active: true,
   color: "",
   size: "",
+  mpn: "",
+  ean: "",
+  attributes: {} as AttributeValues,
 };
 type VariantForm = typeof variantFresh;
 function fromProduct(p: Product): Form {
@@ -106,6 +131,11 @@ function fromProduct(p: Product): Form {
     priceEur: base?.priceEur || 0,
     badge: p.badge || "",
     featuredRank: p.featuredRank,
+    brand: p.brand || "",
+    inBoxCs: p.copy.cs?.inBox || "",
+    inBoxDe: p.copy.de?.inBox || "",
+    inBoxEn: p.copy.en?.inBox || "",
+    attributes: attributeValues(p.attributes),
   };
 }
 function productPrice(p: Product): number | null {
@@ -115,12 +145,6 @@ function productPrice(p: Product): number | null {
     (variant) => variant.priceEur,
   );
   return prices.length ? Math.min(...prices) : null;
-}
-async function json(url: string, init?: RequestInit) {
-  const r = await fetch(url, { ...init, credentials: "same-origin" });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw Error(data.message || `Request failed (${r.status})`);
-  return data;
 }
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -158,6 +182,14 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const loadCategories = useCallback(async () => {
+    try {
+      setCategories(await json("/api/admin/categories"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load categories");
+    }
+  }, []);
   const reload = useCallback(
     async (page: number, search: string, ordersPage: number) => {
       try {
@@ -183,11 +215,11 @@ export default function AdminPage() {
     json("/api/admin/me")
       .then(async (u: User) => {
         setUser(u);
-        await reload(1, "", 1);
+        await Promise.all([reload(1, "", 1), loadCategories()]);
       })
       .catch(() => {})
       .finally(() => setReady(true));
-  }, [reload]);
+  }, [reload, loadCategories]);
   async function login(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -203,7 +235,7 @@ export default function AdminPage() {
         }),
       });
       setUser(u);
-      await reload(1, "", 1);
+      await Promise.all([reload(1, "", 1), loadCategories()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
@@ -244,12 +276,32 @@ export default function AdminPage() {
       {
         ...form,
         badge: form.badge || null,
+        brand: form.brand.trim() || null,
+        inBoxCs: form.inBoxCs.trim() || null,
+        inBoxDe: form.inBoxDe.trim() || null,
+        inBoxEn: form.inBoxEn.trim() || null,
+        attributes: attributePayload(
+          form.attributes,
+          categoryBySlug(form.category)?.effectiveAttributes,
+        ),
         priceCzk: Number(form.priceCzk),
         priceEur: Number(form.priceEur),
         featuredRank: Number(form.featuredRank),
       },
     );
-    if (ok) setEditing(null);
+    if (ok) {
+      setEditing(null);
+      // product counts per category may have moved
+      void loadCategories();
+    }
+  }
+  async function saveCategory(url: string, method: string, body: unknown) {
+    const ok = await mutate(url, method, body);
+    if (ok) await loadCategories();
+    return ok;
+  }
+  function categoryBySlug(slug: string) {
+    return categories.find((c) => c.slug === slug);
   }
   async function saveVariant(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -263,6 +315,15 @@ export default function AdminPage() {
         ...variantForm,
         color: variantForm.color || null,
         size: variantForm.size || null,
+        mpn: variantForm.mpn.trim() || null,
+        ean: variantForm.ean.replace(/[\s-]/g, "") || null,
+        attributes: attributePayload(
+          variantForm.attributes,
+          categoryBySlug(
+            products.find((p) => p.id === variantEditing.productId)?.category ||
+              "",
+          )?.effectiveAttributes,
+        ),
         priceCzk: Number(variantForm.priceCzk),
         priceEur: Number(variantForm.priceEur),
       },
@@ -283,6 +344,9 @@ export default function AdminPage() {
             active: variant.active,
             color: variant.color || "",
             size: variant.size || "",
+            mpn: variant.mpn || "",
+            ean: variant.ean || "",
+            attributes: attributeValues(variant.attributes),
           }
         : variantFresh,
     );
@@ -343,7 +407,7 @@ export default function AdminPage() {
             [key]: kind === "number" ? Number(e.target.value) : e.target.value,
           })
         }
-        required={key !== "badge"}
+        required={!optionalFields.includes(key)}
       />
     </label>
   );
@@ -406,6 +470,10 @@ export default function AdminPage() {
       </main>
     );
   const editingProduct = products.find((product) => product.id === editing);
+  const variantProduct = products.find(
+    (product) => product.id === variantEditing?.productId,
+  );
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
@@ -429,6 +497,14 @@ export default function AdminPage() {
             >
               ▦ <span>Products</span>
               <small>{productPagination.total}</small>
+            </button>
+            <button
+              aria-label="Categories"
+              className={tab === "categories" ? "active" : ""}
+              onClick={() => setTab("categories")}
+            >
+              ▧ <span>Categories</span>
+              <small>{categories.length}</small>
             </button>
             <button
               aria-label="Orders"
@@ -646,6 +722,7 @@ export default function AdminPage() {
                             <div>
                               <strong>{p.name}</strong>
                               <small>
+                                {p.brand ? `${p.brand} · ` : ""}
                                 {p.slug} / {p.category}
                               </small>
                             </div>
@@ -732,6 +809,14 @@ export default function AdminPage() {
                 </div>
               </div>
             </>
+          )}
+          {tab === "categories" && (
+            <CategoriesPanel
+              categories={categories}
+              busy={busy}
+              error={error}
+              save={saveCategory}
+            />
           )}
           {tab === "orders" && (
             <>
@@ -859,6 +944,7 @@ export default function AdminPage() {
                 {field("priceEur", "Price EUR · cents", "number")}
                 {field("featuredRank", "Featured rank", "number")}
                 {field("badge", "Badge")}
+                {field("brand", "Brand")}
                 <label className="admin-field">
                   Category
                   <select
@@ -867,8 +953,21 @@ export default function AdminPage() {
                       setForm({ ...form, category: e.target.value })
                     }
                   >
-                    {["bags", "apparel", "lights", "accessories"].map((x) => (
-                      <option key={x}>{x}</option>
+                    {!categoryBySlug(form.category) && (
+                      <option value={form.category}>{form.category}</option>
+                    )}
+                    {categories.map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.slug}
+                        disabled={
+                          !isVisible(c, categoryById) &&
+                          c.slug !== editingProduct?.category
+                        }
+                      >
+                        {indent(c)}
+                        {c.active ? "" : " (inactive)"}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -884,27 +983,32 @@ export default function AdminPage() {
                     <option value="published">published</option>
                   </select>
                 </label>
+                {field("inBoxCs", "In the box · Czech")}
+                {field("inBoxDe", "In the box · German")}
+                {field("inBoxEn", "In the box · English")}
               </div>
-              {editingProduct?.supplierOffers.map((offer) => (
-                <div className="source-card" key={offer.url}>
-                  <strong>
-                    {offer.supplier.replaceAll("_", " ")} · source snapshot
-                  </strong>
-                  <p>
-                    Checked {offer.checkedAt.slice(0, 10)} · source{" "}
-                    {(offer.priceMinor / 100).toFixed(2)} {offer.currency} ·
-                    reported quantity {offer.reportedQuantity ?? "unconfirmed"}{" "}
-                    · {offer.verificationStatus}
-                  </p>
-                  <a href={offer.url} target="_blank" rel="noopener noreferrer">
-                    Open offer ↗
-                  </a>
-                </div>
-              ))}
+              <AttributeFields
+                title={`Attributes · ${categoryBySlug(form.category)?.names.en || form.category}`}
+                definitions={
+                  categoryBySlug(form.category)?.effectiveAttributes || []
+                }
+                values={form.attributes}
+                onChange={(attributes) => setForm({ ...form, attributes })}
+              />
               <button className="admin-primary" disabled={busy}>
                 Save product ↗
               </button>
             </form>
+            {editingProduct && (
+              <SupplierOffersPanel
+                productId={editingProduct.id}
+                offers={editingProduct.supplierOffers}
+                variants={editingProduct.variants}
+                busy={busy}
+                error={error}
+                save={mutate}
+              />
+            )}
           </div>
         </div>
       )}
@@ -1007,6 +1111,27 @@ export default function AdminPage() {
                     }
                   />
                 </label>
+                <label className="admin-field">
+                  MPN
+                  <input
+                    value={variantForm.mpn}
+                    maxLength={64}
+                    onChange={(e) =>
+                      setVariantForm({ ...variantForm, mpn: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="admin-field">
+                  EAN / GTIN
+                  <input
+                    value={variantForm.ean}
+                    inputMode="numeric"
+                    maxLength={20}
+                    onChange={(e) =>
+                      setVariantForm({ ...variantForm, ean: e.target.value })
+                    }
+                  />
+                </label>
                 <label className="admin-field check-field">
                   <input
                     type="checkbox"
@@ -1021,6 +1146,20 @@ export default function AdminPage() {
                   Active in storefront
                 </label>
               </div>
+              {variantProduct && (
+                <AttributeFields
+                  title="Attribute overrides · empty inherits from the product"
+                  definitions={
+                    categoryBySlug(variantProduct.category)
+                      ?.effectiveAttributes || []
+                  }
+                  values={variantForm.attributes}
+                  inherited={attributeValues(variantProduct.attributes)}
+                  onChange={(attributes) =>
+                    setVariantForm({ ...variantForm, attributes })
+                  }
+                />
+              )}
               <p className="variant-note">
                 New variants start with zero stock. Use the inventory control to
                 add units.
