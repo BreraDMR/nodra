@@ -725,3 +725,92 @@
   color: #738073;
   margin-top: 24px;
 }
+.admin-field textarea {
+  background: white;
+  border: 1px solid #ccd8cc;
+  padding: 12px;
+  min-width: 0;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+.admin-field.wide {
+  grid-column: 1 / -1;
+}
+.admin-fieldset {
+  border: 1px solid var(--line);
+  padding: 16px 18px 20px;
+  margin: 24px 0 0;
+}
+.admin-fieldset legend {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 6px;
+}
+.admin-fieldset .variant-note {
+  margin: 4px 0 16px;
+}
+.attribute-row {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+.attribute-remove {
+  justify-self: start;
+  align-self: center;
+  color: #9d3e3e;
+}
+.admin-secondary {
+  border: 1px solid var(--line);
+  background: white;
+  padding: 11px 15px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.admin-tree-cell strong,
+.admin-tree-cell small {
+  display: block;
+}
+.status.matched {
+  background: #e2f3db;
+  color: #448245;
+}
+.status.inactive,
+.status.rejected {
+  background: #f4e5e5;
+  color: #986666;
+}
+.offers-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 35px;
+  padding-top: 25px;
+}
+.offers-panel .panel-head {
+  margin-bottom: 5px;
+}
+.offer-head,
+.offer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.offer-actions {
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+.offer-form {
+  margin-top: 24px;
+  padding: 20px;
+  background: white;
+  border: 1px solid var(--line);
+}
+.offer-form h3 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+.offer-form .offer-actions {
+  margin-top: 20px;
+}
+.admin-modal .admin-error {
+  margin: 20px 0 0;
+}
