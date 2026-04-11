@@ -29,9 +29,18 @@ class Product
     #[ORM\Column(length: 80, nullable: true)]
     private ?string $brand = null;
 
-    /** @var array<string, string> attribute values keyed by definition key */
-    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '{}'])]
-    private array $attributes = [];
+    /**
+     * Attribute values keyed by definition key. Held as an object so an empty set is stored as {}, not [];
+     * rows written before that may still come back as an array.
+     *
+     * @var \stdClass|array<string, string>
+     */
+    #[ORM\Column(type: Types::JSONB_OBJECT, options: ['default' => '{}'])]
+    private \stdClass|array $attributes;
+
+    /** First time brand or attributes were written, by the import or the admin. Null means never, so the import may fill them. */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $describedAt = null;
 
     #[ORM\Column(length: 16)]
     private string $status = 'draft';
@@ -64,6 +73,7 @@ class Product
         $this->copy = $copy;
         $this->image = $image;
         $this->images = [$image];
+        $this->attributes = new \stdClass();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -71,7 +81,8 @@ class Product
     public function getSlug(): string { return $this->slug; }
     public function getCategory(): Category { return $this->category; }
     public function getBrand(): ?string { return $this->brand; }
-    public function getAttributes(): array { return $this->attributes; }
+    /** @return array<string, string> */
+    public function getAttributes(): array { return (array) $this->attributes; }
     public function getStatus(): string { return $this->status; }
     public function getCopy(): array { return $this->copy; }
     public function getImage(): string { return $this->image; }
@@ -79,6 +90,7 @@ class Product
     public function getBadge(): ?string { return $this->badge; }
     public function getFeaturedRank(): int { return $this->featuredRank; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getDescribedAt(): ?\DateTimeImmutable { return $this->describedAt; }
 
     public function update(string $slug, Category $category, array $copy, string $image, array $images, ?string $badge, int $featuredRank, string $status): void
     {
@@ -95,6 +107,7 @@ class Product
     public function describe(?string $brand, array $attributes): void
     {
         $this->brand = $brand;
-        $this->attributes = $attributes;
+        $this->attributes = (object) $attributes;
+        $this->describedAt ??= new \DateTimeImmutable();
     }
 }
