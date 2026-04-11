@@ -15,15 +15,17 @@ Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http:
 
 Google sign-in uses an OAuth 2.0 web application client. Register `http://127.0.0.1:3000/api/account/google/callback` as an authorized redirect URI in Google Cloud, then put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `api/.env.local`. The public account button redirects to Google once these values are set. The local demo sign-in and points work without credentials. Welcome emails are delivered only to Mailpit at port 8025; a real SMTP transport is not configured.
 
-Run verification with `./scripts/check.sh`. The API contract is in [`api/config/api_doc/shop.yaml`](api/config/api_doc/shop.yaml).
+Run verification with `./scripts/check.sh`; it prepares the `app_test` database and runs the integration tests, each rolled back after it finishes. The API contract is in [`api/config/api_doc/shop.yaml`](api/config/api_doc/shop.yaml). After pulling schema changes into an existing local database, run `cd api && php bin/console doctrine:migrations:migrate -n && php bin/console app:catalog:import`: the import adds missing categories and products and only fills blank fields, so admin edits stay.
 
 ## What works
 
 - Czech, German and English routes, localized product copy and currency formatting
-- 80 sourced demo cards across four categories, with category, search, sorting, pagination, variant selection and available quantities; each source link, observed price and seller quantity is recorded in [`docs/catalog-sources.md`](docs/catalog-sources.md)
+- 80 sourced demo cards in a managed category tree (components with tyres, tubes, chains, cassettes, brake pads, cables, shifting; accessories, lights, bags, apparel), with search by name, brand, MPN or EAN, sorting, bounded pagination, variant selection and available quantities; each source link, observed price and seller quantity is recorded in [`docs/catalog-sources.md`](docs/catalog-sources.md)
+- Compatibility filters: categories define typed attributes (choice, number, text) inherited down the tree; products and variants carry values, a variant value overriding the product one; category facets list brands and filterable values with counts
+- Exact variants with MPN and check-digit-validated, unique EAN; breadcrumbs, spec tables, package contents and brand/MPN/GTIN in product structured data
 - Browser basket and Czech-only delivery in every locale, with required region/district, server-side repricing, inventory reservation, idempotent order creation and private order lookup token
 - Customer account with Google sign-in integration, local demo sign-in and a welcome email; one loyalty point per 100 Kč or 4 € of product subtotal after a signed-in order reaches `completed`
-- Admin session, dashboard, product and variant editing/creation, stock adjustments, order queue and status workflow
+- Admin session, dashboard, category tree editor with attribute definitions, product and variant editing/creation with attributes and identifiers, dated supplier offers matched to exact variants with seller and lead time, stock adjustments, order queue and status workflow
 - Original AI-generated demo imagery and a responsive storefront and admin interface
 
 ## Architecture
