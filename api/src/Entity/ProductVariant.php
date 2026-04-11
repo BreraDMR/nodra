@@ -55,9 +55,9 @@ class ProductVariant
     #[ORM\Column(length: 14, nullable: true)]
     private ?string $ean = null;
 
-    /** @var array<string, string> values that override the product's attributes for this variant */
-    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '{}'])]
-    private array $attributes = [];
+    /** @var \stdClass|array<string, string> values that override the product's, an object for the same reason as Product::$attributes */
+    #[ORM\Column(type: Types::JSONB_OBJECT, options: ['default' => '{}'])]
+    private \stdClass|array $attributes;
 
     public function __construct(Product $product, string $sku, array $label, int $priceCzk, int $priceEur, int $stock, ?string $color = null, ?string $size = null)
     {
@@ -70,6 +70,7 @@ class ProductVariant
         $this->stock = $stock;
         $this->color = $color;
         $this->size = $size;
+        $this->attributes = new \stdClass();
     }
 
     public function getId(): Uuid { return $this->id; }
@@ -84,7 +85,8 @@ class ProductVariant
     public function isActive(): bool { return $this->active; }
     public function getMpn(): ?string { return $this->mpn; }
     public function getEan(): ?string { return $this->ean; }
-    public function getAttributes(): array { return $this->attributes; }
+    /** @return array<string, string> */
+    public function getAttributes(): array { return (array) $this->attributes; }
 
     public function adjustStock(int $delta): void
     {
@@ -108,6 +110,6 @@ class ProductVariant
     {
         $this->mpn = $mpn;
         $this->ean = $ean;
-        $this->attributes = $attributes;
+        $this->attributes = (object) $attributes;
     }
 }
