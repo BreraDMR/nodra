@@ -1,8 +1,12 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.2.0
-  description: JSON contract for the NODRA cycling equipment demo storefront and administration.
+  version: 0.2.1
+  description: >-
+    JSON contract for the NODRA cycling equipment demo storefront and administration.
+    Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
+    that fails validation is a 422 with `violations`; a body that isn't valid JSON is a 400 and a missing or
+    unsupported Content-Type a 415, both with a Problem body.
 servers:
   - url: http://localhost:8000
 tags:
@@ -44,6 +48,7 @@ paths:
       responses:
         '200': { description: 'Account profile, point balance, history page and history totals.' }
         '401': { description: Sign-in required. }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/account/logout:
     post:
       tags: [Account]
@@ -82,6 +87,7 @@ paths:
                   page: { type: integer }
                   pages: { type: integer }
                   total: { type: integer }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/products/{slug}:
     get:
       tags: [Catalogue]
@@ -95,6 +101,7 @@ paths:
           description: Product details.
           content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/categories:
     get:
       tags: [Catalogue]
@@ -105,6 +112,7 @@ paths:
         '200':
           description: Root categories with nested children.
           content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Category' } } } }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/categories/{slug}/facets:
     get:
       tags: [Catalogue]
@@ -118,6 +126,7 @@ paths:
           description: Available filter values.
           content: { application/json: { schema: { $ref: '#/components/schemas/Facets' } } }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/checkout:
     post:
       tags: [Checkout]
@@ -167,7 +176,7 @@ paths:
                 password: { type: string }
       responses:
         '200': { description: Signed in. }
-        '401': { description: Invalid credentials. }
+        '401': { description: 'Invalid credentials. The body is {"error": "..."} from the Symfony login handler, not a Problem.' }
   /api/admin/me:
     get:
       tags: [Administration]
@@ -175,13 +184,14 @@ paths:
       description: Returns the admin identity and CSRF token for authenticated requests.
       responses:
         '200': { description: Authenticated administrator. }
-        '401': { description: No active session. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/admin/logout:
     post:
       tags: [Administration]
       summary: End the admin session
       responses:
         '302': { description: Session ended. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/admin/dashboard:
     get:
       tags: [Administration]
@@ -189,7 +199,7 @@ paths:
       description: Returns order counts, recent orders, low-stock variants and demo revenue totals.
       responses:
         '200': { description: Admin dashboard data. }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/admin/products:
     get:
       tags: [Administration]
@@ -199,18 +209,21 @@ paths:
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: q, in: query, schema: { type: string, maxLength: 80 } }
       responses:
-        '200': { description: 'Admin product page with items, page, pages and total.' }
-        '401': { description: Authentication required. }
+        '200':
+          description: Admin product page.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminProductPage' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Validation' }
     post:
       tags: [Administration]
       summary: Create a product
-      description: Creates a product with one zero-stock variant; the submitted status may be draft or published. Requires X-CSRF-Token from /api/admin/me.
+      description: Creates a product with one zero-stock variant; the submitted status may be draft or published. The category must be active and not hidden by an inactive parent. Requires X-CSRF-Token from /api/admin/me.
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
       responses:
         '201': { description: Product created. }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
@@ -218,16 +231,22 @@ paths:
     put:
       tags: [Administration]
       summary: Update a product
-      description: Changes localized copy, category, brand, attributes, status, image, merchandising order and the first variant's base prices. Long descriptions, details and gallery images are kept. Requires X-CSRF-Token.
+      description: >-
+        Changes localized copy, category, brand, attributes, status, image, merchandising order and the first variant's base prices.
+        Long descriptions, details and gallery images are kept. A draft may stay in its category after that category was deactivated
+        or hidden by a parent, but it can't be published there. When the category changes, variant attribute overrides the new
+        category doesn't define or allow are dropped and the rest are normalized again. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
       responses:
         '200': { description: Product updated. }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/admin/stock-adjustments:
     post:
       tags: [Administration]
@@ -246,23 +265,25 @@ paths:
                 reason: { type: string, minLength: 1, maxLength: 200 }
       responses:
         '201': { description: Stock movement recorded. }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/products/{id}/variants:
     post:
       tags: [Administration]
       summary: Add a variant with zero stock
-      description: Requires an authenticated session and X-CSRF-Token.
+      description: Requires an authenticated session and X-CSRF-Token. The SKU and EAN must be unused.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/VariantWriteRequest' } } }
       responses:
         '201': { description: Variant created. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/admin/variants/{id}:
     put:
       tags: [Administration]
@@ -274,8 +295,10 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/VariantWriteRequest' } } }
       responses:
         '200': { description: Variant updated. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/categories:
     get:
@@ -286,7 +309,7 @@ paths:
         '200':
           description: Categories.
           content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AdminCategory' } } } }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [Administration]
       summary: Create a category
@@ -296,6 +319,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/CategoryWriteRequest' } } }
       responses:
         '201': { description: Category created. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
@@ -303,13 +327,14 @@ paths:
     put:
       tags: [Administration]
       summary: Update a category
-      description: Changes labels, parent, position, active state and own attribute definitions. A category cannot move under itself or a descendant, and it cannot be deactivated while its subtree holds published products. Requires X-CSRF-Token.
+      description: Changes labels, parent, position, active state and own attribute definitions. A category cannot move under itself or a descendant, and while its subtree holds published products it can be neither deactivated nor moved under an inactive or hidden parent. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/CategoryWriteRequest' } } }
       responses:
         '200': { description: Category updated. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -325,6 +350,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/SupplierOfferWriteRequest' } } }
       responses:
         '201': { description: Offer recorded. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -340,6 +366,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/SupplierOfferWriteRequest' } } }
       responses:
         '200': { description: Offer updated. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -353,7 +380,8 @@ paths:
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
       responses:
         '200': { description: 'Admin order page with items, page, pages and total.' }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/admin/orders/{id}:
     get:
       tags: [Administration]
@@ -361,7 +389,7 @@ paths:
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       responses:
         '200': { description: Order and customer delivery details. }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/admin/orders/{id}/status:
     patch:
@@ -380,9 +408,11 @@ paths:
                 status: { type: string, enum: [processing, shipped, completed, cancelled] }
       responses:
         '200': { description: Order status updated. }
-        '401': { description: Authentication required. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
 components:
   parameters:
     Locale:
@@ -390,21 +420,32 @@ components:
       in: query
       schema: { type: string, enum: [cs, de, en], default: en }
   responses:
+    Unauthorized:
+      description: No admin session.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
     NotFound:
-      description: Resource not found.
+      description: Resource not found. An {id} that isn't a UUID is not found as well.
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
     Conflict:
-      description: Request conflicts with current stock or order state.
+      description: Request conflicts with existing data, such as a taken slug, SKU, EAN or listing, or with current stock or order state.
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
     Validation:
-      description: Request failed validation.
+      description: Request failed validation. `violations` is present when the body or query string itself was invalid; a rule checked later, such as an unknown category, gives only `message`.
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
   schemas:
     Problem:
       type: object
       required: [message]
       properties:
-        message: { type: string }
+        message: { type: string, description: 'Readable summary; for request validation it lists each "field: message".' }
+        violations:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: [string, 'null'], description: 'Property path such as nameCs or attr[speeds]; null when the whole request is meant.' }
+              message: { type: string }
     Category:
       type: object
       required: [id, slug, name, count, children]
@@ -492,7 +533,7 @@ components:
                   price: { $ref: '#/components/schemas/Price' }
                   stock: { type: integer }
                   mpn: { type: [string, 'null'] }
-                  ean: { type: [string, 'null'] }
+                  ean: { type: [string, 'null'], pattern: '^(\d{8}|\d{12,14})$', description: Digits only. }
                   specs: { type: array, description: Values set on this variant; they override product values with the same key., items: { $ref: '#/components/schemas/Spec' } }
     CheckoutRequest:
       type: object
@@ -555,11 +596,14 @@ components:
         color: { type: [string, 'null'] }
         size: { type: [string, 'null'] }
         mpn: { type: [string, 'null'], maxLength: 64, description: Manufacturer part number. }
-        ean: { type: [string, 'null'], pattern: '^(\d{8}|\d{12,14})$', description: 'GTIN-8/12/13/14 with a valid check digit, unique across variants.' }
+        ean:
+          type: [string, 'null']
+          maxLength: 20
+          description: 'GTIN-8/12/13/14 with a valid check digit, unique across variants. Spaces and dashes are accepted and stripped, so "859 4000-000013" is stored and returned as 8594000000013. Empty clears it.'
         attributes: { $ref: '#/components/schemas/AttributeValues' }
     AttributeValues:
       type: object
-      description: Values keyed by attribute key from the category's effective definitions. Values are strings; number attributes hold a decimal string and choice attributes one option value. An empty value removes the key.
+      description: Values keyed by attribute key from the category's effective definitions. Values are strings; number attributes hold a decimal string and choice attributes one option value. An empty value removes the key. Always a JSON object, {} when there are none.
       additionalProperties: { type: string, maxLength: 80 }
     AttributeDefinition:
       type: object
@@ -585,17 +629,79 @@ components:
               labelEn: { type: [string, 'null'] }
     AdminCategory:
       type: object
-      required: [id, slug, parentId, names, position, active, attributes, effectiveAttributes, productCount]
+      required: [id, slug, parentId, depth, names, position, active, attributes, effectiveAttributes, productCount]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
         parentId: { type: [string, 'null'], format: uuid }
+        depth: { type: integer, minimum: 0, description: 'Level in the tree, 0 for a root; the list is ordered depth-first.' }
         names: { type: object, properties: { cs: { type: string }, de: { type: string }, en: { type: string } } }
         position: { type: integer }
         active: { type: boolean }
         attributes: { type: array, items: { $ref: '#/components/schemas/AttributeDefinition' } }
         effectiveAttributes: { type: array, items: { $ref: '#/components/schemas/AttributeDefinition' } }
         productCount: { type: integer, description: 'Products directly in this category, any status.' }
+    AdminProductPage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, slug, category, categoryId, brand, attributes, status, name, copy, image, badge, featuredRank, supplierOffers, variants]
+            properties:
+              id: { type: string, format: uuid }
+              slug: { type: string }
+              category: { type: string, description: Category slug. }
+              categoryId: { type: string, format: uuid }
+              brand: { type: [string, 'null'] }
+              attributes: { $ref: '#/components/schemas/AttributeValues' }
+              status: { type: string, enum: [draft, published, archived] }
+              name: { type: string, description: English name. }
+              copy: { type: object, description: 'Per locale: name, short, description, details and optional inBox.' }
+              image: { type: string }
+              badge: { type: [string, 'null'] }
+              featuredRank: { type: integer }
+              supplierOffers: { type: array, items: { $ref: '#/components/schemas/AdminSupplierOffer' } }
+              variants:
+                type: array
+                items:
+                  type: object
+                  required: [id, sku, label, priceCzk, priceEur, stock, active, color, size, mpn, ean, attributes]
+                  properties:
+                    id: { type: string, format: uuid }
+                    sku: { type: string }
+                    label: { type: object, properties: { cs: { type: string }, de: { type: string }, en: { type: string } } }
+                    priceCzk: { type: integer }
+                    priceEur: { type: integer }
+                    stock: { type: integer }
+                    active: { type: boolean }
+                    color: { type: [string, 'null'] }
+                    size: { type: [string, 'null'] }
+                    mpn: { type: [string, 'null'] }
+                    ean: { type: [string, 'null'], description: Digits only. }
+                    attributes: { $ref: '#/components/schemas/AttributeValues' }
+    AdminSupplierOffer:
+      type: object
+      required: [id, variantId, supplier, seller, url, title, currency, priceMinor, reportedQuantity, checkedAt, leadTimeMinDays, leadTimeMaxDays, verificationStatus]
+      properties:
+        id: { type: string, format: uuid }
+        variantId: { type: [string, 'null'], format: uuid }
+        supplier: { type: string }
+        seller: { type: [string, 'null'] }
+        url: { type: string }
+        title: { type: string }
+        currency: { type: string }
+        priceMinor: { type: integer }
+        reportedQuantity: { type: [integer, 'null'] }
+        checkedAt: { type: string, format: date-time, description: 'ISO 8601 with the UTC offset, e.g. 2026-09-26T22:00:00+00:00.' }
+        leadTimeMinDays: { type: [integer, 'null'] }
+        leadTimeMaxDays: { type: [integer, 'null'] }
+        verificationStatus: { type: string, enum: [snapshot, matched, rejected] }
     CategoryWriteRequest:
       type: object
       required: [slug, nameCs, nameDe, nameEn]
