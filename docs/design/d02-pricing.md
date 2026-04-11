@@ -29,6 +29,10 @@ Variant fields `rrp_minor`, `rrp_currency`, `rrp_source` (URL or short text), `r
 
 Table `price_change`: `variant_id`, old/new CZK and EUR, `reason` (`manual`, `reprice`, `import`), admin email or `system`, time. Written by every price change, including existing admin variant/product edits. It is the basis for any future discount claims.
 
+## Market reference price
+
+The competitor survey ([`../market/competitors.md`](../market/competitors.md)) showed Czech shops selling common parts 30–66 % below RRP, so "slightly below RRP" alone can leave NODRA far above the street price. A variant can therefore also carry `market_price_minor` (CZK), `market_price_source` and `market_checked_at` — the lowest price a Czech customer would realistically pay elsewhere, entered by the admin. It is admin-only, like RRP. The pricing panel and the reprice preview show NODRA's price against it, and a variant priced more than 15 % above it (**default**) is flagged `above_market`. The flag only informs; it doesn't block publishing, because installation and evening delivery can justify the gap.
+
 ## Availability and lead time (public)
 
 Per variant, computed server-side:
@@ -53,8 +57,8 @@ Owned stock (`product_variant.stock`) stays a separate concept for goods physica
 - Variant pricing panel: offer → landed cost breakdown, rule used, suggested price, margin %, RRP, `Apply suggestion` (writes history), manual override (also history).
 - Reprice preview for a category or the whole catalogue: rows with current vs suggested price and margin, then apply selected; flagged rows can't be applied.
 - Price history per variant.
-- Dashboard tile: variants with `margin_too_low` or `check_needed`.
+- Dashboard tile: variants with `margin_too_low`, `above_market` or `check_needed`.
 
 ## Tests to cover
 
-Rounding and fx; rule precedence (nearest category, cost band, default); RRP cap and minimum-margin floor; flagged variants excluded from reprice; history written on every change; freshness boundary; lead time with handling days; unknown lead time → `check_needed`; order snapshot unchanged after offer edits; no cost/supplier fields in any public JSON.
+Rounding and fx; `above_market` threshold; rule precedence (nearest category, cost band, default); RRP cap and minimum-margin floor; flagged variants excluded from reprice; history written on every change; freshness boundary; lead time with handling days; unknown lead time → `check_needed`; order snapshot unchanged after offer edits; no cost/supplier fields in any public JSON.
