@@ -8,6 +8,11 @@ framework:
         cookie_secure: auto
         cookie_httponly: true
 
+    serializer:
+        default_context:
+            # an empty stdClass (attribute values) goes out as {}, empty lists stay []
+            preserve_empty_objects: true
+
     #esi: true
     #fragments: true
 
