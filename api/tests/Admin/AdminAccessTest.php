@@ -45,4 +45,19 @@ final class AdminAccessTest extends ApiTestCase
         $this->sendJson('POST', '/api/admin/categories', self::CATEGORY, $token);
         self::assertResponseStatusCodeSame(201);
     }
+
+    public function testMalformedIdsAreNotFound(): void
+    {
+        $token = $this->loginAdmin();
+        $variant = ['sku' => 'T-X', 'labelCs' => 'X', 'labelDe' => 'X', 'labelEn' => 'X', 'priceCzk' => 100, 'priceEur' => 4];
+
+        $this->getJson('/api/admin/orders/not-a-uuid');
+        self::assertResponseStatusCodeSame(404);
+        $this->sendJson('PATCH', '/api/admin/orders/not-a-uuid/status', ['status' => 'processing'], $token);
+        self::assertResponseStatusCodeSame(404);
+        $this->sendJson('PUT', '/api/admin/variants/not-a-uuid', $variant, $token);
+        self::assertResponseStatusCodeSame(404);
+        $this->sendJson('POST', '/api/admin/products/not-a-uuid/variants', $variant, $token);
+        self::assertResponseStatusCodeSame(404);
+    }
 }
