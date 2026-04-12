@@ -18,19 +18,24 @@ final class CatalogSeeder
 {
     public function __construct(private EntityManagerInterface $em) {}
 
-    /** @return array{added: int, filled: int} */
+    /** @return array{added: int, filled: int, warnings: list<string>} */
     public function seedCategories(): array
     {
         $bySlug = $this->categoriesBySlug();
         $added = 0;
         $filled = 0;
+        $warnings = [];
         foreach (CatalogSeed::categories() as $seed) {
             $parent = null;
             if ($seed['parent'] !== null) {
                 $parent = $bySlug[$seed['parent']] ?? throw new \RuntimeException(sprintf('Parent category "%s" is missing; was its slug changed in the admin?', $seed['parent']));
             }
-            $definitions = AttributeSchema::normalizeDefinitions($seed['attributes'] ?? [], array_column($this->effectiveAttributes($parent), 'key'));
             $existing = $bySlug[$seed['slug']] ?? null;
+            // seed definitions only matter for a new category or one without any of its own
+            if ($existing !== null && $existing->getAttributes() !== []) {
+                continue;
+            }
+            $definitions = $this->seedDefinitions($seed, $existing === null ? $parent : $existing->getParent(), $existing, $bySlug, $warnings);
             if ($existing === null) {
                 $category = new Category($seed['slug'], $seed['names'], $parent, $seed['position'] ?? 0);
                 $category->update($seed['slug'], $seed['names'], $parent, $seed['position'] ?? 0, true, $definitions);
@@ -44,7 +49,7 @@ final class CatalogSeeder
         }
         $this->em->flush();
 
-        return ['added' => $added, 'filled' => $filled];
+        return ['added' => $added, 'filled' => $filled, 'warnings' => $warnings];
     }
 
     /** @return array{added: int, filled: int, offers: int} */
@@ -61,9 +66,11 @@ final class CatalogSeeder
             $brand = isset($item['brand']) ? trim($item['brand']) : null;
             $existing = $products->findOneBy(['slug' => $item['slug']]);
             if ($existing !== null) {
-                // seed values only matter when they fill a blank; the admin may have changed the category since
+                // seed values only fill a card nobody has described yet. After that brand and attributes are
+                // the admin's, a blank one included, since the admin may have cleared it on purpose.
+                $blank = $existing->getDescribedAt() === null;
                 $attributes = [];
-                if ($existing->getAttributes() === []) {
+                if ($blank && $existing->getAttributes() === []) {
                     try {
                         $attributes = AttributeSchema::normalizeValues($item['attributes'] ?? [], $this->effectiveAttributes($existing->getCategory()));
                     } catch (\InvalidArgumentException) {
@@ -79,7 +86,7 @@ final class CatalogSeeder
                         ++$newOffers;
                     }
                 }
-                if (($existing->getBrand() === null && $brand !== null) || ($existing->getAttributes() === [] && $attributes !== [])) {
+                if ($blank && (($existing->getBrand() === null && $brand !== null) || ($existing->getAttributes() === [] && $attributes !== []))) {
                     $existing->describe($existing->getBrand() ?? $brand, $existing->getAttributes() ?: $attributes);
                     ++$filled;
                 }
@@ -135,6 +142,50 @@ final class CatalogSeeder
         }
 
         return $bySlug;
+    }
+
+    /**
+     * The seed file's definitions without keys the admin already has above or below the category, for example
+     * after moving a key up the tree. Those are skipped with a warning, the import goes on.
+     *
+     * @param array<string, Category> $all
+     * @param list<string> $warnings
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function seedDefinitions(array $seed, ?Category $parent, ?Category $existing, array $all, array &$warnings): array
+    {
+        $taken = array_column($this->effectiveAttributes($parent), 'key');
+        if ($existing !== null) {
+            foreach ($all as $category) {
+                if ($this->isBelow($category, $existing)) {
+                    array_push($taken, ...array_column($category->getAttributes(), 'key'));
+                }
+            }
+        }
+        $definitions = [];
+        foreach ($seed['attributes'] ?? [] as $definition) {
+            if (in_array($definition['key'] ?? null, $taken, true)) {
+                $warnings[] = sprintf('Seed attribute "%s" of category "%s" skipped: the key is already defined above or below it.', $definition['key'], $seed['slug']);
+                continue;
+            }
+            $definitions[] = $definition;
+        }
+
+        return AttributeSchema::normalizeDefinitions($definitions, $taken);
+    }
+
+    private function isBelow(Category $category, Category $ancestor): bool
+    {
+        $seen = [];
+        for ($current = $category->getParent(); $current !== null && !isset($seen[spl_object_id($current)]); $current = $current->getParent()) {
+            if ($current === $ancestor) {
+                return true;
+            }
+            $seen[spl_object_id($current)] = true;
+        }
+
+        return false;
     }
 
     /** @return list<array<string, mixed>> */
