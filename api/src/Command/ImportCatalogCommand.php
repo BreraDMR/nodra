@@ -21,6 +21,9 @@ final class ImportCatalogCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $categories = $this->seeder->seedCategories();
+        foreach ($categories['warnings'] as $warning) {
+            $output->writeln('<comment>Warning: '.$warning.'</comment>');
+        }
         $products = $this->seeder->seedProducts();
         $output->writeln(sprintf(
             'Categories: %d added, %d filled. Products: %d added, %d filled, %d supplier offers added. Existing edits preserved.',
