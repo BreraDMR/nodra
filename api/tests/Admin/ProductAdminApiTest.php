@@ -150,6 +150,122 @@ final class ProductAdminApiTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
     }
 
+    public function testEmptyAttributesStayJsonObjects(): void
+    {
+        $created = $this->sendJson('POST', '/api/admin/products', $this->payload('t-plain'), $this->token);
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame(['{}', '{}'], $this->storedAttributes('t-plain'));
+        $item = $this->rawAdminItem('t-plain');
+        self::assertEquals(new \stdClass(), $item->attributes);
+        self::assertEquals(new \stdClass(), $item->variants[0]->attributes);
+
+        // clearing values that were set goes back to {} as well
+        $uri = '/api/admin/products/'.$created['id'];
+        $this->sendJson('PUT', $uri, $this->payload('t-plain', ['attributes' => ['width_mm' => '25']]), $this->token);
+        $this->sendJson('PUT', '/api/admin/variants/'.$created['variantId'], $this->variantPayload($item->variants[0]->sku, ['width_mm' => '23']), $this->token);
+        self::assertResponseIsSuccessful();
+        $this->sendJson('PUT', $uri, $this->payload('t-plain', ['attributes' => ['width_mm' => '']]), $this->token);
+        $this->sendJson('PUT', '/api/admin/variants/'.$created['variantId'], $this->variantPayload($item->variants[0]->sku, []), $this->token);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['{}', '{}'], $this->storedAttributes('t-plain'));
+        self::assertEquals(new \stdClass(), $this->rawAdminItem('t-plain')->variants[0]->attributes);
+    }
+
+    public function testPublishingNeedsAVisibleCategory(): void
+    {
+        $b = $this->builder();
+        $old = $b->category('t-old-range');
+        $parent = $b->category('t-closing');
+        $child = $b->category('t-closing-child', $parent);
+        $inactive = $b->sellable('t-old-tyre', $old, status: 'draft');
+        $hidden = $b->sellable('t-hidden-tyre', $child, status: 'draft');
+        $old->update('t-old-range', $old->getNames(), null, 0, false, []);
+        $parent->update('t-closing', $parent->getNames(), null, 0, false, []);
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+
+        $this->sendJson('PUT', '/api/admin/products/'.$inactive->getId()->toRfc4122(), $this->payload('t-old-tyre', ['category' => 't-old-range']), $this->token);
+        self::assertResponseStatusCodeSame(422);
+        // an active category under an inactive one is just as hidden
+        $this->sendJson('PUT', '/api/admin/products/'.$hidden->getId()->toRfc4122(), $this->payload('t-hidden-tyre', ['category' => 't-closing-child']), $this->token);
+        self::assertResponseStatusCodeSame(422);
+        $this->sendJson('POST', '/api/admin/products', $this->payload('t-new-hidden', ['category' => 't-closing-child']), $this->token);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(['draft', 'draft'], $this->db()->fetchFirstColumn("SELECT status FROM product WHERE slug IN ('t-old-tyre', 't-hidden-tyre')"));
+
+        // as a draft it may stay, and once moved to a visible category it can go live
+        $this->sendJson('PUT', '/api/admin/products/'.$hidden->getId()->toRfc4122(), $this->payload('t-hidden-tyre', ['category' => 't-closing-child', 'status' => 'draft']), $this->token);
+        self::assertResponseIsSuccessful();
+        $this->sendJson('PUT', '/api/admin/products/'.$inactive->getId()->toRfc4122(), $this->payload('t-old-tyre'), $this->token);
+        self::assertResponseIsSuccessful();
+        self::assertSame('published', $this->db()->fetchOne("SELECT status FROM product WHERE slug = 't-old-tyre'"));
+    }
+
+    public function testMovingAProductRechecksVariantOverrides(): void
+    {
+        $b = $this->builder();
+        $from = $b->category('t-from', attributes: [
+            CatalogBuilder::attribute('speeds', 'number'),
+            CatalogBuilder::attribute('finish', 'choice', options: ['silver', 'black']),
+            CatalogBuilder::attribute('width', 'text'),
+            CatalogBuilder::attribute('mount', 'text'),
+        ]);
+        $b->category('t-to', attributes: [
+            CatalogBuilder::attribute('speeds', 'number'),
+            CatalogBuilder::attribute('width', 'number'),
+            CatalogBuilder::attribute('mount', 'choice', options: ['frame']),
+        ]);
+        $product = $b->product('t-mover', $from, 'KMC');
+        $b->variant($product, 'T-MOVER-1', ['finish' => 'black', 'mount' => 'rack', 'speeds' => '12', 'width' => '28.0']);
+        $b->variant($product, 'T-MOVER-2', ['finish' => 'silver']);
+        $uri = '/api/admin/products/'.$product->getId()->toRfc4122();
+
+        // saving in the same category leaves the overrides alone
+        $this->sendJson('PUT', $uri, $this->payload('t-mover', ['category' => 't-from']), $this->token);
+        self::assertResponseIsSuccessful();
+        self::assertSame(['finish' => 'black', 'mount' => 'rack', 'speeds' => '12', 'width' => '28.0'], $this->variantAttributes('T-MOVER-1'));
+
+        $this->sendJson('PUT', $uri, $this->payload('t-mover', ['category' => 't-to']), $this->token);
+
+        self::assertResponseIsSuccessful();
+        // finish is unknown there and "rack" isn't a mount option, width becomes a number
+        self::assertSame(['speeds' => '12', 'width' => '28'], $this->variantAttributes('T-MOVER-1'));
+        self::assertSame([], $this->variantAttributes('T-MOVER-2'));
+        self::assertSame('{}', $this->db()->fetchOne("SELECT attributes::text FROM product_variant WHERE sku = 'T-MOVER-2'"));
+    }
+
+    private function variantAttributes(string $sku): array
+    {
+        $attributes = json_decode($this->db()->fetchOne('SELECT attributes FROM product_variant WHERE sku = :sku', ['sku' => $sku]), true);
+        // jsonb keeps its own key order
+        ksort($attributes);
+
+        return $attributes;
+    }
+
+    /** @return array{string, string} product and variant attributes as PostgreSQL has them */
+    private function storedAttributes(string $slug): array
+    {
+        $row = $this->db()->fetchNumeric('SELECT p.attributes::text, v.attributes::text FROM product p JOIN product_variant v ON v.product_id = p.id WHERE p.slug = :slug', ['slug' => $slug]);
+
+        return [$row[0], $row[1]];
+    }
+
+    /** Admin list item decoded without the assoc flag, so {} and [] stay different. */
+    private function rawAdminItem(string $slug): object
+    {
+        $this->client->request('GET', '/api/admin/products', ['q' => $slug], server: ['HTTP_ACCEPT' => 'application/json']);
+        self::assertResponseIsSuccessful();
+        $items = json_decode((string) $this->client->getResponse()->getContent(), flags: JSON_THROW_ON_ERROR)->items;
+        self::assertCount(1, $items);
+
+        return $items[0];
+    }
+
+    private function variantPayload(string $sku, array $attributes): array
+    {
+        return ['sku' => $sku, 'labelCs' => 'Standardní', 'labelDe' => 'Standard', 'labelEn' => 'Standard', 'priceCzk' => 129000, 'priceEur' => 5200, 'attributes' => $attributes];
+    }
+
     private function payload(string $slug, array $overrides = []): array
     {
         return $overrides + [
