@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
@@ -40,7 +41,7 @@ final class AdminController extends AbstractController
         catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
     }
 
-    #[Route('/products/{id}', methods: ['PUT'])]
+    #[Route('/products/{id}', methods: ['PUT'], requirements: ['id' => Requirement::UUID])]
     public function updateProduct(string $id, #[MapRequestPayload] ProductWriteRequest $payload, Request $request): JsonResponse
     {
         if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
@@ -59,7 +60,7 @@ final class AdminController extends AbstractController
         catch (\InvalidArgumentException|\DomainException $error) { return $this->json(['message' => $error->getMessage()], 422); }
     }
 
-    #[Route('/products/{id}/variants', methods: ['POST'])]
+    #[Route('/products/{id}/variants', methods: ['POST'], requirements: ['id' => Requirement::UUID])]
     public function createVariant(string $id, #[MapRequestPayload] VariantWriteRequest $payload, Request $request): JsonResponse
     {
         if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
@@ -70,7 +71,7 @@ final class AdminController extends AbstractController
         catch (\DomainException $error) { return $this->json(['message' => $error->getMessage()], 409); }
     }
 
-    #[Route('/variants/{id}', methods: ['PUT'])]
+    #[Route('/variants/{id}', methods: ['PUT'], requirements: ['id' => Requirement::UUID])]
     public function updateVariant(string $id, #[MapRequestPayload] VariantWriteRequest $payload, Request $request): JsonResponse
     {
         if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
@@ -84,14 +85,14 @@ final class AdminController extends AbstractController
     #[Route('/orders', methods: ['GET'])]
     public function orders(#[MapQueryString] AdminOrdersQuery $query): JsonResponse { return $this->json($this->admin->orders($query)); }
 
-    #[Route('/orders/{id}', methods: ['GET'])]
+    #[Route('/orders/{id}', methods: ['GET'], requirements: ['id' => Requirement::UUID])]
     public function order(string $id): JsonResponse
     {
         $order = $this->admin->order($id);
         return $order === null ? $this->json(['message' => 'Order not found'], 404) : $this->json($order);
     }
 
-    #[Route('/orders/{id}/status', methods: ['PATCH'])]
+    #[Route('/orders/{id}/status', methods: ['PATCH'], requirements: ['id' => Requirement::UUID])]
     public function status(string $id, #[MapRequestPayload] OrderStatusRequest $payload, Request $request): JsonResponse
     {
         if (!$this->validCsrf($request)) return $this->json(['message' => 'Invalid CSRF token'], 403);
