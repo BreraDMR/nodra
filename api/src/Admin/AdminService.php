@@ -85,7 +85,7 @@ final class AdminService
                     'supplier' => $offer['supplier'], 'url' => $offer['url'], 'title' => $offer['title'],
                     'currency' => $offer['currency'], 'priceMinor' => (int) $offer['price_minor'],
                     'reportedQuantity' => $offer['reported_quantity'] === null ? null : (int) $offer['reported_quantity'],
-                    'checkedAt' => $offer['checked_at'], 'verificationStatus' => $offer['verification_status'],
+                    'checkedAt' => (new \DateTimeImmutable($offer['checked_at']))->format(\DATE_ATOM), 'verificationStatus' => $offer['verification_status'],
                 ];
             }
         }
@@ -95,7 +95,7 @@ final class AdminService
 
             return [
                 'id' => $row['id'], 'slug' => $row['slug'], 'category' => $row['category_slug'], 'categoryId' => $row['category_id'],
-                'brand' => $row['brand'], 'attributes' => json_decode($row['attributes'], true, flags: JSON_THROW_ON_ERROR),
+                'brand' => $row['brand'], 'attributes' => self::attributeMap($row['attributes']),
                 'status' => $row['status'], 'name' => $row['name'], 'copy' => json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR),
                 'image' => $row['image'], 'badge' => $row['badge'], 'featuredRank' => (int) $row['featured_rank'],
                 'supplierOffers' => $offersByProduct[$row['id']] ?? [],
@@ -103,7 +103,7 @@ final class AdminService
                     'id' => $v['id'], 'sku' => $v['sku'], 'label' => json_decode($v['label'], true, flags: JSON_THROW_ON_ERROR),
                     'priceCzk' => (int) $v['price_czk'], 'priceEur' => (int) $v['price_eur'], 'stock' => (int) $v['stock'],
                     'active' => (bool) $v['active'], 'color' => $v['color'], 'size' => $v['size'],
-                    'mpn' => $v['mpn'], 'ean' => $v['ean'], 'attributes' => json_decode($v['attributes'], true, flags: JSON_THROW_ON_ERROR),
+                    'mpn' => $v['mpn'], 'ean' => $v['ean'], 'attributes' => self::attributeMap($v['attributes']),
                 ], $variants),
             ];
         }, $rows);
@@ -114,7 +114,7 @@ final class AdminService
     public function createProduct(ProductWriteRequest $input): array
     {
         $this->validateSlug($input->slug);
-        $category = $this->category($input->category);
+        $category = $this->category($input->category, $input->status);
         $copy = $this->copy($input);
         $product = new Product($input->slug, $category, $copy, $input->image);
         $product->update($input->slug, $category, $copy, $input->image, [$input->image], $input->badge, $input->featuredRank, $input->status);
@@ -134,11 +134,15 @@ final class AdminService
             return null;
         }
         $this->validateSlug($input->slug, $id);
-        $category = $this->category($input->category, $product->getCategory());
+        $category = $this->category($input->category, $input->status, $product->getCategory());
+        $moved = $category !== $product->getCategory();
         $copy = $this->copy($input, $product->getCopy());
         $images = array_values(array_unique([$input->image, ...$product->getImages()]));
         $product->update($input->slug, $category, $copy, $input->image, $images, $input->badge, $input->featuredRank, $input->status);
         $product->describe($this->brand($input->brand), $this->productAttributes($input->attributes, $category));
+        if ($moved) {
+            $this->recheckVariantAttributes($product, $category);
+        }
         $baseId = $this->db->fetchOne('SELECT id FROM product_variant WHERE product_id = :id ORDER BY (active AND stock > 0) DESC, active DESC, sku ASC LIMIT 1', ['id' => $id]);
         $variant = $baseId === false ? null : $this->em->find(ProductVariant::class, Uuid::fromString($baseId));
         if ($variant !== null) {
@@ -303,18 +307,44 @@ final class AdminService
         }
     }
 
-    /** Active category by slug; a product may keep its current category even after it was deactivated. */
-    private function category(string $slug, ?Category $current = null): Category
+    /** Visible category by slug; a draft may keep its current category after it was deactivated or hidden by a parent. */
+    private function category(string $slug, string $status, ?Category $current = null): Category
     {
         $category = $this->em->getRepository(Category::class)->findOneBy(['slug' => $slug]);
         if ($category === null) {
             throw new \InvalidArgumentException('Unknown category');
         }
-        if ($category !== $current && !CategoryIndex::load($this->db)->isVisible($category->getId()->toRfc4122())) {
-            throw new \InvalidArgumentException('Choose an active category');
+        if (!CategoryIndex::load($this->db)->isVisible($category->getId()->toRfc4122())) {
+            if ($category !== $current) {
+                throw new \InvalidArgumentException('Choose an active category');
+            }
+            if ($status === 'published') {
+                throw new \InvalidArgumentException('This category is inactive or hidden by a parent; move the product to an active one before publishing');
+            }
         }
 
         return $category;
+    }
+
+    /**
+     * Variant overrides are checked again after the product moved to another category. Keys the new category
+     * doesn't define, and values it doesn't allow, are dropped rather than refused: the product form can't
+     * edit variants, so refusing would make the move impossible from the admin.
+     */
+    private function recheckVariantAttributes(Product $product, Category $category): void
+    {
+        $definitions = CategoryIndex::load($this->db)->effectiveAttributes($category->getId()->toRfc4122());
+        foreach ($this->em->getRepository(ProductVariant::class)->findBy(['product' => $product]) as $variant) {
+            if ($variant->getAttributes() !== []) {
+                $variant->identify($variant->getMpn(), $variant->getEan(), AttributeSchema::keepValid($variant->getAttributes(), $definitions));
+            }
+        }
+    }
+
+    /** Attribute values as a JSON object, so an empty set goes out as {} and not []. */
+    private static function attributeMap(string $json): \stdClass
+    {
+        return (object) json_decode($json, true, flags: JSON_THROW_ON_ERROR);
     }
 
     private function brand(?string $brand): ?string
