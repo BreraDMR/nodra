@@ -57,9 +57,10 @@ final class CategoryAdminService
         $this->assertSlugFree($input->slug, $id);
         $parent = $this->parent($input->parentId, $id);
         $definitions = $this->definitions($input, $parent, $id);
-        if (!$input->active && $category->isActive()) {
-            $subtree = CategoryIndex::load($this->db)->subtreeIds($id);
-            $published = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product WHERE status = 'published' AND category_id IN (:ids)", ['ids' => $subtree], ['ids' => ArrayParameterType::STRING]);
+        $index = CategoryIndex::load($this->db);
+        // published products must stay reachable: the branch can't be deactivated or moved under a hidden parent while it has any
+        if (!$input->active || ($parent !== null && !$index->isVisible($parent->getId()->toRfc4122()))) {
+            $published = (int) $this->db->fetchOne("SELECT COUNT(*) FROM product WHERE status = 'published' AND category_id IN (:ids)", ['ids' => $index->subtreeIds($id)], ['ids' => ArrayParameterType::STRING]);
             if ($published > 0) {
                 throw new \DomainException(sprintf('%d published products are in this category or below it; move or unpublish them first', $published));
             }
