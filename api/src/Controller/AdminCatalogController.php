@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
@@ -37,19 +38,19 @@ final class AdminCatalogController extends AbstractController
         return $this->write($request, fn (): ?array => $this->categories->create($payload), 201);
     }
 
-    #[Route('/categories/{id}', methods: ['PUT'])]
+    #[Route('/categories/{id}', methods: ['PUT'], requirements: ['id' => Requirement::UUID])]
     public function updateCategory(string $id, #[MapRequestPayload] CategoryWriteRequest $payload, Request $request): JsonResponse
     {
         return $this->write($request, fn (): ?array => $this->categories->update($id, $payload), 200, 'Category not found');
     }
 
-    #[Route('/products/{id}/supplier-offers', methods: ['POST'])]
+    #[Route('/products/{id}/supplier-offers', methods: ['POST'], requirements: ['id' => Requirement::UUID])]
     public function createOffer(string $id, #[MapRequestPayload] SupplierOfferWriteRequest $payload, Request $request): JsonResponse
     {
         return $this->write($request, fn (): ?array => $this->offers->create($id, $payload), 201, 'Product not found');
     }
 
-    #[Route('/supplier-offers/{id}', methods: ['PUT'])]
+    #[Route('/supplier-offers/{id}', methods: ['PUT'], requirements: ['id' => Requirement::UUID])]
     public function updateOffer(string $id, #[MapRequestPayload] SupplierOfferWriteRequest $payload, Request $request): JsonResponse
     {
         return $this->write($request, fn (): ?array => $this->offers->update($id, $payload), 200, 'Offer not found');
