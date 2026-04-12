@@ -124,6 +124,29 @@ final class AttributeSchema
     }
 
     /**
+     * Like normalizeValues, but a key the definitions don't know or a value they don't allow is dropped instead of failing.
+     *
+     * @param array<string, mixed> $values
+     * @param list<array<string, mixed>> $definitions
+     *
+     * @return array<string, string>
+     */
+    public static function keepValid(array $values, array $definitions): array
+    {
+        $clean = [];
+        foreach ($values as $key => $value) {
+            try {
+                $clean += self::normalizeValues([$key => $value], $definitions);
+            } catch (\InvalidArgumentException) {
+                continue;
+            }
+        }
+        ksort($clean);
+
+        return $clean;
+    }
+
+    /**
      * Localized display rows for stored values, in definition order.
      *
      * @param array<string, string> $values
