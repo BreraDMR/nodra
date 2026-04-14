@@ -125,6 +125,26 @@ final class CategoryAdminApiTest extends ApiTestCase
         self::assertSame(['t-chains'], array_column($public['t-drive']['children'], 'slug'));
     }
 
+    public function testBranchWithPublishedProductsCannotMoveUnderAHiddenParent(): void
+    {
+        $offId = $this->create('t-off');
+        $this->sendJson('PUT', '/api/admin/categories/'.$offId, $this->payload('t-off', active: false), $this->token);
+        self::assertResponseIsSuccessful();
+        $liveId = $this->create('t-live');
+        $emptyId = $this->create('t-empty');
+        $b = $this->builder();
+        $b->sellable('t-live-item', $b->category('t-live-child', $this->entity($liveId)));
+
+        // the products would stay published but nobody could reach them
+        $this->sendJson('PUT', '/api/admin/categories/'.$liveId, $this->payload('t-live', $offId), $this->token);
+        self::assertResponseStatusCodeSame(409);
+        self::assertStringContainsString('1 published', $this->client->getResponse()->getContent());
+        self::assertNull($this->db()->fetchOne('SELECT parent_id FROM category WHERE id = :id', ['id' => $liveId]));
+
+        $this->sendJson('PUT', '/api/admin/categories/'.$emptyId, $this->payload('t-empty', $offId), $this->token);
+        self::assertResponseIsSuccessful();
+    }
+
     public function testUnknownCategoryIsNotFound(): void
     {
         $this->sendJson('PUT', '/api/admin/categories/01890000-0000-7000-8000-000000000000', $this->payload('t-ghost'), $this->token);
