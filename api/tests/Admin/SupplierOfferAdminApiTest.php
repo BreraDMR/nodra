@@ -46,7 +46,9 @@ final class SupplierOfferAdminApiTest extends ApiTestCase
             'supplier' => 'allegro_cz', 'url' => self::URL, 'title' => 'KMC X12 chain', 'currency' => 'CZK', 'priceMinor' => 129900,
             'reportedQuantity' => 7, 'verificationStatus' => 'matched',
         ], array_diff_key($offer, ['id' => true, 'checkedAt' => true]));
-        self::assertStringStartsWith('2026-09-20', $offer['checkedAt']);
+        // ISO 8601 with the offset, the same moment that was sent
+        self::assertMatchesRegularExpression('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/', $offer['checkedAt']);
+        self::assertEquals(new \DateTimeImmutable('2026-09-20T10:00:00+02:00'), new \DateTimeImmutable($offer['checkedAt']));
 
         // unmatching an offer keeps it at product level
         $this->sendJson('PUT', '/api/admin/supplier-offers/'.$created['id'], $this->payload(['verificationStatus' => 'rejected']), $this->token);
