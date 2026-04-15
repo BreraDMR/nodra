@@ -64,7 +64,8 @@ final class CatalogImportTest extends KernelTestCase
         $db = static::getContainer()->get(Connection::class);
         $this->import();
         $item = current(array_filter(CatalogSeed::items(), static fn (array $i): bool => isset($i['brand'], $i['attributes']) && $i['attributes'] !== []));
-        $db->executeStatement("UPDATE product SET brand = NULL, attributes = '{}' WHERE slug = :slug", ['slug' => $item['slug']]);
+        // a card from before brands and attributes existed: blank and never described
+        $db->executeStatement("UPDATE product SET brand = NULL, attributes = '{}', described_at = NULL WHERE slug = :slug", ['slug' => $item['slug']]);
         static::getContainer()->get(EntityManagerInterface::class)->clear();
 
         self::assertStringContainsString('Products: 0 added, 1 filled', $this->import());
@@ -72,6 +73,61 @@ final class CatalogImportTest extends KernelTestCase
         $product = $db->fetchAssociative('SELECT brand, attributes FROM product WHERE slug = :slug', ['slug' => $item['slug']]);
         self::assertSame($item['brand'], $product['brand']);
         self::assertEqualsCanonicalizing(array_keys($item['attributes']), array_keys(json_decode($product['attributes'], true)));
+    }
+
+    public function testImportKeepsBrandAndAttributesTheAdminCleared(): void
+    {
+        self::bootKernel();
+        $db = static::getContainer()->get(Connection::class);
+        $this->import();
+        $item = current(array_filter(CatalogSeed::items(), static fn (array $i): bool => isset($i['brand'], $i['attributes']) && $i['attributes'] !== []));
+        $this->editProduct($item['slug'], '', []);
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+
+        self::assertStringContainsString('Products: 0 added, 0 filled', $this->import());
+
+        $product = $db->fetchAssociative('SELECT brand, attributes::text AS attributes FROM product WHERE slug = :slug', ['slug' => $item['slug']]);
+        self::assertSame(['brand' => null, 'attributes' => '{}'], $product);
+    }
+
+    public function testImportSkipsSeedAttributesTheAdminMovedUpTheTree(): void
+    {
+        self::bootKernel();
+        $this->import();
+        // chains keeps speeds, cables is left with nothing of its own
+        $this->moveAttributeUp('links', 'chains');
+        $this->moveAttributeUp('cable_type', 'cables');
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+
+        $output = $this->import();
+
+        self::assertStringContainsString('Categories: 0 added, 0 filled.', $output);
+        self::assertStringContainsString('"cable_type"', $output);
+        self::assertStringContainsString('"cables"', $output);
+        // chains was never refilled, so its seed "links" had nothing to clash with
+        self::assertStringNotContainsString('"links"', $output);
+        self::assertSame([], $this->categoryKeys('cables'));
+        self::assertSame(['speeds'], $this->categoryKeys('chains'));
+        self::assertSame(['links', 'cable_type'], $this->categoryKeys('components'));
+    }
+
+    public function testImportDoesNotRefillKeysTheAdminMovedDown(): void
+    {
+        self::bootKernel();
+        $this->import();
+        $categories = static::getContainer()->get(CategoryAdminService::class);
+        $bags = static::getContainer()->get(EntityManagerInterface::class)->getRepository(Category::class)->findOneBy(['slug' => 'bags']);
+        $definitions = AttributeSchema::forAdmin($bags->getAttributes());
+        $this->saveCategory($bags, []);
+        $categories->create(new CategoryWriteRequest('t-frame-bags', 'Rámové', 'Rahmen', 'Frame', $bags->getId()->toRfc4122(), 0, true, $definitions));
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+
+        $output = $this->import();
+
+        self::assertStringContainsString('Categories: 0 added, 0 filled.', $output);
+        self::assertStringContainsString('"volume_l"', $output);
+        self::assertSame([], $this->categoryKeys('bags'));
+        self::assertSame(['mount', 'volume_l'], $this->categoryKeys('t-frame-bags'));
     }
 
     public function testImportedCatalogueHasWorkingFacets(): void
@@ -127,6 +183,32 @@ final class CatalogImportTest extends KernelTestCase
         static::getContainer()->get(CategoryAdminService::class)->update($bags->getId()->toRfc4122(), new CategoryWriteRequest(
             'bags', $names['cs'], $names['de'], $names['en'], null, $bags->getPosition(), true, $attributes,
         ));
+    }
+
+    /** Takes the key off the category and adds it to its parent, in the order the admin form allows. */
+    private function moveAttributeUp(string $key, string $from): void
+    {
+        $category = static::getContainer()->get(EntityManagerInterface::class)->getRepository(Category::class)->findOneBy(['slug' => $from]);
+        $definitions = AttributeSchema::forAdmin($category->getAttributes());
+        $moved = array_values(array_filter($definitions, static fn (array $d): bool => $d['key'] === $key));
+        self::assertCount(1, $moved, $key);
+        $this->saveCategory($category, array_values(array_filter($definitions, static fn (array $d): bool => $d['key'] !== $key)));
+        $parent = $category->getParent();
+        $this->saveCategory($parent, [...AttributeSchema::forAdmin($parent->getAttributes()), ...$moved]);
+    }
+
+    private function saveCategory(Category $category, array $attributes): void
+    {
+        $names = $category->getNames();
+        static::getContainer()->get(CategoryAdminService::class)->update($category->getId()->toRfc4122(), new CategoryWriteRequest(
+            $category->getSlug(), $names['cs'], $names['de'], $names['en'], $category->getParent()?->getId()->toRfc4122(), $category->getPosition(), $category->isActive(), $attributes,
+        ));
+    }
+
+    /** @return list<string> */
+    private function categoryKeys(string $slug): array
+    {
+        return array_column(json_decode(static::getContainer()->get(Connection::class)->fetchOne('SELECT attributes FROM category WHERE slug = :slug', ['slug' => $slug]), true), 'key');
     }
 
     /** The admin confirms the seeded listing is exactly the first variant. */
