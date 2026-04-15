@@ -61,7 +61,7 @@ export const offerStatuses = ["snapshot", "matched", "rejected"];
 export async function json(url: string, init?: RequestInit) {
   const r = await fetch(url, {
     ...init,
-    // without Accept, Symfony answers payload validation errors with an HTML page
+    // errors under /api/ are JSON anyway now, Accept just says what we expect
     headers: {
       Accept: "application/json",
       ...(init?.headers as Record<string, string> | undefined),
@@ -74,7 +74,7 @@ export async function json(url: string, init?: RequestInit) {
   return data;
 }
 
-// PHP sends an empty map as [], so take only real string pairs
+// The API sends {} for no values (older responses had []), so take only real string pairs
 export function attributeValues(raw: unknown): AttributeValues {
   if (!raw || Array.isArray(raw) || typeof raw !== "object") return {};
   const out: AttributeValues = {};
@@ -134,7 +134,7 @@ export function indent(category: AdminCategory): string {
   return "   ".repeat(category.depth) + category.names.en;
 }
 
-// "2026-09-26 22:00:00+00" is what the API sends; Safari wants proper ISO
+// The API sends ISO 8601 now; the old "2026-09-26 22:00:00+00" form is still fixed up for Safari
 export function parseApiDate(value: string): Date {
   const iso = value
     .trim()
