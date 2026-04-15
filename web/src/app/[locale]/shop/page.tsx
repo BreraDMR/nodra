@@ -57,10 +57,10 @@ export default async function Shop({
   const t = copy[locale];
   const query = {
     category: first(raw.category),
-    // clamp to the contract limits, longer values make the API answer 404
+    // clamp to the contract limits, longer values make the API answer 422
     brand: first(raw.brand).slice(0, 80),
     q: first(raw.q).slice(0, 80),
-    // the API answers 404 to anything outside these, so drop junk here
+    // the API answers 422 to anything outside these, so drop junk here
     sort: sorts.includes(first(raw.sort)) ? first(raw.sort) : "",
     page: /^[1-9]\d{0,5}$/.test(first(raw.page)) ? first(raw.page) : "",
     availableOnly: first(raw.availableOnly) === "1" ? "1" : "",
