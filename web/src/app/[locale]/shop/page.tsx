@@ -9,6 +9,16 @@ import {
   type Facets,
 } from "@/lib/shop";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return isLocale(locale) ? { title: copy[locale].shop } : {};
+}
 
 type Query = Record<string, string | string[] | undefined>;
 const sorts = ["featured", "price_asc", "price_desc", "newest"];
@@ -149,7 +159,7 @@ export default async function Shop({
   return (
     <main className="shop-main">
       <div className="shop-heading">
-        <p className="eyebrow">NODRA / THE COLLECTION</p>
+        <p className="eyebrow">{t.collectionLabel}</p>
         <h1>
           {t.shop}
           <sup>{catalog.total.toString().padStart(2, "0")}</sup>
