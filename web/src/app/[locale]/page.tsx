@@ -19,7 +19,7 @@ export default async function Landing({
       <section className="hero">
         <Image
           src="/images/hero-prague.png"
-          alt="Cyclist riding through Prague at dawn"
+          alt={t.heroImageAlt}
           fill
           priority
           sizes="100vw"
@@ -36,18 +36,18 @@ export default async function Landing({
         </div>
         <div className="hero-bottom">
           <span>01 / 04</span>
-          <span>RIDE BEYOND THE ROUTINE</span>
+          <span>{t.heroTagline}</span>
         </div>
       </section>
       <section className="home-intro">
-        <div className="eyebrow">NODRA / EVERYDAY EXPLORATION</div>
+        <div className="eyebrow">{t.introLabel}</div>
         <p>{t.promise}</p>
         <span>↓</span>
       </section>
       <section className="section-shell">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">CURATED FOR THE ROAD</p>
+            <p className="eyebrow">{t.featuredLabel}</p>
             <h2>{t.featured}</h2>
             <p>{t.featuredText}</p>
           </div>
@@ -70,13 +70,13 @@ export default async function Landing({
         <div className="story-image">
           <Image
             src="/images/frame-bag.png"
-            alt="Cycling frame bag on a bicycle"
+            alt={t.storyImageAlt}
             fill
             sizes="50vw"
           />
         </div>
         <div className="story-copy">
-          <p className="eyebrow">NODRA / OUR APPROACH</p>
+          <p className="eyebrow">{t.storyLabel}</p>
           <h2>
             {t.storyTitle[0]}
             <br />
@@ -89,7 +89,7 @@ export default async function Landing({
         </div>
       </section>
       <div className="marquee">
-        RIDE WELL ✦ GO FURTHER ✦ TAKE THE LONG WAY ✦ RIDE WELL ✦ GO FURTHER ✦
+        {[...t.marquee, ...t.marquee.slice(0, 2)].join(" ✦ ")} ✦
       </div>
     </main>
   );
