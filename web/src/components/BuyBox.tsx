@@ -120,7 +120,7 @@ export function BuyBox({
       )}
       <div className="detail-notes">
         <p>↗ &nbsp; {t.demo}</p>
-        <p>✦ &nbsp; NODRA / CURATED FOR THE EVERYDAY ESCAPE</p>
+        <p>✦ &nbsp; {t.announcement}</p>
       </div>
     </div>
   );
