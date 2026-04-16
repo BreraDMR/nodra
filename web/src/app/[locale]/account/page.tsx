@@ -66,7 +66,7 @@ export default function AccountPage() {
         ← {t.shop}
       </Link>
       <div className="account-intro">
-        <p className="eyebrow">NODRA / RIDER CLUB</p>
+        <p className="eyebrow">{t.accountLabel}</p>
         <h1>{t.account}</h1>
         <p>{t.pointsRule}</p>
       </div>
