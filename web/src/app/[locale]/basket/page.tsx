@@ -17,7 +17,7 @@ export default function Basket() {
   return (
     <main className="cart-page">
       <div className="page-title">
-        <p className="eyebrow">NODRA / YOUR SELECTION</p>
+        <p className="eyebrow">{t.selectionLabel}</p>
         <h1>
           {t.bag}
           <sup>{items.reduce((n, x) => n + x.quantity, 0)}</sup>
