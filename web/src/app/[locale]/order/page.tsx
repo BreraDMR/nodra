@@ -31,12 +31,12 @@ export default function OrderPage() {
       `/api/orders/${encodeURIComponent(reference)}?token=${encodeURIComponent(token)}`,
     )
       .then((r) => {
-        if (!r.ok) throw Error("Order not found");
+        if (!r.ok) throw Error(r.statusText);
         return r.json();
       })
       .then(setReceipt)
-      .catch((e) => setError(e.message));
-  }, [reference, token]);
+      .catch(() => setError(t.orderNotFound));
+  }, [reference, token, t]);
   return (
     <main className="confirmation-page">
       <p className="eyebrow">NODRA / {t.confirmationLabel}</p>
