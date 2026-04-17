@@ -52,17 +52,14 @@ export default function Checkout() {
         }),
       });
       const result = await res.json();
-      if (!res.ok)
-        throw new Error(result.message || "Order could not be placed");
+      if (!res.ok) throw new Error(result.message || t.orderFailed);
       sessionStorage.setItem("nodra-last-order", JSON.stringify(result));
       writeCart([]);
       router.push(
         `/${locale}/order?reference=${encodeURIComponent(result.reference)}&token=${encodeURIComponent(result.lookupToken)}`,
       );
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Order could not be placed",
-      );
+      setError(err instanceof Error ? err.message : t.orderFailed);
     } finally {
       setBusy(false);
     }
