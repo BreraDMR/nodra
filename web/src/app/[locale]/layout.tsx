@@ -1,6 +1,21 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { StoreFooter, QuickContact } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { copy, isLocale } from "@/lib/shop";
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  return {
+    // absolute, otherwise the root template adds " | NODRA" to the default too
+    title: { absolute: copy[locale].metaTitle, template: "%s | NODRA" },
+    description: copy[locale].metaDescription,
+  };
+}
 export default async function LocaleLayout({
   children,
   params,
@@ -14,19 +29,8 @@ export default async function LocaleLayout({
     <>
       <StoreHeader locale={locale} />
       {children}
-      <footer className="footer">
-        <div className="footer-mark">
-          NODRA<span>®</span>
-        </div>
-        <div>
-          <p>GOOD GEAR. OPEN ROADS.</p>
-          <small>{copy[locale].demoFooter}</small>
-        </div>
-        <div className="footer-languages">
-          PRAGUE / CZECHIA
-          <br />© 2026 NODRA
-        </div>
-      </footer>
+      <StoreFooter locale={locale} />
+      <QuickContact locale={locale} />
     </>
   );
 }
