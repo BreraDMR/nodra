@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
@@ -43,6 +44,23 @@ class OrderItem
     #[ORM\Column]
     private int $lineTotalMinor;
 
+    // sourcing as it was at checkout, admin-only; null on orders placed before D02
+    #[ORM\Column(length: 16, nullable: true)]
+    private ?string $availabilityStatus = null;
+
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $leadTimeMinDays = null;
+
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $leadTimeMaxDays = null;
+
+    #[ORM\ManyToOne(targetEntity: SupplierOffer::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?SupplierOffer $supplierOffer = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $unitCostCzkMinor = null;
+
     public function __construct(ShopOrder $order, ProductVariant $variant, string $productName, string $variantLabel, int $quantity, int $unitPriceMinor)
     {
         $this->id = Uuid::v7();
@@ -65,4 +83,18 @@ class OrderItem
     public function getQuantity(): int { return $this->quantity; }
     public function getUnitPriceMinor(): int { return $this->unitPriceMinor; }
     public function getLineTotalMinor(): int { return $this->lineTotalMinor; }
+    public function getAvailabilityStatus(): ?string { return $this->availabilityStatus; }
+    public function getLeadTimeMinDays(): ?int { return $this->leadTimeMinDays; }
+    public function getLeadTimeMaxDays(): ?int { return $this->leadTimeMaxDays; }
+    public function getSupplierOffer(): ?SupplierOffer { return $this->supplierOffer; }
+    public function getUnitCostCzkMinor(): ?int { return $this->unitCostCzkMinor; }
+
+    public function recordSourcing(string $availabilityStatus, ?int $leadTimeMinDays, ?int $leadTimeMaxDays, ?SupplierOffer $offer, ?int $unitCostCzkMinor): void
+    {
+        $this->availabilityStatus = $availabilityStatus;
+        $this->leadTimeMinDays = $leadTimeMinDays;
+        $this->leadTimeMaxDays = $leadTimeMaxDays;
+        $this->supplierOffer = $offer;
+        $this->unitCostCzkMinor = $unitCostCzkMinor;
+    }
 }
