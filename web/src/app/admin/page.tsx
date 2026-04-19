@@ -434,7 +434,7 @@ export default function AdminPage() {
         </div>
         <div className="admin-login-panel">
           <Link href="/cs" className="admin-wordmark">
-            NODRA<span>®</span>
+            NODRA
           </Link>
           <div className="admin-login-box">
             <p className="eyebrow">OPERATIONS / SIGN IN</p>
@@ -479,7 +479,7 @@ export default function AdminPage() {
       <aside className="admin-sidebar">
         <div>
           <Link href="/cs" className="admin-wordmark">
-            NODRA<span>®</span>
+            NODRA
           </Link>
           <p>STUDIO / COMMERCE</p>
           <nav>
