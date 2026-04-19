@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { headers } from "next/headers";
 
+// Storefront title and description come per locale from [locale]/layout.tsx
 export const metadata: Metadata = {
-  title: { default: "NODRA — Ride beyond the routine", template: "%s | NODRA" },
-  description: "Considered cycling equipment for every way through.",
+  title: { default: "NODRA", template: "%s | NODRA" },
 };
 export default async function RootLayout({
   children,
