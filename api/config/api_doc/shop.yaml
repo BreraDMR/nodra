@@ -1,12 +1,15 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.2.1
+  version: 0.3.0
   description: >-
     JSON contract for the NODRA cycling equipment demo storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
     that fails validation is a 422 with `violations`; a body that isn't valid JSON is a 400 and a missing or
     unsupported Content-Type a 415, both with a Problem body.
+    Money is always an integer in minor units (haléře for CZK, cents for EUR). Percentages are basis points
+    (100 = 1 %), exchange rates integer millionths (25.315 CZK per EUR = 25315000). Cost, supplier, seller,
+    offer URL, exchange rate, markup, RRP and market price are admin-only and never appear in public responses.
 servers:
   - url: http://localhost:8000
 tags:
@@ -59,7 +62,7 @@ paths:
     get:
       tags: [Catalogue]
       summary: Browse published cycling products
-      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list. A category filter includes products from its subcategories. Attribute filters match when at least one active variant has the value, a variant value taking precedence over the product value. Search matches the localized name, brand, slug, variant MPN and exact EAN. Successful responses may be cached by shared caches for 15 seconds; checkout always checks current stock and prices.
+      description: Returns public product cards in a stable order. Filters can be combined; the response contains only fields needed by the product list. A category filter includes products from its subcategories. Attribute filters match when at least one active variant has the value, a variant value taking precedence over the product value. Search matches the localized name, brand, slug, variant MPN and exact EAN. Each card carries the best availability among its active variants. Successful responses may be cached by shared caches for 15 seconds; checkout always checks current stock, availability and prices.
       parameters:
         - $ref: '#/components/parameters/Locale'
         - { name: category, in: query, schema: { type: string } }
@@ -92,7 +95,7 @@ paths:
     get:
       tags: [Catalogue]
       summary: Read one published product
-      description: Returns localized copy, product imagery, options, prices and live availability for one product.
+      description: Returns localized copy, product imagery, options, prices and availability with lead time for one product and each of its active variants.
       parameters:
         - $ref: '#/components/parameters/Locale'
         - { name: slug, in: path, required: true, schema: { type: string } }
@@ -131,7 +134,12 @@ paths:
     post:
       tags: [Checkout]
       summary: Place a demo order as a guest or signed-in customer
-      description: Reprices items and checks stock in a transaction. Czech delivery address is required in every interface locale. Signed-in customers must use their account email to earn points on completion. Repeating the same idempotency key and payload returns the same order; a changed payload conflicts. No payment or shipment is performed.
+      description: >-
+        Reprices items and checks availability and stock in a transaction. A variant whose availability is `unavailable`
+        is refused with a 422 naming the product. Czech delivery address is required in every interface locale. Signed-in
+        customers must use their account email to earn points on completion. Repeating the same idempotency key and payload
+        returns the same order; a changed payload conflicts. Each order line keeps the availability, lead time, offer and
+        cost of the moment of checkout, so later catalogue or offer edits don't change it. No payment or shipment is performed.
       parameters:
         - name: Idempotency-Key
           in: header
@@ -217,7 +225,7 @@ paths:
     post:
       tags: [Administration]
       summary: Create a product
-      description: Creates a product with one zero-stock variant; the submitted status may be draft or published. The category must be active and not hidden by an inactive parent. Requires X-CSRF-Token from /api/admin/me.
+      description: Creates a product with one zero-stock variant; the submitted status may be draft or published. The category must be active and not hidden by an inactive parent. The variant's first price starts its price history (reason `manual`). Requires X-CSRF-Token from /api/admin/me.
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ProductWriteRequest' } } }
@@ -232,8 +240,8 @@ paths:
       tags: [Administration]
       summary: Update a product
       description: >-
-        Changes localized copy, category, brand, attributes, status, image, merchandising order and the first variant's base prices.
-        Long descriptions, details and gallery images are kept. A draft may stay in its category after that category was deactivated
+        Changes localized copy, category, brand, attributes, status, image, merchandising order and the first variant's base prices
+        (a changed price goes to the price history with reason `manual`). Long descriptions, details and gallery images are kept. A draft may stay in its category after that category was deactivated
         or hidden by a parent, but it can't be published there. When the category changes, variant attribute overrides the new
         category doesn't define or allow are dropped and the rest are normalized again. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
@@ -272,7 +280,7 @@ paths:
     post:
       tags: [Administration]
       summary: Add a variant with zero stock
-      description: Requires an authenticated session and X-CSRF-Token. The SKU and EAN must be unused.
+      description: Requires an authenticated session and X-CSRF-Token. The SKU and EAN must be unused. The first price starts the variant's price history (reason `manual`).
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -288,7 +296,10 @@ paths:
     put:
       tags: [Administration]
       summary: Update a variant
-      description: Updates labels, identifiers, attributes, prices and active status. SKU is immutable. Requires X-CSRF-Token.
+      description: >-
+        Updates labels, identifiers, attributes, prices, RRP, market price and active status. SKU is immutable. Like every
+        PUT here it replaces the whole record, so RRP and market fields left out are cleared. A changed CZK or EUR price is
+        written to the price history with reason `manual`. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -359,7 +370,7 @@ paths:
     put:
       tags: [Administration]
       summary: Update a supplier offer
-      description: Updates the check result, lead time, variant match and status. Requires X-CSRF-Token.
+      description: Updates the check result, inbound shipping, exchange rate, lead time, variant match and status. Existing orders keep their snapshot. Requires X-CSRF-Token.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       requestBody:
         required: true
@@ -386,9 +397,12 @@ paths:
     get:
       tags: [Administration]
       summary: Read order details for fulfillment
+      description: The receipt plus customer details; each item also carries the sourcing snapshot taken at checkout.
       parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
       responses:
-        '200': { description: Order and customer delivery details. }
+        '200':
+          description: Order and customer delivery details.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrder' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/admin/orders/{id}/status:
@@ -413,6 +427,162 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/pricing-rules:
+    get:
+      tags: [Administration]
+      summary: List pricing rules
+      description: >-
+        Every rule, active or not, default rules (categoryId null) first, then by category and cost band. The rule for a
+        variant is the active one on the nearest category up the tree whose band contains the landed cost, otherwise the
+        default rule whose band contains it.
+      responses:
+        '200':
+          description: Pricing rules.
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PricingRule' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Administration]
+      summary: Create a pricing rule
+      description: The band is minCostCzkMinor inclusive to maxCostCzkMinor exclusive (null = no upper limit). Active bands of one category may not overlap. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PricingRuleWriteRequest' } } }
+      responses:
+        '201':
+          description: Rule created.
+          content: { application/json: { schema: { $ref: '#/components/schemas/IdResponse' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '409': { description: 'The band overlaps another active rule of the same category.', content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/pricing-rules/{id}:
+    put:
+      tags: [Administration]
+      summary: Update a pricing rule
+      description: Replaces category, band, markup and active state. Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PricingRuleWriteRequest' } } }
+      responses:
+        '200':
+          description: Rule updated.
+          content: { application/json: { schema: { $ref: '#/components/schemas/IdResponse' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'The band overlaps another active rule of the same category.', content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+        '422': { $ref: '#/components/responses/Validation' }
+    delete:
+      tags: [Administration]
+      summary: Delete a pricing rule
+      description: Prices already set stay as they are. Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '204': { description: Rule deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/variants/{id}/pricing:
+    get:
+      tags: [Administration]
+      summary: Read the pricing panel of a variant
+      description: Best offer and landed cost breakdown, rule used, suggested price, margins, RRP, market price, flags and availability.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          description: Variant pricing.
+          content: { application/json: { schema: { $ref: '#/components/schemas/VariantPricing' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/variants/{id}/pricing/apply:
+    post:
+      tags: [Administration]
+      summary: Apply the suggested price to a variant
+      description: >-
+        Sets the variant's CZK and EUR price to the current suggestion and writes the price history with reason `reprice`.
+        Send the suggested CZK price you showed; if the suggestion changed or disappeared since, nothing is applied and the
+        answer is 409. A variant flagged `margin_too_low` can't be applied (422); set its price manually instead.
+        Requires X-CSRF-Token.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [suggestedPriceCzk]
+              properties:
+                suggestedPriceCzk: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Price applied (or already equal).
+          content: { application/json: { schema: { $ref: '#/components/schemas/PriceApplied' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/StalePrice' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/variants/{id}/price-history:
+    get:
+      tags: [Administration]
+      summary: Read a variant's own price history
+      description: 30 changes per page, newest first. The first entry of a variant created after D02 has null old prices. RRP is never part of this history.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        '200':
+          description: Price history page.
+          content: { application/json: { schema: { $ref: '#/components/schemas/PriceHistoryPage' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/pricing/reprice:
+    get:
+      tags: [Administration]
+      summary: Preview repricing
+      description: >-
+        One row per active variant (of draft and published products) in the category subtree, or the whole catalogue
+        without categoryId, that has a suggested price. Variants without a fresh matched offer or without a rule are only
+        counted. Rows with applicable false (flagged `margin_too_low`) can't be applied.
+      parameters:
+        - { name: categoryId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Reprice preview.
+          content: { application/json: { schema: { $ref: '#/components/schemas/RepricePreview' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
+    post:
+      tags: [Administration]
+      summary: Apply repricing to selected variants
+      description: >-
+        All or nothing. Each item carries the suggested CZK price the preview showed; if any suggestion changed or
+        disappeared since, nothing is applied and the 409 lists those variants. A flagged or unknown variant is a 422.
+        Every changed price is written to the history with reason `reprice`. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RepriceApplyRequest' } } }
+      responses:
+        '200':
+          description: Prices applied.
+          content: { application/json: { schema: { $ref: '#/components/schemas/RepriceApplyResult' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '409': { $ref: '#/components/responses/StalePrice' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/pricing/alerts:
+    get:
+      tags: [Administration]
+      summary: Count variants that need pricing attention
+      description: Active variants of published products whose suggestion is flagged margin_too_low, whose current price is more than the set threshold above the market price, or whose availability is check_needed.
+      responses:
+        '200':
+          description: Alert counts for the dashboard tile.
+          content: { application/json: { schema: { $ref: '#/components/schemas/PricingAlerts' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 components:
   parameters:
     Locale:
@@ -432,6 +602,17 @@ components:
     Validation:
       description: Request failed validation. `violations` is present when the body or query string itself was invalid; a rule checked later, such as an unknown category, gives only `message`.
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    StalePrice:
+      description: A suggested price changed since it was shown; nothing was applied. Load the preview or panel again.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Problem'
+              - type: object
+                required: [staleVariantIds]
+                properties:
+                  staleVariantIds: { type: array, items: { type: string, format: uuid } }
   schemas:
     Problem:
       type: object
@@ -490,9 +671,21 @@ components:
       properties:
         amount: { type: integer, description: Minor currency units. }
         currency: { type: string, enum: [CZK, EUR] }
+    Availability:
+      type: object
+      description: >-
+        Computed from supplier offers. orderable - a fresh matched offer with known lead time; check_needed - only stale,
+        unmatched or incomplete offers, the shop confirms availability and date; unavailable - no offers, or all rejected or
+        sold out. Lead time is in days including handling and is null unless orderable. Owned stock (`stock`, `inStock`) is a
+        separate thing.
+      required: [status, leadTimeMinDays, leadTimeMaxDays]
+      properties:
+        status: { type: string, enum: [orderable, check_needed, unavailable] }
+        leadTimeMinDays: { type: [integer, 'null'] }
+        leadTimeMaxDays: { type: [integer, 'null'] }
     ProductCard:
       type: object
-      required: [id, slug, name, brand, category, categoryName, image, fromPrice, inStock, availableUnits]
+      required: [id, slug, name, brand, category, categoryName, image, fromPrice, inStock, availableUnits, availability]
       properties:
         id: { type: string, format: uuid }
         slug: { type: string }
@@ -504,6 +697,9 @@ components:
         fromPrice: { $ref: '#/components/schemas/Price' }
         inStock: { type: boolean }
         availableUnits: { type: integer, minimum: 0 }
+        availability:
+          allOf: [{ $ref: '#/components/schemas/Availability' }]
+          description: 'Best status among the active variants (orderable, then check_needed, then unavailable); for orderable the shortest lead time.'
         badge: { type: string, nullable: true }
     Product:
       allOf:
@@ -525,13 +721,14 @@ components:
               type: array
               items:
                 type: object
-                required: [id, sku, label, price, stock, mpn, ean, specs]
+                required: [id, sku, label, price, stock, mpn, ean, specs, availability]
                 properties:
                   id: { type: string, format: uuid }
                   sku: { type: string }
                   label: { type: string }
                   price: { $ref: '#/components/schemas/Price' }
                   stock: { type: integer }
+                  availability: { $ref: '#/components/schemas/Availability' }
                   mpn: { type: [string, 'null'] }
                   ean: { type: [string, 'null'], pattern: '^(\d{8}|\d{12,14})$', description: Digits only. }
                   specs: { type: array, description: Values set on this variant; they override product values with the same key., items: { $ref: '#/components/schemas/Spec' } }
@@ -601,6 +798,13 @@ components:
           maxLength: 20
           description: 'GTIN-8/12/13/14 with a valid check digit, unique across variants. Spaces and dashes are accepted and stripped, so "859 4000-000013" is stored and returned as 8594000000013. Empty clears it.'
         attributes: { $ref: '#/components/schemas/AttributeValues' }
+        rrpMinor: { type: [integer, 'null'], minimum: 1, description: "Manufacturer's recommended retail price, admin-only reference. Never shown as a previous NODRA price." }
+        rrpCurrency: { type: [string, 'null'], enum: [CZK, EUR, null], description: Required with rrpMinor. An EUR RRP is converted at the EUR display rate for the price cap. }
+        rrpSource: { type: [string, 'null'], maxLength: 500, description: URL or short note. }
+        rrpCheckedAt: { type: [string, 'null'], format: date }
+        marketPriceMinor: { type: [integer, 'null'], minimum: 1, description: 'Lowest price a Czech customer would realistically pay elsewhere, in haléře. Admin-only.' }
+        marketPriceSource: { type: [string, 'null'], maxLength: 500 }
+        marketCheckedAt: { type: [string, 'null'], format: date }
     AttributeValues:
       type: object
       description: Values keyed by attribute key from the category's effective definitions. Values are strings; number attributes hold a decimal string and choice attributes one option value. An empty value removes the key. Always a JSON object, {} when there are none.
@@ -671,7 +875,7 @@ components:
                 type: array
                 items:
                   type: object
-                  required: [id, sku, label, priceCzk, priceEur, stock, active, color, size, mpn, ean, attributes]
+                  required: [id, sku, label, priceCzk, priceEur, stock, active, color, size, mpn, ean, attributes, rrpMinor, rrpCurrency, rrpSource, rrpCheckedAt, marketPriceMinor, marketPriceSource, marketCheckedAt]
                   properties:
                     id: { type: string, format: uuid }
                     sku: { type: string }
@@ -685,9 +889,16 @@ components:
                     mpn: { type: [string, 'null'] }
                     ean: { type: [string, 'null'], description: Digits only. }
                     attributes: { $ref: '#/components/schemas/AttributeValues' }
+                    rrpMinor: { type: [integer, 'null'] }
+                    rrpCurrency: { type: [string, 'null'] }
+                    rrpSource: { type: [string, 'null'] }
+                    rrpCheckedAt: { type: [string, 'null'], format: date }
+                    marketPriceMinor: { type: [integer, 'null'] }
+                    marketPriceSource: { type: [string, 'null'] }
+                    marketCheckedAt: { type: [string, 'null'], format: date }
     AdminSupplierOffer:
       type: object
-      required: [id, variantId, supplier, seller, url, title, currency, priceMinor, reportedQuantity, checkedAt, leadTimeMinDays, leadTimeMaxDays, verificationStatus]
+      required: [id, variantId, supplier, seller, url, title, currency, priceMinor, inboundShippingMinor, fxRateCzk, fxRateDate, reportedQuantity, checkedAt, leadTimeMinDays, leadTimeMaxDays, verificationStatus]
       properties:
         id: { type: string, format: uuid }
         variantId: { type: [string, 'null'], format: uuid }
@@ -697,6 +908,9 @@ components:
         title: { type: string }
         currency: { type: string }
         priceMinor: { type: integer }
+        inboundShippingMinor: { type: integer, description: Delivery to NODRA per unit in the offer currency. }
+        fxRateCzk: { type: [integer, 'null'], description: "CZK per offer-currency unit in millionths; 1000000 for CZK. Null means unknown, the offer can't be priced." }
+        fxRateDate: { type: [string, 'null'], format: date }
         reportedQuantity: { type: [integer, 'null'] }
         checkedAt: { type: string, format: date-time, description: 'ISO 8601 with the UTC offset, e.g. 2026-09-26T22:00:00+00:00.' }
         leadTimeMinDays: { type: [integer, 'null'] }
@@ -730,14 +944,239 @@ components:
         leadTimeMaxDays: { type: [integer, 'null'], minimum: 0, maximum: 365 }
         variantId: { type: [string, 'null'], format: uuid }
         verificationStatus: { type: string, enum: [snapshot, matched, rejected], description: 'snapshot: not checked against a variant; matched: confirmed exact variant; rejected: listing does not match.' }
+        inboundShippingMinor: { type: integer, minimum: 0, default: 0, description: Delivery to NODRA per unit in the offer currency. }
+        fxRateCzk: { type: [integer, 'null'], minimum: 1, description: 'CZK per offer-currency unit in millionths. For CZK leave it out or send 1000000; for EUR/PLN null means unknown and the offer is not used for price or availability.' }
+        fxRateDate: { type: [string, 'null'], format: date, description: Date of the exchange rate. }
     OrderReceipt:
       type: object
       required: [reference, status, items, subtotal, shipping, total, lookupToken]
       properties:
         reference: { type: string }
         status: { type: string, enum: [placed, processing, shipped, completed, cancelled] }
-        items: { type: array, items: { type: object } }
+        items: { type: array, items: { $ref: '#/components/schemas/ReceiptItem' } }
         subtotal: { $ref: '#/components/schemas/Price' }
         shipping: { $ref: '#/components/schemas/Price' }
         total: { $ref: '#/components/schemas/Price' }
         lookupToken: { type: string }
+    ReceiptItem:
+      type: object
+      required: [name, variant, sku, quantity, unitPrice, lineTotal]
+      properties:
+        name: { type: string }
+        variant: { type: string }
+        sku: { type: string }
+        quantity: { type: integer }
+        unitPrice: { type: integer }
+        lineTotal: { type: integer }
+    AdminOrderItem:
+      allOf:
+        - $ref: '#/components/schemas/ReceiptItem'
+        - type: object
+          description: 'Snapshot taken at checkout; null on orders placed before D02.'
+          required: [availabilityStatus, leadTimeMinDays, leadTimeMaxDays, supplierOfferId, unitCostCzkMinor]
+          properties:
+            availabilityStatus: { type: [string, 'null'], enum: [orderable, check_needed, unavailable, null] }
+            leadTimeMinDays: { type: [integer, 'null'] }
+            leadTimeMaxDays: { type: [integer, 'null'] }
+            supplierOfferId: { type: [string, 'null'], format: uuid }
+            unitCostCzkMinor: { type: [integer, 'null'], description: 'Landed cost per unit at checkout, in haléře.' }
+    AdminOrder:
+      allOf:
+        - $ref: '#/components/schemas/OrderReceipt'
+        - type: object
+          required: [id, customer, items]
+          properties:
+            id: { type: string, format: uuid }
+            customer:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                country: { type: string }
+                address: { type: string }
+                postalCode: { type: string }
+                district: { type: string }
+            items: { type: array, items: { $ref: '#/components/schemas/AdminOrderItem' } }
+    IdResponse:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+    PricingRule:
+      type: object
+      required: [id, categoryId, categorySlug, minCostCzkMinor, maxCostCzkMinor, markupBp, active]
+      properties:
+        id: { type: string, format: uuid }
+        categoryId: { type: [string, 'null'], format: uuid, description: Null for a default rule. }
+        categorySlug: { type: [string, 'null'] }
+        minCostCzkMinor: { type: integer, description: 'Landed cost band start in haléře, inclusive.' }
+        maxCostCzkMinor: { type: [integer, 'null'], description: 'Band end in haléře, exclusive; null for no limit.' }
+        markupBp: { type: integer, description: 'Markup on landed cost in basis points, 4000 = 40 %.' }
+        active: { type: boolean }
+    PricingRuleWriteRequest:
+      type: object
+      required: [minCostCzkMinor, markupBp]
+      properties:
+        categoryId: { type: [string, 'null'], format: uuid, description: Omit or null for a default rule. }
+        minCostCzkMinor: { type: integer, minimum: 0 }
+        maxCostCzkMinor: { type: [integer, 'null'], minimum: 1, description: Must be above minCostCzkMinor. }
+        markupBp: { type: integer, minimum: 0, maximum: 100000 }
+        active: { type: boolean, default: true }
+    AdminAvailability:
+      allOf:
+        - $ref: '#/components/schemas/Availability'
+        - type: object
+          required: [reason]
+          properties:
+            reason:
+              type: [string, 'null']
+              enum: [no_offers, sold_out, not_matched, stale, missing_fx, unknown_lead_time, null]
+              description: Why the variant is not orderable; null when it is.
+    LandedCost:
+      type: object
+      description: The best fresh matched offer and how its landed cost is made.
+      required: [offerId, supplier, seller, url, currency, priceMinor, inboundShippingMinor, fxRateCzk, fxRateDate, checkedAt, leadTimeMinDays, leadTimeMaxDays, landedCostCzk]
+      properties:
+        offerId: { type: string, format: uuid }
+        supplier: { type: string }
+        seller: { type: [string, 'null'] }
+        url: { type: string }
+        currency: { type: string }
+        priceMinor: { type: integer }
+        inboundShippingMinor: { type: integer }
+        fxRateCzk: { type: integer }
+        fxRateDate: { type: [string, 'null'], format: date }
+        checkedAt: { type: string, format: date-time }
+        leadTimeMinDays: { type: [integer, 'null'], description: "The supplier's own lead time, without handling." }
+        leadTimeMaxDays: { type: [integer, 'null'] }
+        landedCostCzk: { type: integer, description: 'round((priceMinor + inboundShippingMinor) * fxRateCzk / 1000000), haléře.' }
+    PriceSuggestion:
+      type: object
+      required: [priceCzk, priceEur, markupPriceCzk, rrpCapCzk, rrpCapped, floorPriceCzk, marginBp, aboveMarket]
+      properties:
+        priceCzk: { type: integer, description: 'The suggested CZK price in haléře, a whole 10 Kč.' }
+        priceEur: { type: integer, description: 'priceCzk at the EUR display rate, rounded to 0.10 €.' }
+        markupPriceCzk: { type: integer, description: 'Landed cost plus the rule markup, rounded up to 10 Kč.' }
+        rrpCapCzk: { type: [integer, 'null'], description: 'RRP times the RRP factor, rounded down to 10 Kč; null without RRP.' }
+        rrpCapped: { type: boolean, description: The cap lowered the price. }
+        floorPriceCzk: { type: integer, description: 'Landed cost plus the minimum margin, rounded up to 10 Kč.' }
+        marginBp: { type: integer, description: (priceCzk - landed cost) / landed cost in basis points. }
+        aboveMarket: { type: boolean, description: The suggested price is more than the threshold above the market price. }
+    VariantPricing:
+      type: object
+      required: [variantId, productId, productName, sku, categoryId, categorySlug, priceCzk, priceEur, currentMarginBp, availability, cost, rule, suggestion, rrpMinor, rrpCurrency, rrpSource, rrpCheckedAt, rrpCzk, marketPriceMinor, marketPriceSource, marketCheckedAt, flags, applicable]
+      properties:
+        variantId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string, description: English name. }
+        sku: { type: string }
+        categoryId: { type: string, format: uuid }
+        categorySlug: { type: string }
+        priceCzk: { type: integer, description: Current price. }
+        priceEur: { type: integer }
+        currentMarginBp: { type: [integer, 'null'], description: 'Margin of the current CZK price over landed cost; null without a cost.' }
+        availability: { $ref: '#/components/schemas/AdminAvailability' }
+        cost: { oneOf: [{ $ref: '#/components/schemas/LandedCost' }, { type: 'null' }] }
+        rule: { oneOf: [{ $ref: '#/components/schemas/PricingRule' }, { type: 'null' }], description: 'Null without a cost or when no rule covers it.' }
+        suggestion: { oneOf: [{ $ref: '#/components/schemas/PriceSuggestion' }, { type: 'null' }] }
+        rrpMinor: { type: [integer, 'null'] }
+        rrpCurrency: { type: [string, 'null'] }
+        rrpSource: { type: [string, 'null'] }
+        rrpCheckedAt: { type: [string, 'null'], format: date }
+        rrpCzk: { type: [integer, 'null'], description: 'RRP in haléře, an EUR RRP converted at the EUR display rate.' }
+        marketPriceMinor: { type: [integer, 'null'] }
+        marketPriceSource: { type: [string, 'null'] }
+        marketCheckedAt: { type: [string, 'null'], format: date }
+        flags:
+          type: array
+          description: 'margin_too_low - the rule or RRP target cannot keep the minimum margin, the suggestion was lifted to the floor and is never applied automatically; above_market - the current price is more than the threshold above the market price (informs only).'
+          items: { type: string, enum: [margin_too_low, above_market] }
+        applicable: { type: boolean, description: There is a suggestion and it is not flagged margin_too_low. }
+    PriceApplied:
+      type: object
+      required: [variantId, oldPriceCzk, newPriceCzk, oldPriceEur, newPriceEur, changed]
+      properties:
+        variantId: { type: string, format: uuid }
+        oldPriceCzk: { type: integer }
+        newPriceCzk: { type: integer }
+        oldPriceEur: { type: integer }
+        newPriceEur: { type: integer }
+        changed: { type: boolean, description: 'False when the price already was the suggestion; no history is written then.' }
+    PriceHistoryPage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, oldPriceCzk, newPriceCzk, oldPriceEur, newPriceEur, reason, changedBy, changedAt]
+            properties:
+              id: { type: string, format: uuid }
+              oldPriceCzk: { type: [integer, 'null'], description: Null for the first price of a new variant. }
+              newPriceCzk: { type: integer }
+              oldPriceEur: { type: [integer, 'null'] }
+              newPriceEur: { type: integer }
+              reason: { type: string, enum: [manual, reprice, import] }
+              changedBy: { type: string, description: 'Admin email, or system for the import.' }
+              changedAt: { type: string, format: date-time }
+    RepricePreview:
+      type: object
+      required: [categoryId, variants, withoutSuggestion, rows]
+      properties:
+        categoryId: { type: [string, 'null'], format: uuid }
+        variants: { type: integer, description: Active variants in scope. }
+        withoutSuggestion: { type: integer, description: 'Of those, variants with no fresh matched offer or no rule.' }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [variantId, productId, productName, sku, categorySlug, priceCzk, priceEur, landedCostCzk, currentMarginBp, suggestedPriceCzk, suggestedPriceEur, suggestedMarginBp, marketPriceMinor, suggestionAboveMarket, flags, changed, applicable]
+            properties:
+              variantId: { type: string, format: uuid }
+              productId: { type: string, format: uuid }
+              productName: { type: string }
+              sku: { type: string }
+              categorySlug: { type: string }
+              priceCzk: { type: integer }
+              priceEur: { type: integer }
+              landedCostCzk: { type: integer }
+              currentMarginBp: { type: integer }
+              suggestedPriceCzk: { type: integer, description: Send this back when applying. }
+              suggestedPriceEur: { type: integer }
+              suggestedMarginBp: { type: integer }
+              marketPriceMinor: { type: [integer, 'null'] }
+              suggestionAboveMarket: { type: boolean }
+              flags: { type: array, items: { type: string, enum: [margin_too_low, above_market] } }
+              changed: { type: boolean, description: The suggestion differs from the current CZK or EUR price. }
+              applicable: { type: boolean }
+    RepriceApplyRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            required: [variantId, suggestedPriceCzk]
+            properties:
+              variantId: { type: string, format: uuid }
+              suggestedPriceCzk: { type: integer, minimum: 0 }
+    RepriceApplyResult:
+      type: object
+      required: [applied, items]
+      properties:
+        applied: { type: integer, description: Variants whose price actually changed. }
+        items: { type: array, items: { $ref: '#/components/schemas/PriceApplied' } }
+    PricingAlerts:
+      type: object
+      required: [marginTooLow, aboveMarket, checkNeeded]
+      properties:
+        marginTooLow: { type: integer }
+        aboveMarket: { type: integer }
+        checkNeeded: { type: integer }
