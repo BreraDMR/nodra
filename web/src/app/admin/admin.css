@@ -53,12 +53,6 @@
   font: 800 29px var(--display);
   letter-spacing: -0.09em;
 }
-.admin-wordmark span {
-  font-size: 9px;
-  vertical-align: top;
-  letter-spacing: 0;
-  margin-left: 3px;
-}
 .admin-login-box {
   max-width: 400px;
   width: 100%;
@@ -622,9 +616,6 @@
   .admin-sidebar .admin-wordmark:before {
     content: "N";
     font: 800 23px var(--display);
-  }
-  .admin-sidebar .admin-wordmark span {
-    display: none;
   }
   .admin-sidebar nav span,
   .admin-sidebar nav small,
