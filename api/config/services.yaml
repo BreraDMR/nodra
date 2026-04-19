@@ -7,6 +7,14 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # D02 pricing and availability settings, the one place to tune them (read by App\Pricing\PricingSettings).
+    # The values are defaults picked while the owner was away, see D00.5/D00.6. Percentages are basis points, 100 = 1 %.
+    app.pricing.fresh_offer_days: 7       # an offer checked longer ago than this needs a new check
+    app.pricing.handling_days: 1          # added to the supplier's lead time
+    app.pricing.rrp_factor_bp: 9700       # suggested price at most RRP x 0.97
+    app.pricing.min_margin_bp: 1000       # ...but never below landed cost x 1.10
+    app.pricing.eur_display_rate: '25.0'  # CZK per 1 EUR for EUR prices, until D06.7
+    app.pricing.above_market_bp: 1500     # flag a price more than 15 % above the market price
 
 services:
     # default configuration for services in *this* file
