@@ -19,6 +19,8 @@ class SupplierOffer
 {
     public const SUPPLIERS = ['allegro_cz', 'allegro_pl', 'bikeinn', 'bike24', 'bike_discount', 'other'];
     public const STATUSES = ['snapshot', 'matched', 'rejected'];
+    /** 1.0 in integer millionths, the rate of a CZK offer */
+    public const CZK_RATE = 1_000_000;
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
@@ -65,6 +67,17 @@ class SupplierOffer
     #[ORM\Column(length: 24)]
     private string $verificationStatus = 'snapshot';
 
+    /** Delivery to NODRA per unit, in the offer currency. */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $inboundShippingMinor = 0;
+
+    /** CZK per offer-currency unit in millionths. Null while the rate isn't known, such an offer can't be priced. */
+    #[ORM\Column(nullable: true)]
+    private ?int $fxRateCzk;
+
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $fxRateDate = null;
+
     public function __construct(Product $product, string $supplier, string $url, string $title, string $currency, int $priceMinor, ?int $reportedQuantity, \DateTimeImmutable $checkedAt)
     {
         $this->id = Uuid::v7();
@@ -76,6 +89,7 @@ class SupplierOffer
         $this->priceMinor = $priceMinor;
         $this->reportedQuantity = $reportedQuantity;
         $this->checkedAt = $checkedAt;
+        $this->fxRateCzk = $currency === 'CZK' ? self::CZK_RATE : null;
     }
 
     public function getId(): Uuid { return $this->id; }
@@ -83,6 +97,17 @@ class SupplierOffer
     public function getVariant(): ?ProductVariant { return $this->variant; }
     public function getUrl(): string { return $this->url; }
     public function getVerificationStatus(): string { return $this->verificationStatus; }
+    public function getSupplier(): string { return $this->supplier; }
+    public function getSeller(): ?string { return $this->seller; }
+    public function getCurrency(): string { return $this->currency; }
+    public function getPriceMinor(): int { return $this->priceMinor; }
+    public function getReportedQuantity(): ?int { return $this->reportedQuantity; }
+    public function getCheckedAt(): \DateTimeImmutable { return $this->checkedAt; }
+    public function getLeadTimeMinDays(): ?int { return $this->leadTimeMinDays; }
+    public function getLeadTimeMaxDays(): ?int { return $this->leadTimeMaxDays; }
+    public function getInboundShippingMinor(): int { return $this->inboundShippingMinor; }
+    public function getFxRateCzk(): ?int { return $this->fxRateCzk; }
+    public function getFxRateDate(): ?\DateTimeImmutable { return $this->fxRateDate; }
 
     public function update(string $supplier, string $url, string $title, ?string $seller, string $currency, int $priceMinor, ?int $reportedQuantity, \DateTimeImmutable $checkedAt, ?int $leadTimeMinDays, ?int $leadTimeMaxDays, ?ProductVariant $variant, string $verificationStatus): void
     {
@@ -99,6 +124,11 @@ class SupplierOffer
         $this->url = $url;
         $this->title = $title;
         $this->seller = $seller;
+        if ($currency !== $this->currency) {
+            // a rate for the old currency means nothing for the new one
+            $this->fxRateCzk = $currency === 'CZK' ? self::CZK_RATE : null;
+            $this->fxRateDate = null;
+        }
         $this->currency = $currency;
         $this->priceMinor = $priceMinor;
         $this->reportedQuantity = $reportedQuantity;
@@ -107,5 +137,24 @@ class SupplierOffer
         $this->leadTimeMaxDays = $leadTimeMaxDays;
         $this->variant = $variant;
         $this->verificationStatus = $verificationStatus;
+    }
+
+    /** Inbound shipping and exchange rate. A CZK offer always has the rate 1. */
+    public function setCost(int $inboundShippingMinor, ?int $fxRateCzk, ?\DateTimeImmutable $fxRateDate): void
+    {
+        if ($inboundShippingMinor < 0) {
+            throw new \InvalidArgumentException('Inbound shipping cannot be negative');
+        }
+        if ($this->currency === 'CZK') {
+            if ($fxRateCzk !== null && $fxRateCzk !== self::CZK_RATE) {
+                throw new \InvalidArgumentException('A CZK offer has the exchange rate 1 (1000000)');
+            }
+            $fxRateCzk = self::CZK_RATE;
+        } elseif ($fxRateCzk !== null && $fxRateCzk <= 0) {
+            throw new \InvalidArgumentException('The exchange rate must be positive');
+        }
+        $this->inboundShippingMinor = $inboundShippingMinor;
+        $this->fxRateCzk = $fxRateCzk;
+        $this->fxRateDate = $fxRateDate;
     }
 }
