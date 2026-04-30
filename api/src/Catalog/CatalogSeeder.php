@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Catalog;
 
 use App\Entity\Category;
+use App\Entity\PriceChange;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\SupplierOffer;
+use App\Pricing\PriceHistory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -16,7 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class CatalogSeeder
 {
-    public function __construct(private EntityManagerInterface $em) {}
+    public function __construct(private EntityManagerInterface $em, private PriceHistory $history) {}
 
     /** @return array{added: int, filled: int, warnings: list<string>} */
     public function seedCategories(): array
@@ -114,8 +116,8 @@ final class CatalogSeeder
                 ++$newOffers;
             }
             foreach ($item['variants'] as $index => $option) {
-                // demo stock still comes from the source snapshot, D02/D04 replace it with order-request availability
-                $this->em->persist(new ProductVariant(
+                // demo stock still comes from the source snapshot, D04 replaces it with order-request checkout
+                $variant = new ProductVariant(
                     $product,
                     'ND-'.strtoupper(substr(hash('sha256', $item['slug']), 0, 12)).'-'.($index + 1),
                     $option['label'],
@@ -124,7 +126,10 @@ final class CatalogSeeder
                     max(0, $item['stock'] - ($index * 3)),
                     $option['color'] ?? null,
                     $option['size'] ?? null,
-                ));
+                );
+                $this->em->persist($variant);
+                // the first price is history too; existing variants' prices are never touched by the import
+                $this->history->record($variant, null, null, PriceChange::IMPORT);
             }
             ++$added;
         }
