@@ -58,6 +58,7 @@ final class SupplierOfferAdminService
             $input->currency, $input->priceMinor, $input->reportedQuantity, $this->checkedAt($input->checkedAt),
             $input->leadTimeMinDays, $input->leadTimeMaxDays, $variant, $input->verificationStatus,
         );
+        $offer->setCost($input->inboundShippingMinor, $input->fxRateCzk, $input->fxRateDate === null ? null : new \DateTimeImmutable($input->fxRateDate));
     }
 
     private function checkedAt(string $value): \DateTimeImmutable
