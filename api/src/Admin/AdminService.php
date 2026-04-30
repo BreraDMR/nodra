@@ -11,10 +11,12 @@ use App\Checkout\CheckoutService;
 use App\Entity\Category;
 use App\Entity\OrderItem;
 use App\Entity\LoyaltyEntry;
+use App\Entity\PriceChange;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\ShopOrder;
 use App\Entity\StockMovement;
+use App\Pricing\PriceHistory;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
@@ -23,7 +25,7 @@ use Symfony\Component\Uid\Uuid;
 
 final class AdminService
 {
-    public function __construct(private EntityManagerInterface $em, private Connection $db, private CheckoutService $checkout) {}
+    public function __construct(private EntityManagerInterface $em, private Connection $db, private CheckoutService $checkout, private PriceHistory $history) {}
 
     public function dashboard(): array
     {
@@ -65,7 +67,9 @@ final class AdminService
         $offersByProduct = [];
         if ($rows !== []) {
             $variants = $this->db->fetchAllAssociative(
-                'SELECT product_id, id, sku, label, price_czk, price_eur, stock, active, color, size, mpn, ean, attributes FROM product_variant WHERE product_id IN (:ids) ORDER BY sku',
+                'SELECT product_id, id, sku, label, price_czk, price_eur, stock, active, color, size, mpn, ean, attributes,
+                    rrp_minor, rrp_currency, rrp_source, rrp_checked_at, market_price_minor, market_price_source, market_checked_at
+                FROM product_variant WHERE product_id IN (:ids) ORDER BY sku',
                 ['ids' => array_column($rows, 'id')],
                 ['ids' => ArrayParameterType::STRING],
             );
@@ -73,7 +77,9 @@ final class AdminService
                 $variantsByProduct[$variant['product_id']][] = $variant;
             }
             $offers = $this->db->fetchAllAssociative(
-                'SELECT id, product_id, variant_id, supplier, seller, url, title, currency, price_minor, reported_quantity, checked_at, lead_time_min_days, lead_time_max_days, verification_status FROM supplier_offer WHERE product_id IN (:ids) ORDER BY checked_at DESC, id',
+                'SELECT id, product_id, variant_id, supplier, seller, url, title, currency, price_minor, inbound_shipping_minor, fx_rate_czk, fx_rate_date,
+                    reported_quantity, checked_at, lead_time_min_days, lead_time_max_days, verification_status
+                FROM supplier_offer WHERE product_id IN (:ids) ORDER BY checked_at DESC, id',
                 ['ids' => array_column($rows, 'id')],
                 ['ids' => ArrayParameterType::STRING],
             );
@@ -84,6 +90,8 @@ final class AdminService
                     'leadTimeMaxDays' => $offer['lead_time_max_days'] === null ? null : (int) $offer['lead_time_max_days'],
                     'supplier' => $offer['supplier'], 'url' => $offer['url'], 'title' => $offer['title'],
                     'currency' => $offer['currency'], 'priceMinor' => (int) $offer['price_minor'],
+                    'inboundShippingMinor' => (int) $offer['inbound_shipping_minor'],
+                    'fxRateCzk' => $offer['fx_rate_czk'] === null ? null : (int) $offer['fx_rate_czk'], 'fxRateDate' => $offer['fx_rate_date'],
                     'reportedQuantity' => $offer['reported_quantity'] === null ? null : (int) $offer['reported_quantity'],
                     'checkedAt' => (new \DateTimeImmutable($offer['checked_at']))->format(\DATE_ATOM), 'verificationStatus' => $offer['verification_status'],
                 ];
@@ -104,6 +112,10 @@ final class AdminService
                     'priceCzk' => (int) $v['price_czk'], 'priceEur' => (int) $v['price_eur'], 'stock' => (int) $v['stock'],
                     'active' => (bool) $v['active'], 'color' => $v['color'], 'size' => $v['size'],
                     'mpn' => $v['mpn'], 'ean' => $v['ean'], 'attributes' => self::attributeMap($v['attributes']),
+                    'rrpMinor' => $v['rrp_minor'] === null ? null : (int) $v['rrp_minor'], 'rrpCurrency' => $v['rrp_currency'],
+                    'rrpSource' => $v['rrp_source'], 'rrpCheckedAt' => $v['rrp_checked_at'],
+                    'marketPriceMinor' => $v['market_price_minor'] === null ? null : (int) $v['market_price_minor'],
+                    'marketPriceSource' => $v['market_price_source'], 'marketCheckedAt' => $v['market_checked_at'],
                 ], $variants),
             ];
         }, $rows);
@@ -122,6 +134,7 @@ final class AdminService
         $variant = new ProductVariant($product, 'ND-'.strtoupper(bin2hex(random_bytes(4))), ['cs' => 'Standardní', 'de' => 'Standard', 'en' => 'Standard'], $input->priceCzk, $input->priceEur, 0);
         $this->em->persist($product);
         $this->em->persist($variant);
+        $this->history->record($variant, null, null, PriceChange::MANUAL);
         $this->em->flush();
 
         return ['id' => $product->getId()->toRfc4122(), 'variantId' => $variant->getId()->toRfc4122()];
@@ -146,7 +159,9 @@ final class AdminService
         $baseId = $this->db->fetchOne('SELECT id FROM product_variant WHERE product_id = :id ORDER BY (active AND stock > 0) DESC, active DESC, sku ASC LIMIT 1', ['id' => $id]);
         $variant = $baseId === false ? null : $this->em->find(ProductVariant::class, Uuid::fromString($baseId));
         if ($variant !== null) {
-            $variant->update($variant->getLabel(), $input->priceCzk, $input->priceEur, $variant->isActive(), $variant->getColor(), $variant->getSize());
+            [$oldCzk, $oldEur] = [$variant->getPriceCzk(), $variant->getPriceEur()];
+            $variant->changePrice($input->priceCzk, $input->priceEur);
+            $this->history->record($variant, $oldCzk, $oldEur, PriceChange::MANUAL);
         }
         $this->em->flush();
 
@@ -178,7 +193,9 @@ final class AdminService
         $variant = new ProductVariant($product, trim($input->sku), $this->variantLabels($input), $input->priceCzk, $input->priceEur, 0, $input->color, $input->size);
         $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
         $this->identify($variant, $input);
+        $this->referencePrices($variant, $input);
         $this->em->persist($variant);
+        $this->history->record($variant, null, null, PriceChange::MANUAL);
         $this->em->flush();
 
         return ['id' => $variant->getId()->toRfc4122(), 'sku' => $variant->getSku()];
@@ -193,8 +210,11 @@ final class AdminService
         if ($variant->getSku() !== $input->sku) {
             throw new \InvalidArgumentException('SKU cannot be changed after creation');
         }
+        [$oldCzk, $oldEur] = [$variant->getPriceCzk(), $variant->getPriceEur()];
         $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
         $this->identify($variant, $input);
+        $this->referencePrices($variant, $input);
+        $this->history->record($variant, $oldCzk, $oldEur, PriceChange::MANUAL);
         $this->em->flush();
 
         return ['id' => $id, 'sku' => $variant->getSku()];
@@ -236,7 +256,7 @@ final class AdminService
             return null;
         }
 
-        return $this->checkout->receipt($order) + [
+        return $this->checkout->receipt($order, internal: true) + [
             'id' => $id,
             'customer' => ['name' => $order->getCustomerName(), 'email' => $order->getEmail(), 'country' => $order->getCountry(), 'address' => $order->getAddress(), 'postalCode' => $order->getPostalCode(), 'district' => $order->getDistrict()],
         ];
@@ -372,6 +392,16 @@ final class AdminService
         $categoryId = $variant->getProduct()->getCategory()->getId()->toRfc4122();
         $attributes = AttributeSchema::normalizeValues($input->attributes, CategoryIndex::load($this->db)->effectiveAttributes($categoryId));
         $variant->identify($mpn === '' ? null : $mpn, $ean, $attributes);
+    }
+
+    private function referencePrices(ProductVariant $variant, VariantWriteRequest $input): void
+    {
+        $date = static fn (?string $value): ?\DateTimeImmutable => $value === null || trim($value) === '' ? null : new \DateTimeImmutable($value);
+        $text = static fn (?string $value): ?string => trim((string) $value) === '' ? null : trim((string) $value);
+        $variant->setReferencePrices(
+            $input->rrpMinor, $input->rrpCurrency, $text($input->rrpSource), $date($input->rrpCheckedAt),
+            $input->marketPriceMinor, $text($input->marketPriceSource), $date($input->marketCheckedAt),
+        );
     }
 
     private function variantLabels(VariantWriteRequest $input): array
