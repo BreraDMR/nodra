@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Admin;
 
+use App\Entity\ProductVariant;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class VariantWriteRequest
@@ -21,5 +22,12 @@ final readonly class VariantWriteRequest
         #[Assert\Length(max: 64)] public ?string $mpn = null,
         #[Assert\Length(max: 20)] public ?string $ean = null,
         #[Assert\Count(max: 40)] public array $attributes = [],
+        #[Assert\Positive] public ?int $rrpMinor = null,
+        #[Assert\Choice(choices: ProductVariant::RRP_CURRENCIES)] public ?string $rrpCurrency = null,
+        #[Assert\Length(max: 500)] public ?string $rrpSource = null,
+        #[Assert\Date] public ?string $rrpCheckedAt = null,
+        #[Assert\Positive] public ?int $marketPriceMinor = null,
+        #[Assert\Length(max: 500)] public ?string $marketPriceSource = null,
+        #[Assert\Date] public ?string $marketCheckedAt = null,
     ) {}
 }
