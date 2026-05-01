@@ -8,6 +8,9 @@ use App\Entity\OrderItem;
 use App\Entity\CustomerAccount;
 use App\Entity\ProductVariant;
 use App\Entity\ShopOrder;
+use App\Entity\SupplierOffer;
+use App\Pricing\AvailabilityService;
+use App\Pricing\Sourcing;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,7 +18,7 @@ use Symfony\Component\Uid\Uuid;
 
 final class CheckoutService
 {
-    public function __construct(private EntityManagerInterface $em, private Connection $db) {}
+    public function __construct(private EntityManagerInterface $em, private Connection $db, private AvailabilityService $availability) {}
 
     public function place(CheckoutRequest $request, string $key, ?CustomerAccount $account = null): array
     {
@@ -44,23 +47,34 @@ final class CheckoutService
                     return $existing;
                 }
 
-                $lines = [];
-                $subtotal = 0;
+                $rows = [];
                 foreach ($quantities as $id => $quantity) {
-                    $row = $this->db->fetchAssociative('SELECT v.id, v.stock, v.active, v.price_czk, v.price_eur, v.label,
+                    $row = $this->db->fetchAssociative('SELECT v.id, v.product_id, v.stock, v.active, v.price_czk, v.price_eur, v.label,
                         p.status, p.copy FROM product_variant v JOIN product p ON p.id = v.product_id
                         WHERE v.id = :id FOR UPDATE OF v', ['id' => $id]);
                     if ($row === false || !$row['active'] || $row['status'] !== 'published') {
                         throw new \DomainException('A selected product is no longer available');
+                    }
+                    $rows[$id] = $row;
+                }
+                // the same calculation the catalogue shows; the order keeps what it said at this moment
+                $sourcing = $this->availability->forVariants(array_column($rows, 'product_id', 'id'));
+
+                $lines = [];
+                $subtotal = 0;
+                foreach ($quantities as $id => $quantity) {
+                    $row = $rows[$id];
+                    $copy = json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR)[$request->locale];
+                    $label = json_decode($row['label'], true, flags: JSON_THROW_ON_ERROR)[$request->locale];
+                    if ($sourcing[$row['id']]->status === Sourcing::UNAVAILABLE) {
+                        throw new \InvalidArgumentException(sprintf('%s (%s) cannot be ordered at the moment: no supplier has it available', $copy['name'], $label));
                     }
                     if ((int) $row['stock'] < $quantity) {
                         throw new \DomainException('There is not enough stock for one of the selected products');
                     }
                     $price = (int) $row[$currency === 'CZK' ? 'price_czk' : 'price_eur'];
                     $subtotal += $price * $quantity;
-                    $copy = json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR)[$request->locale];
-                    $label = json_decode($row['label'], true, flags: JSON_THROW_ON_ERROR)[$request->locale];
-                    $lines[] = [$id, $quantity, $price, $copy['name'], $label];
+                    $lines[] = [$id, $quantity, $price, $copy['name'], $label, $sourcing[$row['id']]];
                 }
 
                 $shipping = $currency === 'CZK' ? 8900 : 390;
@@ -70,10 +84,13 @@ final class CheckoutService
                 }
                 $this->em->persist($order);
 
-                foreach ($lines as [$id, $quantity, $price, $name, $label]) {
+                foreach ($lines as [$id, $quantity, $price, $name, $label, $source]) {
                     $variant = $this->em->find(ProductVariant::class, Uuid::fromString($id));
                     $variant->adjustStock(-$quantity);
-                    $this->em->persist(new OrderItem($order, $variant, $name, $label, $quantity, $price));
+                    $item = new OrderItem($order, $variant, $name, $label, $quantity, $price);
+                    $offer = $source->offer === null ? null : $this->em->getReference(SupplierOffer::class, Uuid::fromString($source->offer->id));
+                    $item->recordSourcing($source->status, $source->leadTimeMinDays, $source->leadTimeMaxDays, $offer, $source->landedCostCzk);
+                    $this->em->persist($item);
                 }
                 $this->em->flush();
 
@@ -103,7 +120,8 @@ final class CheckoutService
         return $this->receipt($order);
     }
 
-    public function receipt(ShopOrder $order): array
+    /** @param bool $internal adds the sourcing snapshot, for the admin only */
+    public function receipt(ShopOrder $order, bool $internal = false): array
     {
         $items = $this->em->getRepository(OrderItem::class)->findBy(['order' => $order]);
         $price = fn (int $amount): array => ['amount' => $amount, 'currency' => $order->getCurrency()];
@@ -115,7 +133,12 @@ final class CheckoutService
                 'name' => $item->getProductName(), 'variant' => $item->getVariantLabel(),
                 'sku' => $item->getSku(), 'quantity' => $item->getQuantity(),
                 'unitPrice' => $item->getUnitPriceMinor(), 'lineTotal' => $item->getLineTotalMinor(),
-            ], $items),
+            ] + (!$internal ? [] : [
+                'availabilityStatus' => $item->getAvailabilityStatus(),
+                'leadTimeMinDays' => $item->getLeadTimeMinDays(), 'leadTimeMaxDays' => $item->getLeadTimeMaxDays(),
+                'supplierOfferId' => $item->getSupplierOffer()?->getId()->toRfc4122(),
+                'unitCostCzkMinor' => $item->getUnitCostCzkMinor(),
+            ]), $items),
             'subtotal' => $price($order->getSubtotalMinor()),
             'shipping' => $price($order->getShippingMinor()),
             'total' => $price($order->getTotalMinor()),
