@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Catalog;
 
+use App\Pricing\AvailabilityService;
+use App\Pricing\Sourcing;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 final class CatalogService
 {
-    public function __construct(private Connection $db) {}
+    public function __construct(private Connection $db, private AvailabilityService $availability) {}
 
     public function browse(CatalogQuery $query): array
     {
@@ -78,8 +80,11 @@ final class CatalogService
             JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
             WHERE $where GROUP BY p.id, c.id ORDER BY $sort LIMIT 12 OFFSET ".(($page - 1) * 12), $params, $types);
 
+        // one lookup for the whole page, not one per card
+        $availability = $this->availability->forProducts(array_column($rows, 'id'));
+
         return [
-            'items' => array_map(fn (array $row): array => $this->card($row, $currency), $rows),
+            'items' => array_map(fn (array $row): array => $this->card($row, $currency) + ['availability' => $availability[$row['id']]['card']], $rows),
             'page' => $page,
             'pages' => $pages,
             'total' => $total,
@@ -105,6 +110,7 @@ final class CatalogService
         $definitions = $index->effectiveAttributes($row['category_id']);
         $attributes = json_decode($row['attributes'], true, flags: JSON_THROW_ON_ERROR);
         $variants = $this->db->fetchAllAssociative('SELECT * FROM product_variant WHERE product_id = :id AND active = TRUE ORDER BY sku', ['id' => $row['id']]);
+        $availability = $this->availability->forProducts([$row['id']])[$row['id']];
         $inBox = trim((string) ($copy['inBox'] ?? ''));
 
         return [
@@ -126,7 +132,8 @@ final class CatalogService
             'fromPrice' => ['amount' => (int) $row[$currency === 'CZK' ? 'from_czk' : 'from_eur'], 'currency' => $currency],
             'inStock' => (int) $row['available_units'] > 0,
             'availableUnits' => (int) $row['available_units'],
-            'variants' => array_map(static function (array $variant) use ($locale, $currency, $definitions): array {
+            'availability' => $availability['card'],
+            'variants' => array_map(static function (array $variant) use ($locale, $currency, $definitions, $availability): array {
                 $labels = json_decode($variant['label'], true, flags: JSON_THROW_ON_ERROR);
 
                 return [
@@ -135,6 +142,7 @@ final class CatalogService
                     'mpn' => $variant['mpn'], 'ean' => $variant['ean'],
                     'specs' => AttributeSchema::specs(json_decode($variant['attributes'], true, flags: JSON_THROW_ON_ERROR), $definitions, $locale),
                     'price' => ['amount' => (int) $variant[$currency === 'CZK' ? 'price_czk' : 'price_eur'], 'currency' => $currency],
+                    'availability' => $availability['variants'][$variant['id']] ?? Sourcing::unavailable()->toPublic(),
                 ];
             }, $variants),
         ];
