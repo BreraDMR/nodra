@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Catalog;
 
 use App\Catalog\CatalogService;
+use App\Tests\Support\PricingDefaults;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
 
@@ -38,7 +39,7 @@ final class ProductDetailsTest extends TestCase
             'position' => 30, 'active' => true, 'attributes' => '[]',
         ]] : []);
 
-        $product = (new CatalogService($db))->product('demo-light', 'cs');
+        $product = (new CatalogService($db, PricingDefaults::availability($db)))->product('demo-light', 'cs');
 
         self::assertSame(['800 lm', 'USB charging', 'handlebar mount'], $product['details']);
         self::assertSame([['slug' => 'lights', 'name' => 'Světla']], $product['breadcrumbs']);
