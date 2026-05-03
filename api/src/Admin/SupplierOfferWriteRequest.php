@@ -22,5 +22,8 @@ final readonly class SupplierOfferWriteRequest
         #[Assert\Range(min: 0, max: 365)] public ?int $leadTimeMinDays = null,
         #[Assert\Range(min: 0, max: 365)] public ?int $leadTimeMaxDays = null,
         #[Assert\Uuid] public ?string $variantId = null,
+        #[Assert\PositiveOrZero] public int $inboundShippingMinor = 0,
+        #[Assert\Positive] public ?int $fxRateCzk = null,
+        #[Assert\Date] public ?string $fxRateDate = null,
     ) {}
 }
