@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Catalog\AttributeSchema;
 use App\Entity\Category;
+use App\Entity\PricingRule;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\SupplierOffer;
@@ -97,5 +98,40 @@ final class CatalogBuilder
         $this->em->flush();
 
         return $offer;
+    }
+
+    /** Offer with the fields pricing reads; matched when a variant is given, a product-level snapshot otherwise. */
+    public function pricedOffer(
+        Product $product,
+        ?ProductVariant $variant,
+        int $priceMinor,
+        string $currency = 'CZK',
+        ?int $fxRateCzk = null,
+        int $inboundShippingMinor = 0,
+        ?int $leadTimeMinDays = 2,
+        ?int $leadTimeMaxDays = 5,
+        ?int $reportedQuantity = 4,
+        ?\DateTimeImmutable $checkedAt = null,
+        ?string $status = null,
+    ): SupplierOffer {
+        $url = 'https://supplier.example/'.$product->getSlug().'/'.bin2hex(random_bytes(4));
+        $checkedAt ??= new \DateTimeImmutable('-1 day');
+        $offer = new SupplierOffer($product, 'bike24', $url, 'Listing '.$product->getSlug(), $currency, $priceMinor, $reportedQuantity, $checkedAt);
+        $offer->update('bike24', $url, 'Listing '.$product->getSlug(), 'Secret Seller GmbH', $currency, $priceMinor, $reportedQuantity, $checkedAt,
+            $leadTimeMinDays, $leadTimeMaxDays, $variant, $status ?? ($variant === null ? 'snapshot' : 'matched'));
+        $offer->setCost($inboundShippingMinor, $fxRateCzk, $fxRateCzk === null ? null : new \DateTimeImmutable('2026-09-25'));
+        $this->em->persist($offer);
+        $this->em->flush();
+
+        return $offer;
+    }
+
+    public function rule(?Category $category, int $minCostCzkMinor, ?int $maxCostCzkMinor, int $markupBp, bool $active = true): PricingRule
+    {
+        $rule = new PricingRule($category, $minCostCzkMinor, $maxCostCzkMinor, $markupBp, $active);
+        $this->em->persist($rule);
+        $this->em->flush();
+
+        return $rule;
     }
 }
