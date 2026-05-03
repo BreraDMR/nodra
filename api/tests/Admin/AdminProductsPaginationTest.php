@@ -7,9 +7,13 @@ namespace App\Tests\Admin;
 use App\Admin\AdminProductsQuery;
 use App\Admin\AdminService;
 use App\Checkout\CheckoutService;
+use App\Pricing\PriceHistory;
+use App\Tests\Support\PricingDefaults;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Clock\MockClock;
 
 final class AdminProductsPaginationTest extends TestCase
 {
@@ -41,11 +45,14 @@ final class AdminProductsPaginationTest extends TestCase
                     'label' => '{"en":"Standard"}', 'price_czk' => 100000,
                     'price_eur' => 4000, 'stock' => 4, 'active' => true,
                     'color' => null, 'size' => null, 'mpn' => null, 'ean' => null, 'attributes' => '{}',
+                    'rrp_minor' => null, 'rrp_currency' => null, 'rrp_source' => null, 'rrp_checked_at' => null,
+                    'market_price_minor' => null, 'market_price_source' => null, 'market_checked_at' => null,
                 ]];
             },
         );
         $em = $this->createStub(EntityManagerInterface::class);
-        $service = new AdminService($em, $db, new CheckoutService($em, $db));
+        $history = new PriceHistory($em, $db, $this->createStub(Security::class), new MockClock());
+        $service = new AdminService($em, $db, new CheckoutService($em, $db, PricingDefaults::availability($db)), $history);
 
         $result = $service->products(new AdminProductsQuery(2));
 
