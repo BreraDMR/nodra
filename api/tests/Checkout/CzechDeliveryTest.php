@@ -6,6 +6,7 @@ namespace App\Tests\Checkout;
 
 use App\Checkout\CheckoutRequest;
 use App\Checkout\CheckoutService;
+use App\Tests\Support\PricingDefaults;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -14,10 +15,8 @@ final class CzechDeliveryTest extends TestCase
 {
     public function testOtherCountriesAreRejectedBeforeInventoryChanges(): void
     {
-        $checkout = new CheckoutService(
-            $this->createStub(EntityManagerInterface::class),
-            $this->createStub(Connection::class),
-        );
+        $db = $this->createStub(Connection::class);
+        $checkout = new CheckoutService($this->createStub(EntityManagerInterface::class), $db, PricingDefaults::availability($db));
         $request = new CheckoutRequest('en', [
             'name' => 'Demo Rider',
             'email' => 'rider@example.test',
