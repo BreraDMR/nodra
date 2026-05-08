@@ -44,6 +44,7 @@ final class SupplierOfferAdminApiTest extends ApiTestCase
         self::assertSame([
             'variantId' => $this->variantA, 'seller' => 'Velo Shop', 'leadTimeMinDays' => 2, 'leadTimeMaxDays' => 5,
             'supplier' => 'allegro_cz', 'url' => self::URL, 'title' => 'KMC X12 chain', 'currency' => 'CZK', 'priceMinor' => 129900,
+            'inboundShippingMinor' => 0, 'fxRateCzk' => 1000000, 'fxRateDate' => null,
             'reportedQuantity' => 7, 'verificationStatus' => 'matched',
         ], array_diff_key($offer, ['id' => true, 'checkedAt' => true]));
         // ISO 8601 with the offset, the same moment that was sent
