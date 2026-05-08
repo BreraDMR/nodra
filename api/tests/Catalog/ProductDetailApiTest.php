@@ -60,13 +60,14 @@ final class ProductDetailApiTest extends ApiTestCase
         self::assertSame(['12', 'Stahl', '257,5'], array_column($de['specs'], 'value'));
         self::assertNull($de['inBox']);
 
-        // supplier listings stay internal, on the detail page and in the list
+        // supplier listings stay internal, on the detail page and in the list; since D02 only the computed
+        // availability and lead time are public, see PublicResponsePrivacyTest for the full key check
         foreach (['cs', 'de', 'en'] as $locale) {
             foreach (['/api/products/t-chain', '/api/products'] as $uri) {
                 $this->getJson($uri, ['locale' => $locale, 'category' => 't-parts']);
                 $raw = strtolower((string) $this->client->getResponse()->getContent());
                 self::assertStringContainsString('t-chain', $raw);
-                foreach (['supplier', 'seller', 'allegro', 'bike24', 'secret', 'offer', 'leadtime'] as $needle) {
+                foreach (['supplier', 'seller', 'allegro', 'bike24', 'secret', 'offer'] as $needle) {
                     self::assertStringNotContainsString($needle, $raw, $uri.' '.$locale);
                 }
             }
