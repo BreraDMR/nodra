@@ -1,6 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { badgeName, copy, money, type Card, type Locale } from "@/lib/shop";
+import {
+  availabilityOf,
+  availabilityText,
+  badgeName,
+  copy,
+  money,
+  type Card,
+  type Locale,
+} from "@/lib/shop";
 export function ProductCard({
   product,
   locale,
@@ -10,6 +18,9 @@ export function ProductCard({
   locale: Locale;
   priority?: boolean;
 }) {
+  const status = availabilityOf(product).status;
+  // the demo checkout still takes owned stock, so without it the card says sold out
+  const soldOut = status !== "unavailable" && !product.inStock;
   return (
     <Link href={`/${locale}/shop/${product.slug}`} className="product-card">
       <div className="product-image">
@@ -32,8 +43,12 @@ export function ProductCard({
           <p className="eyebrow">{product.categoryName}</p>
           {product.brand && <p className="product-brand">{product.brand}</p>}
           <h3>{product.name}</h3>
-          <p className="product-availability">
-            {product.inStock ? copy[locale].available : copy[locale].out}
+          <p
+            className={`product-availability ${soldOut ? "unavailable" : status}`}
+          >
+            {soldOut
+              ? copy[locale].out
+              : availabilityText(availabilityOf(product), locale)}
           </p>
         </div>
         <span>{money(product.fromPrice, locale)}</span>
