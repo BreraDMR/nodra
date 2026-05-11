@@ -4,15 +4,31 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { AttributeFields } from "./AttributeFields";
 import { CategoriesPanel } from "./CategoriesPanel";
+import { PricingRulesPanel } from "./PricingRulesPanel";
+import { RepricePanel, type RepriceFilter } from "./RepricePanel";
 import { SupplierOffersPanel } from "./SupplierOffersPanel";
+import { ProductPricingPanel } from "./VariantPricingPanel";
 import {
   attributePayload,
   attributeValues,
+  availabilityLabels,
+  errorText,
+  formatCzk,
+  formatDays,
   indent,
   isVisible,
   json,
+  minorText,
+  moneyHint,
+  moneyPattern,
+  parseMinor,
   type AdminCategory,
   type AttributeValues,
+  type AvailabilityStatus,
+  type PriceApplied,
+  type PricingAlerts,
+  type Save,
+  type Send,
   type SupplierOffer,
 } from "./shared";
 type User = { email: string; name: string; csrfToken: string };
@@ -29,6 +45,26 @@ type Variant = {
   mpn: string | null;
   ean: string | null;
   attributes: unknown;
+  rrpMinor: number | null;
+  rrpCurrency: string | null;
+  rrpSource: string | null;
+  rrpCheckedAt: string | null;
+  marketPriceMinor: number | null;
+  marketPriceSource: string | null;
+  marketCheckedAt: string | null;
+};
+type OrderLine = {
+  name: string;
+  variant: string;
+  sku: string;
+  quantity: number;
+  lineTotal: number;
+  // checkout snapshot, all null on orders from before D02
+  availabilityStatus: AvailabilityStatus | null;
+  leadTimeMinDays: number | null;
+  leadTimeMaxDays: number | null;
+  supplierOfferId: string | null;
+  unitCostCzkMinor: number | null;
 };
 type Product = {
   id: string;
@@ -64,7 +100,8 @@ type Dashboard = {
   lowStock: { sku: string; stock: number; product: string }[];
   recentOrders: Order[];
 };
-type Tab = "overview" | "products" | "categories" | "orders";
+type Tab =
+  "overview" | "products" | "categories" | "pricing" | "reprice" | "orders";
 const fresh = {
   slug: "",
   category: "bags",
@@ -76,8 +113,9 @@ const fresh = {
   shortEn: "",
   image: "/images/pannier.png",
   status: "draft",
-  priceCzk: 0,
-  priceEur: 0,
+  // typed in Kč and €, turned into haléře/cents on save
+  priceCzk: "0",
+  priceEur: "0",
   badge: "",
   featuredRank: 100,
   brand: "",
@@ -99,23 +137,40 @@ const variantFresh = {
   labelCs: "",
   labelDe: "",
   labelEn: "",
-  priceCzk: 0,
-  priceEur: 0,
+  priceCzk: "",
+  priceEur: "",
   active: true,
   color: "",
   size: "",
   mpn: "",
   ean: "",
   attributes: {} as AttributeValues,
+  rrp: "",
+  rrpCurrency: "CZK",
+  rrpSource: "",
+  rrpCheckedAt: "",
+  marketPrice: "",
+  marketPriceSource: "",
+  marketCheckedAt: "",
 };
 type VariantForm = typeof variantFresh;
-function fromProduct(p: Product): Form {
-  const base = [...p.variants].sort(
+// Price inputs to minor units; an empty required price is an error, not zero
+function requiredMinor(text: string, label: string): number {
+  const value = parseMinor(text);
+  if (value === null) throw Error(`${label} is required`);
+  return value;
+}
+// The variant whose price the product form edits; same order the API uses on PUT
+function baseVariant(p: Product): Variant | undefined {
+  return [...p.variants].sort(
     (a, b) =>
       Number(b.active && b.stock > 0) - Number(a.active && a.stock > 0) ||
       Number(b.active) - Number(a.active) ||
       a.sku.localeCompare(b.sku),
   )[0];
+}
+function fromProduct(p: Product): Form {
+  const base = baseVariant(p);
   return {
     slug: p.slug,
     category: p.category,
@@ -127,8 +182,8 @@ function fromProduct(p: Product): Form {
     shortEn: p.copy.en?.short || "",
     image: p.image,
     status: p.status,
-    priceCzk: base?.priceCzk || 0,
-    priceEur: base?.priceEur || 0,
+    priceCzk: minorText(base?.priceCzk ?? 0),
+    priceEur: minorText(base?.priceEur ?? 0),
     badge: p.badge || "",
     featuredRank: p.featuredRank,
     brand: p.brand || "",
@@ -183,6 +238,12 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [alerts, setAlerts] = useState<PricingAlerts | null>(null);
+  const [repriceFilter, setRepriceFilter] = useState<RepriceFilter>("all");
+  // remounts the reprice screen when an alert opens it with another filter
+  const [repriceKey, setRepriceKey] = useState(0);
+  // bumped after an offer save so the open pricing panel reloads its cost
+  const [pricingRevision, setPricingRevision] = useState(0);
   const loadCategories = useCallback(async () => {
     try {
       setCategories(await json("/api/admin/categories"));
@@ -195,12 +256,14 @@ export default function AdminPage() {
       try {
         const query = new URLSearchParams({ page: String(page) });
         if (search) query.set("q", search);
-        const [d, p, o] = await Promise.all([
+        const [d, p, o, a] = await Promise.all([
           json("/api/admin/dashboard"),
           json(`/api/admin/products?${query}`),
           json(`/api/admin/orders?page=${ordersPage}`),
+          json("/api/admin/pricing/alerts"),
         ]);
         setDashboard(d);
+        setAlerts(a);
         setProducts(p.items);
         setProductPagination({ page: p.page, pages: p.pages, total: p.total });
         setOrders(o.items);
@@ -242,6 +305,50 @@ export default function AdminPage() {
       setBusy(false);
     }
   }
+  // For panels that handle their own errors (409 stale or overlapping). Writes carry
+  // the same CSRF token as mutate(); a DELETE goes out without a body.
+  const send = useCallback<Send>(
+    (url, method = "GET", body) =>
+      json(url, {
+        method,
+        headers:
+          method === "GET"
+            ? undefined
+            : {
+                ...(body === undefined
+                  ? {}
+                  : { "Content-Type": "application/json" }),
+                "X-CSRF-Token": user?.csrfToken || "",
+              },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    [user],
+  );
+  function pricesChanged() {
+    void reload(productPage, productSearch, orderPage);
+  }
+  // Product PUT writes the form price into the base variant, so after an apply in
+  // the product editor the form must follow, or "Save product" would undo it
+  function suggestionApplied(applied: PriceApplied) {
+    const product = products.find((p) => p.id === editing);
+    if (product && baseVariant(product)?.id === applied.variantId)
+      setForm((current) => ({
+        ...current,
+        priceCzk: minorText(applied.newPriceCzk),
+        priceEur: minorText(applied.newPriceEur),
+      }));
+    pricesChanged();
+  }
+  function openReprice(filter: RepriceFilter) {
+    setRepriceFilter(filter);
+    setRepriceKey((key) => key + 1);
+    setTab("reprice");
+  }
+  const saveOffer: Save = async (url, method, body) => {
+    const ok = await mutate(url, method, body);
+    if (ok) setPricingRevision((n) => n + 1);
+    return ok;
+  };
   async function mutate(url: string, method: string, body: unknown) {
     if (!user) return;
     setBusy(true);
@@ -268,6 +375,14 @@ export default function AdminPage() {
   }
   async function saveProduct(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    let priceCzk: number, priceEur: number;
+    try {
+      priceCzk = requiredMinor(form.priceCzk, "Price CZK");
+      priceEur = requiredMinor(form.priceEur, "Price EUR");
+    } catch (err) {
+      setError(errorText(err, "Check the prices"));
+      return;
+    }
     const ok = await mutate(
       editing !== "new"
         ? `/api/admin/products/${editing}`
@@ -284,8 +399,8 @@ export default function AdminPage() {
           form.attributes,
           categoryBySlug(form.category)?.effectiveAttributes,
         ),
-        priceCzk: Number(form.priceCzk),
-        priceEur: Number(form.priceEur),
+        priceCzk,
+        priceEur,
         featuredRank: Number(form.featuredRank),
       },
     );
@@ -306,31 +421,68 @@ export default function AdminPage() {
   async function saveVariant(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!variantEditing) return;
+    const f = variantForm;
+    let money;
+    try {
+      const rrpMinor = parseMinor(f.rrp);
+      const marketPriceMinor = parseMinor(f.marketPrice);
+      // the API drops source and date without an amount, so don't lose them quietly
+      if (rrpMinor === null && (f.rrpSource.trim() || f.rrpCheckedAt))
+        throw Error("Enter the RRP amount, or clear its source and date");
+      if (
+        marketPriceMinor === null &&
+        (f.marketPriceSource.trim() || f.marketCheckedAt)
+      )
+        throw Error("Enter the market price, or clear its source and date");
+      if (rrpMinor === 0 || marketPriceMinor === 0)
+        throw Error("RRP and market price must be above zero, or left empty");
+      money = {
+        priceCzk: requiredMinor(f.priceCzk, "Price CZK"),
+        priceEur: requiredMinor(f.priceEur, "Price EUR"),
+        rrpMinor,
+        rrpCurrency: rrpMinor === null ? null : f.rrpCurrency,
+        rrpSource: rrpMinor === null ? null : f.rrpSource.trim() || null,
+        rrpCheckedAt: rrpMinor === null ? null : f.rrpCheckedAt || null,
+        marketPriceMinor,
+        marketPriceSource:
+          marketPriceMinor === null ? null : f.marketPriceSource.trim() || null,
+        marketCheckedAt:
+          marketPriceMinor === null ? null : f.marketCheckedAt || null,
+      };
+    } catch (err) {
+      setError(errorText(err, "Check the prices"));
+      return;
+    }
+    // PUT replaces the whole variant, so every field goes out, changed or not
     const ok = await mutate(
       variantEditing.id
         ? `/api/admin/variants/${variantEditing.id}`
         : `/api/admin/products/${variantEditing.productId}/variants`,
       variantEditing.id ? "PUT" : "POST",
       {
-        ...variantForm,
-        color: variantForm.color || null,
-        size: variantForm.size || null,
-        mpn: variantForm.mpn.trim() || null,
-        ean: variantForm.ean.replace(/[\s-]/g, "") || null,
+        sku: f.sku,
+        labelCs: f.labelCs,
+        labelDe: f.labelDe,
+        labelEn: f.labelEn,
+        active: f.active,
+        color: f.color || null,
+        size: f.size || null,
+        mpn: f.mpn.trim() || null,
+        ean: f.ean.replace(/[\s-]/g, "") || null,
         attributes: attributePayload(
-          variantForm.attributes,
+          f.attributes,
           categoryBySlug(
             products.find((p) => p.id === variantEditing.productId)?.category ||
               "",
           )?.effectiveAttributes,
         ),
-        priceCzk: Number(variantForm.priceCzk),
-        priceEur: Number(variantForm.priceEur),
+        ...money,
       },
     );
     if (ok) setVariantEditing(null);
   }
   function editVariant(productId: string, variant?: Variant) {
+    setError("");
     setVariantEditing({ productId, id: variant?.id });
     setVariantForm(
       variant
@@ -339,14 +491,21 @@ export default function AdminPage() {
             labelCs: variant.label.cs,
             labelDe: variant.label.de,
             labelEn: variant.label.en,
-            priceCzk: variant.priceCzk,
-            priceEur: variant.priceEur,
+            priceCzk: minorText(variant.priceCzk),
+            priceEur: minorText(variant.priceEur),
             active: variant.active,
             color: variant.color || "",
             size: variant.size || "",
             mpn: variant.mpn || "",
             ean: variant.ean || "",
             attributes: attributeValues(variant.attributes),
+            rrp: minorText(variant.rrpMinor),
+            rrpCurrency: variant.rrpCurrency || "CZK",
+            rrpSource: variant.rrpSource || "",
+            rrpCheckedAt: (variant.rrpCheckedAt || "").slice(0, 10),
+            marketPrice: minorText(variant.marketPriceMinor),
+            marketPriceSource: variant.marketPriceSource || "",
+            marketCheckedAt: (variant.marketCheckedAt || "").slice(0, 10),
           }
         : variantFresh,
     );
@@ -394,12 +553,15 @@ export default function AdminPage() {
   const field = (
     key: keyof Form,
     label: string,
-    kind: "text" | "number" = "text",
+    kind: "text" | "number" | "money" = "text",
   ) => (
     <label className="admin-field">
       {label}
       <input
-        type={kind}
+        type={kind === "number" ? "number" : "text"}
+        inputMode={kind === "money" ? "decimal" : undefined}
+        pattern={kind === "money" ? moneyPattern : undefined}
+        title={kind === "money" ? moneyHint : undefined}
         value={String(form[key])}
         onChange={(e) =>
           setForm({
@@ -507,6 +669,20 @@ export default function AdminPage() {
               <small>{categories.length}</small>
             </button>
             <button
+              aria-label="Pricing rules"
+              className={tab === "pricing" ? "active" : ""}
+              onClick={() => setTab("pricing")}
+            >
+              ◩ <span>Pricing rules</span>
+            </button>
+            <button
+              aria-label="Reprice"
+              className={tab === "reprice" ? "active" : ""}
+              onClick={() => openReprice("all")}
+            >
+              ◪ <span>Reprice</span>
+            </button>
+            <button
               aria-label="Orders"
               className={tab === "orders" ? "active" : ""}
               onClick={() => setTab("orders")}
@@ -602,6 +778,55 @@ export default function AdminPage() {
                   <small>Variants at 5 or below</small>
                 </div>
               </div>
+              <section className="admin-panel pricing-watch">
+                <div className="panel-head">
+                  <div>
+                    <p className="eyebrow">PRICING WATCH</p>
+                    <h2>Needs attention</h2>
+                  </div>
+                  <button onClick={() => setTab("pricing")}>
+                    Pricing rules ↗
+                  </button>
+                </div>
+                <div className="pricing-watch-grid">
+                  <button
+                    className={alerts?.marginTooLow ? "alert" : ""}
+                    onClick={() => openReprice("margin_too_low")}
+                  >
+                    <strong>{alerts?.marginTooLow ?? "—"}</strong>
+                    <span>Margin too low</span>
+                    <small>
+                      Suggestion held up by the minimum margin. Review in
+                      Reprice ↗
+                    </small>
+                  </button>
+                  <button
+                    className={alerts?.aboveMarket ? "alert" : ""}
+                    onClick={() => openReprice("above_market")}
+                  >
+                    <strong>{alerts?.aboveMarket ?? "—"}</strong>
+                    <span>Above market</span>
+                    <small>
+                      Current price over the market threshold. Review in Reprice
+                      ↗
+                    </small>
+                  </button>
+                  <button
+                    className={alerts?.checkNeeded ? "alert" : ""}
+                    onClick={() => setTab("products")}
+                  >
+                    <strong>{alerts?.checkNeeded ?? "—"}</strong>
+                    <span>Check needed</span>
+                    <small>
+                      No fresh matched offer with a lead time. Match offers in
+                      Products ↗
+                    </small>
+                  </button>
+                </div>
+                <p className="variant-note">
+                  Counts cover active variants of published products.
+                </p>
+              </section>
               <div className="admin-overview-grid">
                 <section className="admin-panel">
                   <div className="panel-head">
@@ -818,6 +1043,22 @@ export default function AdminPage() {
               save={saveCategory}
             />
           )}
+          {tab === "pricing" && (
+            <PricingRulesPanel
+              categories={categories}
+              send={send}
+              onChanged={pricesChanged}
+            />
+          )}
+          {tab === "reprice" && (
+            <RepricePanel
+              key={repriceKey}
+              categories={categories}
+              send={send}
+              onApplied={pricesChanged}
+              initialFilter={repriceFilter}
+            />
+          )}
           {tab === "orders" && (
             <>
               <div className="admin-heading compact">
@@ -940,8 +1181,8 @@ export default function AdminPage() {
                 {field("shortCs", "Short copy · Czech")}
                 {field("shortDe", "Short copy · German")}
                 {field("shortEn", "Short copy · English")}
-                {field("priceCzk", "Price CZK · cents", "number")}
-                {field("priceEur", "Price EUR · cents", "number")}
+                {field("priceCzk", "Price · Kč", "money")}
+                {field("priceEur", "Price · €", "money")}
                 {field("featuredRank", "Featured rank", "number")}
                 {field("badge", "Badge")}
                 {field("brand", "Brand")}
@@ -1006,7 +1247,16 @@ export default function AdminPage() {
                 variants={editingProduct.variants}
                 busy={busy}
                 error={error}
-                save={mutate}
+                save={saveOffer}
+              />
+            )}
+            {editingProduct && (
+              <ProductPricingPanel
+                key={editingProduct.id}
+                variants={editingProduct.variants}
+                send={send}
+                revision={pricingRevision}
+                onApplied={suggestionApplied}
               />
             )}
           </div>
@@ -1064,30 +1314,34 @@ export default function AdminPage() {
                   </label>
                 ))}
                 <label className="admin-field">
-                  Price CZK · cents
+                  Price · Kč
                   <input
-                    type="number"
-                    min="0"
+                    inputMode="decimal"
+                    pattern={moneyPattern}
+                    title={moneyHint}
+                    placeholder="e.g. 1290"
                     value={variantForm.priceCzk}
                     onChange={(e) =>
                       setVariantForm({
                         ...variantForm,
-                        priceCzk: Number(e.target.value),
+                        priceCzk: e.target.value,
                       })
                     }
                     required
                   />
                 </label>
                 <label className="admin-field">
-                  Price EUR · cents
+                  Price · €
                   <input
-                    type="number"
-                    min="0"
+                    inputMode="decimal"
+                    pattern={moneyPattern}
+                    title={moneyHint}
+                    placeholder="e.g. 51.60"
                     value={variantForm.priceEur}
                     onChange={(e) =>
                       setVariantForm({
                         ...variantForm,
-                        priceEur: Number(e.target.value),
+                        priceEur: e.target.value,
                       })
                     }
                     required
@@ -1160,10 +1414,124 @@ export default function AdminPage() {
                   }
                 />
               )}
+              <fieldset className="admin-fieldset">
+                <legend>Reference prices · admin only</legend>
+                <p className="variant-note">
+                  The manufacturer&apos;s RRP caps the suggested price. It is
+                  never shown to customers or as a previous NODRA price. Market
+                  price is the lowest a Czech customer would realistically pay
+                  elsewhere. Empty amount = not known.
+                </p>
+                <div className="admin-form-grid">
+                  <label className="admin-field">
+                    RRP · amount
+                    <input
+                      inputMode="decimal"
+                      pattern={moneyPattern}
+                      title={moneyHint}
+                      placeholder="e.g. 1499"
+                      value={variantForm.rrp}
+                      onChange={(e) =>
+                        setVariantForm({ ...variantForm, rrp: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="admin-field">
+                    RRP · currency
+                    <select
+                      value={variantForm.rrpCurrency}
+                      onChange={(e) =>
+                        setVariantForm({
+                          ...variantForm,
+                          rrpCurrency: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="CZK">CZK · Kč</option>
+                      <option value="EUR">EUR · €</option>
+                    </select>
+                  </label>
+                  <label className="admin-field">
+                    RRP · source
+                    <input
+                      maxLength={500}
+                      placeholder="URL or short note"
+                      value={variantForm.rrpSource}
+                      onChange={(e) =>
+                        setVariantForm({
+                          ...variantForm,
+                          rrpSource: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="admin-field">
+                    RRP · checked on
+                    <input
+                      type="date"
+                      value={variantForm.rrpCheckedAt}
+                      onChange={(e) =>
+                        setVariantForm({
+                          ...variantForm,
+                          rrpCheckedAt: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="admin-field">
+                    Market price · Kč
+                    <input
+                      inputMode="decimal"
+                      pattern={moneyPattern}
+                      title={moneyHint}
+                      placeholder="e.g. 1190"
+                      value={variantForm.marketPrice}
+                      onChange={(e) =>
+                        setVariantForm({
+                          ...variantForm,
+                          marketPrice: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="admin-field">
+                    Market price · checked on
+                    <input
+                      type="date"
+                      value={variantForm.marketCheckedAt}
+                      onChange={(e) =>
+                        setVariantForm({
+                          ...variantForm,
+                          marketCheckedAt: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="admin-field wide">
+                    Market price · source
+                    <input
+                      maxLength={500}
+                      placeholder="URL or shop name"
+                      value={variantForm.marketPriceSource}
+                      onChange={(e) =>
+                        setVariantForm({
+                          ...variantForm,
+                          marketPriceSource: e.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </fieldset>
               <p className="variant-note">
                 New variants start with zero stock. Use the inventory control to
                 add units.
               </p>
+              {error && (
+                <p className="admin-error" role="alert">
+                  {error}
+                </p>
+              )}
               <button className="admin-primary" disabled={busy}>
                 Save variant ↗
               </button>
@@ -1211,18 +1579,37 @@ export default function AdminPage() {
               </span>
             </div>
             <div className="order-detail-lines">
-              {(
-                (orderDetail.items || []) as {
-                  name: string;
-                  variant: string;
-                  quantity: number;
-                  lineTotal: number;
-                }[]
-              ).map((x, i) => (
+              {((orderDetail.items || []) as OrderLine[]).map((x, i) => (
                 <div key={i}>
-                  <span>
+                  <div>
                     {x.name} / {x.variant} × {x.quantity}
-                  </span>
+                    {/* taken at checkout; orders from before D02 have none */}
+                    <dl className="order-snapshot">
+                      <dt>Availability</dt>
+                      <dd>
+                        {x.availabilityStatus
+                          ? availabilityLabels[x.availabilityStatus] ||
+                            x.availabilityStatus
+                          : "—"}
+                      </dd>
+                      <dt>Lead time</dt>
+                      <dd>
+                        {formatDays(x.leadTimeMinDays, x.leadTimeMaxDays)}
+                      </dd>
+                      <dt>Unit cost</dt>
+                      <dd>
+                        {x.unitCostCzkMinor === null
+                          ? "—"
+                          : formatCzk(x.unitCostCzkMinor)}
+                      </dd>
+                      <dt>Offer</dt>
+                      <dd title={x.supplierOfferId || undefined}>
+                        {x.supplierOfferId
+                          ? `${x.supplierOfferId.slice(0, 8)}…`
+                          : "—"}
+                      </dd>
+                    </dl>
+                  </div>
                   <strong>
                     {new Intl.NumberFormat("de-DE", {
                       style: "currency",
