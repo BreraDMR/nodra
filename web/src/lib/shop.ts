@@ -1,5 +1,12 @@
 export type Locale = "cs" | "de" | "en";
 export type Money = { amount: number; currency: string };
+// Worked out from supplier offers on the server. Lead time already includes handling
+// and is null unless the status is orderable.
+export type Availability = {
+  status: "orderable" | "check_needed" | "unavailable";
+  leadTimeMinDays: number | null;
+  leadTimeMaxDays: number | null;
+};
 export type Card = {
   id: string;
   slug: string;
@@ -12,6 +19,7 @@ export type Card = {
   fromPrice: Money;
   inStock: boolean;
   availableUnits: number;
+  availability: Availability;
 };
 export type Spec = {
   key: string;
@@ -30,6 +38,7 @@ export type Variant = {
   mpn: string | null;
   ean: string | null;
   specs: Spec[];
+  availability: Availability;
 };
 export type Product = Card & {
   short: string;
@@ -179,6 +188,10 @@ export const copy = {
     contactUs: "Napište nám",
     sellerLabel: "Prodávající",
     companyId: "IČO",
+    checkNeeded: "Dostupnost a termín ověříme",
+    unavailable: "Momentálně nedostupné",
+    cannotOrder:
+      "{item} teď bohužel nelze objednat. Odeberte ho prosím z košíku a zkuste to znovu.",
   },
   de: {
     shop: "Shop",
@@ -287,6 +300,10 @@ export const copy = {
     contactUs: "Schreib uns",
     sellerLabel: "Verkäufer",
     companyId: "IČO (Firmennummer)",
+    checkNeeded: "Verfügbarkeit und Liefertermin prüfen wir",
+    unavailable: "Derzeit nicht verfügbar",
+    cannotOrder:
+      "{item} kann derzeit leider nicht bestellt werden. Bitte entferne den Artikel aus dem Warenkorb und versuche es erneut.",
   },
   en: {
     shop: "Shop",
@@ -395,6 +412,10 @@ export const copy = {
     contactUs: "Message us",
     sellerLabel: "Seller",
     companyId: "Company ID (IČO)",
+    checkNeeded: "We'll confirm availability and delivery date",
+    unavailable: "Currently unavailable",
+    cannotOrder:
+      "{item} can't be ordered at the moment. Please remove it from your basket and try again.",
   },
 };
 export function badgeName(locale: Locale, badge: string): string {
@@ -404,6 +425,39 @@ export function badgeName(locale: Locale, badge: string): string {
     en: { New: "New", Limited: "Limited", Bestseller: "Bestseller" },
   };
   return labels[locale][badge] || badge;
+}
+// "Doručení za 3–5 dní"; one number when min and max match
+export function leadTime(locale: Locale, min: number, max: number): string {
+  const days = min === max ? String(max) : `${min}–${max}`;
+  if (locale === "cs") {
+    const word = max === 1 ? "den" : max >= 2 && max <= 4 ? "dny" : "dní";
+    return `Doručení za ${days} ${word}`;
+  }
+  if (locale === "de")
+    return `Lieferung in ${days} ${max === 1 ? "Tag" : "Tagen"}`;
+  return `Delivery in ${days} ${max === 1 ? "day" : "days"}`;
+}
+// A page cached before the API started sending availability (up to 15 s after a
+// deploy) has none; show it as "we'll check" instead of failing the whole page
+const unknownAvailability: Availability = {
+  status: "check_needed",
+  leadTimeMinDays: null,
+  leadTimeMaxDays: null,
+};
+export function availabilityOf(item: {
+  availability?: Availability;
+}): Availability {
+  return item.availability ?? unknownAvailability;
+}
+export function availabilityText(
+  availability: Availability,
+  locale: Locale,
+): string {
+  const { status, leadTimeMinDays: min, leadTimeMaxDays: max } = availability;
+  if (status === "unavailable") return copy[locale].unavailable;
+  if (status === "orderable" && min !== null && max !== null)
+    return leadTime(locale, min, max);
+  return copy[locale].checkNeeded;
 }
 export function money(value: Money, locale: Locale): string {
   return new Intl.NumberFormat(
