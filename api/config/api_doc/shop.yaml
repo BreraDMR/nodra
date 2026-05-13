@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.3.0
+  version: 0.4.0
   description: >-
-    JSON contract for the NODRA cycling equipment demo storefront and administration.
+    JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
     that fails validation is a 422 with `violations`; a body that isn't valid JSON is a 400 and a missing or
-    unsupported Content-Type a 415, both with a Problem body.
-    Money is always an integer in minor units (haléře for CZK, cents for EUR). Percentages are basis points
-    (100 = 1 %), exchange rates integer millionths (25.315 CZK per EUR = 25315000). Cost, supplier, seller,
-    offer URL, exchange rate, markup, RRP and market price are admin-only and never appear in public responses.
+    unsupported Content-Type a 415, both with a Problem body. Errors raised by business rules carry a machine-readable
+    `code` (see Problem).
+    Money is always an integer in minor units (haléře for CZK, cents for EUR). Orders are always in CZK whatever the
+    interface language; EUR is a display reference in the catalogue only (older EUR demo orders keep their currency).
+    Percentages are basis points (100 = 1 %), exchange rates integer millionths (25.315 CZK per EUR = 25315000). Cost,
+    supplier, seller, offer id or URL, supplier order reference, exchange rate, markup, RRP, market price and journal
+    actors are admin-only and never appear in public responses.
 servers:
   - url: http://localhost:8000
 tags:
@@ -45,11 +48,16 @@ paths:
     get:
       tags: [Account]
       summary: Read signed-in account and earned points
-      description: Returns the full point balance and up to 20 ledger entries for the requested history page.
+      description: >-
+        Returns the full point balance and up to 20 ledger entries for the requested history page. Points are earned
+        when an order is completed and lowered by refunds after that (entries with reason `refund` have negative points).
+        `lastDelivery` holds the contact and address of the account's latest order, for prefilling checkout, or null.
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
       responses:
-        '200': { description: 'Account profile, point balance, history page and history totals.' }
+        '200':
+          description: 'Account profile, point balance, history page, history totals and last delivery details.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/AccountSummary' } } }
         '401': { description: Sign-in required. }
         '422': { $ref: '#/components/responses/Validation' }
   /api/account/logout:
@@ -76,7 +84,7 @@ paths:
         - { name: q, in: query, schema: { type: string, maxLength: 80 } }
         - { name: sort, in: query, schema: { type: string, enum: [featured, price_asc, price_desc, newest] } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
-        - { name: availableOnly, in: query, schema: { type: boolean, default: false } }
+        - { name: availableOnly, in: query, description: 'Only products with at least one `orderable` variant (own stock, or a fresh matched offer with known lead time).', schema: { type: boolean, default: false } }
       responses:
         '200':
           description: Paginated published products.
@@ -130,16 +138,43 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/Facets' } } }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/Validation' }
+  /api/checkout/quote:
+    post:
+      tags: [Checkout]
+      summary: Price a basket for one delivery method
+      description: >-
+        No side effects. Reprices the basket in CZK, tells the availability and lead time of every line, which delivery
+        methods are offered for the postal code, and the two ways to deliver: `together` (one shipment, lead time of the
+        slowest line) and `split` (one shipment per group of lines with the same maximum lead time; lines whose date is
+        still to be confirmed form one group), or null when there is only one group. A line covered by NODRA's own stock
+        is `orderable` with the handling days as lead time. Fees are computed here only: Prague personal delivery is
+        free from 500 Kč of goods and 149 Kč per shipment below that, pickup at Anděl is free, carrier delivery is not
+        offered until its tariff is set. `options` is null while the method isn't available for the postal code or a
+        line is `unavailable`; `canCheckout` says whether POST /api/checkout would accept this basket and method.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/QuoteRequest' } } }
+      responses:
+        '200':
+          description: Quote.
+          content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutQuote' } } }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/checkout:
     post:
       tags: [Checkout]
-      summary: Place a demo order as a guest or signed-in customer
+      summary: Send an order request as a guest or signed-in customer
       description: >-
-        Reprices items and checks availability and stock in a transaction. A variant whose availability is `unavailable`
-        is refused with a 422 naming the product. Czech delivery address is required in every interface locale. Signed-in
-        customers must use their account email to earn points on completion. Repeating the same idempotency key and payload
-        returns the same order; a changed payload conflicts. Each order line keeps the availability, lead time, offer and
-        cost of the moment of checkout, so later catalogue or offer edits don't change it. No payment or shipment is performed.
+        Recomputes the quote in a transaction and creates an order with status `requested`: NODRA checks the offer and
+        agrees price and date with the customer before confirming. The order is always in CZK. Lines covered by own stock
+        reserve it (`from_stock`); every other line is ordered from a supplier after confirmation and reserves nothing.
+        A line whose availability is `unavailable` is refused (422, code `unavailable`, with `variantId`); `check_needed`
+        is accepted and confirmed by hand. The client sends no amounts except `expectedTotal`, the total of the quote the
+        customer saw for the chosen fulfilment: if the recomputed total differs, nothing is written and the answer is a
+        409 with code `quote_changed` and the fresh quote. A method that isn't available for the postal code (code
+        `method_unavailable`) or `split` with fewer than two groups (code `split_unavailable`) is a 422. Signed-in
+        customers must use their account email to earn points on completion. Repeating the same Idempotency-Key and
+        payload returns the same order (201 again); the same key with a different payload is a 409 with code
+        `idempotency_conflict`. Nothing is paid here: payment happens on receipt.
       parameters:
         - name: Idempotency-Key
           in: header
@@ -150,15 +185,27 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/CheckoutRequest' } } }
       responses:
         '201':
-          description: Demo order placed and stock reserved.
+          description: Order request created, or the one created earlier with the same key and payload.
           content: { application/json: { schema: { $ref: '#/components/schemas/OrderReceipt' } } }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409':
+          description: '`quote_changed` (with `quote`, the fresh CheckoutQuote) or `idempotency_conflict`.'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Problem'
+                  - type: object
+                    properties:
+                      quote: { $ref: '#/components/schemas/CheckoutQuote' }
         '422': { $ref: '#/components/responses/Validation' }
   /api/orders/{reference}:
     get:
       tags: [Checkout]
-      summary: Look up a demo order
-      description: Requires the unguessable lookup token returned at checkout; never exposes customer information to a reference alone.
+      summary: Look up an order
+      description: >-
+        Requires the unguessable lookup token returned at checkout; never exposes customer information to a reference
+        alone. Shows the order and payment status, the shipments with their fee, lead time and agreed window, and the
+        lead time of every line. Never shows cost, supplier, offer or procurement details.
       parameters:
         - { name: reference, in: path, required: true, schema: { type: string } }
         - { name: token, in: query, required: true, schema: { type: string } }
@@ -204,7 +251,7 @@ paths:
     get:
       tags: [Administration]
       summary: Read operational dashboard
-      description: Returns order counts, recent orders, low-stock variants and demo revenue totals.
+      description: 'Returns order counts (open = requested or confirmed), recent orders, low own-stock variants and revenue totals: revenueCzkMinor over CZK orders that are not cancelled, revenueEurMinor over the older EUR demo orders.'
       responses:
         '200': { description: Admin dashboard data. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -385,47 +432,288 @@ paths:
   /api/admin/orders:
     get:
       tags: [Administration]
-      summary: List orders for fulfillment
-      description: Returns up to 30 demo orders per page, newest first.
+      summary: List orders for fulfilment
+      description: Returns up to 30 orders per page, newest first, optionally only one order status and/or one payment status.
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: status, in: query, schema: { type: string, enum: [requested, confirmed, completed, cancelled] } }
+        - { name: paymentStatus, in: query, schema: { type: string, enum: [unpaid, partially_paid, paid, partially_refunded, refunded] } }
       responses:
-        '200': { description: 'Admin order page with items, page, pages and total.' }
+        '200':
+          description: Admin order page.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrderPage' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/orders/{id}:
     get:
       tags: [Administration]
-      summary: Read order details for fulfillment
-      description: The receipt plus customer details; each item also carries the sourcing snapshot taken at checkout.
-      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      summary: Read an order for fulfilment
+      description: >-
+        Customer and consents, lines with source, procurement status, supplier reference and the cost snapshot taken at
+        checkout, shipments with the computed `ready` flag, the payment ledger, the journal, and the actions allowed right
+        now on the order, on each line and on each shipment. Every action below answers with this same document.
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
       responses:
         '200':
-          description: Order and customer delivery details.
+          description: Order.
           content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrder' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /api/admin/orders/{id}/status:
-    patch:
+  /api/admin/orders/{id}/confirm:
+    post:
       tags: [Administration]
-      summary: Advance an order
-      description: Permits only valid order state transitions; cancellation restores reserved inventory once. Completing an account order earns one point per 100 Kč or 4 € of product subtotal. Requires X-CSRF-Token.
-      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      summary: Confirm a requested order
+      description: >-
+        The customer agreed price and date. Allowed while the order is `requested`, has an active line and no active line is `failed`. Writes the agreement channel and note to the journal. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
       requestBody:
         required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [status]
-              properties:
-                status: { type: string, enum: [processing, shipped, completed, cancelled] }
+        content: { application/json: { schema: { $ref: '#/components/schemas/ConfirmOrderRequest' } } }
       responses:
-        '200': { description: Order status updated. }
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/cancel:
+    post:
+      tags: [Administration]
+      summary: Cancel the whole order
+      description: >-
+        Allowed while `requested` or `confirmed` and no shipment was handed over. Active lines become `cancelled`: reserved own stock goes back, goods already received become own stock (stock movements with the order reference); lines still `ordered` go to own stock when they are marked received. Open shipments are cancelled and their fees drop. Money already taken stays in the ledger and shows as `refundDue` until a refund is recorded. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/terms:
+    post:
+      tags: [Administration]
+      summary: Change a line's price or lead time
+      description: >-
+        Allowed on an active line whose shipment is not handed over, while the order is `requested` or `confirmed`. A `confirmed` order goes back to `requested` until the customer agrees again (confirm). Send the new unit price, the new lead time (both min and max), or both. Shipment fees fixed at checkout never go up, even when the goods total falls below the free-delivery threshold. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LineTermsRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/ordered:
+    post:
+      tags: [Administration]
+      summary: Mark a line ordered from the supplier
+      description: >-
+        Allowed on an active `to_order` line of a `confirmed` order. Stores the supplier order reference (admin-only). Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MarkOrderedRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/received:
+    post:
+      tags: [Administration]
+      summary: Mark a line's goods received
+      description: >-
+        Allowed on an `ordered` line. On an active line the goods wait for its shipment; on a cancelled line they become own stock (stock movement with the order reference). Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+  /api/admin/orders/{id}/items/{itemId}/failed:
+    post:
+      tags: [Administration]
+      summary: Mark procurement of a line failed
+      description: >-
+        Allowed on an active `to_order` or `ordered` line. Then cancel the line or add a replacement; the order can not be confirmed while a failed line is active. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/cancel:
+    post:
+      tags: [Administration]
+      summary: Cancel one line
+      description: >-
+        Allowed on an active line whose shipment is not handed over. Stock effects as for the whole order. A shipment left without active lines is cancelled with its fee; an order left without active lines is cancelled. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/replacement:
+    post:
+      tags: [Administration]
+      summary: Replace a failed line with another variant
+      description: >-
+        Allowed on an active `failed` line whose shipment is not handed over. Requires `customerAgreedVia`: a model is never swapped without the customer. The failed line is cancelled and the new line joins the same shipment; it reserves own stock when that covers it, otherwise it is `to_order`. Price defaults to the variant CZK price, quantity to the failed line quantity, lead time to the current availability. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReplacementRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/return:
+    post:
+      tags: [Administration]
+      summary: Take back a delivered line
+      description: >-
+        The 14-day withdrawal: allowed on an active line whose shipment was handed over. The line becomes `returned`, its goods go to own stock; record the refund separately. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/shipments/{shipmentId}/schedule:
+    post:
+      tags: [Administration]
+      summary: Agree a delivery or pickup window
+      description: >-
+        Allowed on a `planned`, `scheduled` (reschedule) or `refused` (re-plan) shipment with active lines of a `confirmed` order. Re-planning a refused shipment takes its goods from own stock again (409 `not_enough_stock` when they are gone). Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ShipmentId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ScheduleShipmentRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/shipments/{shipmentId}/hand-over:
+    post:
+      tags: [Administration]
+      summary: Hand a shipment over
+      description: >-
+        Allowed on a `scheduled` shipment that is ready (every active line `from_stock` or `received`) of a `confirmed` order. When every active line is delivered and the order is paid, the order completes and loyalty points are earned once. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ShipmentId'
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+  /api/admin/orders/{id}/shipments/{shipmentId}/refused:
+    post:
+      tags: [Administration]
+      summary: Record that the customer refused a shipment
+      description: >-
+        Allowed on a `scheduled`, ready shipment of a `confirmed` order. Its goods become own stock; then cancel the order or re-plan the shipment. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ShipmentId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/payments:
+    post:
+      tags: [Administration]
+      summary: Record a payment or a refund
+      description: >-
+        Appends to the order's payment ledger; entries are never edited or deleted. A payment is accepted while the order
+        is `requested` or `confirmed`, with a handover method (`cash`, `bank_transfer`; `card` and `carrier_cod` only once
+        enabled), and never above what is still due (422 `overpayment`). A refund is accepted in any status up to the net
+        amount received (422 `refund_exceeds_paid`); on a completed order it lowers the customer's points for the refunded
+        amount, never below zero for that order. The payment status is recomputed from the ledger on every write, and the
+        order completes when every active line is delivered and it is paid. The same Idempotency-Key again returns the
+        first entry (201) without a second write; the same key with a different body is a 409 `idempotency_conflict`.
+        Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 80 }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RecordPaymentRequest' } } }
+      responses:
+        '201':
+          description: Entry recorded, or the entry recorded earlier with this key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [payment, order]
+                properties:
+                  payment: { $ref: '#/components/schemas/AdminPayment' }
+                  order: { $ref: '#/components/schemas/AdminOrder' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
         '422': { $ref: '#/components/responses/Validation' }
   /api/admin/pricing-rules:
     get:
@@ -589,6 +877,9 @@ components:
       name: locale
       in: query
       schema: { type: string, enum: [cs, de, en], default: en }
+    OrderId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    ItemId: { name: itemId, in: path, required: true, description: 'Order line id; a line of another order is not found.', schema: { type: string, format: uuid } }
+    ShipmentId: { name: shipmentId, in: path, required: true, description: 'Shipment id; a shipment of another order is not found.', schema: { type: string, format: uuid } }
   responses:
     Unauthorized:
       description: No admin session.
@@ -601,6 +892,15 @@ components:
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
     Validation:
       description: Request failed validation. `violations` is present when the body or query string itself was invalid; a rule checked later, such as an unknown category, gives only `message`.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    AdminOrderUpdated:
+      description: Action done; the order as it is now.
+      content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrder' } } }
+    ActionRefused:
+      description: >-
+        The action isn't allowed in the order's current state (code `action_not_allowed`, the order's `actions` lists
+        what is), the Idempotency-Key was used with another body (code `idempotency_conflict`), or own stock no longer
+        covers a re-planned shipment (code `not_enough_stock`). Nothing was changed.
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
     StalePrice:
       description: A suggested price changed since it was shown; nothing was applied. Load the preview or panel again.
@@ -619,6 +919,18 @@ components:
       required: [message]
       properties:
         message: { type: string, description: 'Readable summary; for request validation it lists each "field: message".' }
+        code:
+          type: string
+          description: >-
+            Machine-readable reason of a business-rule error. Checkout and quote: invalid_field (with violations),
+            invalid_idempotency_key, product_unavailable, unavailable (both with variantId), method_unavailable,
+            split_unavailable, quote_changed, idempotency_conflict. Admin orders: action_not_allowed (with action),
+            idempotency_conflict, not_enough_stock, overpayment, refund_exceeds_paid, method_not_accepted, invalid_field.
+        variantId: { type: string, format: uuid, description: The variant a checkout error is about. }
+        action: { type: string, description: 'The refused admin action, with action_not_allowed.' }
+        reason: { type: string, enum: [postal_code_required, invalid_postal_code, outside_prague, not_offered], description: 'Why the method is refused, with method_unavailable.' }
+        amountDueMinor: { type: integer, description: 'What is still due, with overpayment.' }
+        paidMinor: { type: integer, description: 'Net amount received, with refund_exceeds_paid.' }
         violations:
           type: array
           items:
@@ -674,10 +986,10 @@ components:
     Availability:
       type: object
       description: >-
-        Computed from supplier offers. orderable - a fresh matched offer with known lead time; check_needed - only stale,
-        unmatched or incomplete offers, the shop confirms availability and date; unavailable - no offers, or all rejected or
-        sold out. Lead time is in days including handling and is null unless orderable. Owned stock (`stock`, `inStock`) is a
-        separate thing.
+        orderable - NODRA holds at least one unit itself (lead time = handling days), or a fresh matched offer with known
+        lead time; check_needed - only stale, unmatched or incomplete offers, the shop confirms availability and date;
+        unavailable - no own stock and no offers, or all rejected or sold out. Lead time is in days including handling and
+        is null unless orderable. `stock`, `inStock` and `availableUnits` count NODRA's own stock only.
       required: [status, leadTimeMinDays, leadTimeMaxDays]
       properties:
         status: { type: string, enum: [orderable, check_needed, unavailable] }
@@ -732,30 +1044,126 @@ components:
                   mpn: { type: [string, 'null'] }
                   ean: { type: [string, 'null'], pattern: '^(\d{8}|\d{12,14})$', description: Digits only. }
                   specs: { type: array, description: Values set on this variant; they override product values with the same key., items: { $ref: '#/components/schemas/Spec' } }
+    BasketItem:
+      type: object
+      required: [variantId, quantity]
+      properties:
+        variantId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 10, description: At most 10 units of one variant per order. }
+    DeliveryMethod:
+      type: string
+      enum: [pickup_andel, prague_personal, carrier_cz]
+      description: 'pickup_andel - free pickup at Anděl; prague_personal - NODRA delivers in person, postal codes 100 00-199 99; carrier_cz - carrier within Czechia, offered only once its tariff is set.'
+    QuoteRequest:
+      type: object
+      required: [locale, items, delivery]
+      properties:
+        locale: { type: string, enum: [cs, de, en], description: Language of the product names. Prices are CZK in every language. }
+        items: { type: array, minItems: 1, maxItems: 20, items: { $ref: '#/components/schemas/BasketItem' } }
+        delivery:
+          type: object
+          required: [method]
+          properties:
+            method: { $ref: '#/components/schemas/DeliveryMethod' }
+            postalCode: { type: [string, 'null'], description: 'Needed for prague_personal and carrier_cz; "11000" or "110 00".' }
+    CheckoutQuote:
+      type: object
+      required: [currency, lines, subtotal, methods, delivery, options, canCheckout]
+      properties:
+        currency: { type: string, enum: [CZK] }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [variantId, name, variant, sku, quantity, unitPrice, lineTotal, availability]
+            properties:
+              variantId: { type: string, format: uuid }
+              name: { type: string }
+              variant: { type: string }
+              sku: { type: string }
+              quantity: { type: integer }
+              unitPrice: { type: integer, description: Haléře. }
+              lineTotal: { type: integer, description: Haléře. }
+              availability: { $ref: '#/components/schemas/Availability' }
+        subtotal: { $ref: '#/components/schemas/Price' }
+        methods:
+          type: array
+          description: "Methods offered at all, with whether they work for this postal code. carrier_cz is missing while its tariff isn't set."
+          items:
+            type: object
+            required: [method, available, reason, fee, note]
+            properties:
+              method: { $ref: '#/components/schemas/DeliveryMethod' }
+              available: { type: boolean }
+              reason: { type: [string, 'null'], enum: [postal_code_required, invalid_postal_code, outside_prague, null] }
+              fee: { oneOf: [{ $ref: '#/components/schemas/Price' }, { type: 'null' }], description: 'Fee per shipment for this basket, null when not available.' }
+              note: { type: [string, 'null'], description: Pickup place and time note for pickup_andel. }
+        delivery:
+          type: object
+          required: [method, postalCode]
+          properties:
+            method: { $ref: '#/components/schemas/DeliveryMethod' }
+            postalCode: { type: [string, 'null'], description: 'Normalized as "110 00"; null when missing or invalid.' }
+        options:
+          type: [object, 'null']
+          required: [together, split]
+          properties:
+            together: { $ref: '#/components/schemas/DeliveryOption' }
+            split: { oneOf: [{ $ref: '#/components/schemas/DeliveryOption' }, { type: 'null' }], description: 'Null with fewer than two groups of lines.' }
+        canCheckout: { type: boolean }
+    DeliveryOption:
+      type: object
+      required: [fulfilment, shipments, shipping, total]
+      properties:
+        fulfilment: { type: string, enum: [together, split] }
+        shipments:
+          type: array
+          items:
+            type: object
+            required: [number, variantIds, leadTimeMinDays, leadTimeMaxDays, fee]
+            properties:
+              number: { type: integer, minimum: 1 }
+              variantIds: { type: array, items: { type: string, format: uuid } }
+              leadTimeMinDays: { type: [integer, 'null'], description: "Null when a line's date is still to be confirmed." }
+              leadTimeMaxDays: { type: [integer, 'null'] }
+              fee: { $ref: '#/components/schemas/Price' }
+        shipping: { $ref: '#/components/schemas/Price' }
+        total: { $ref: '#/components/schemas/Price', description: Send total.amount as expectedTotal. }
     CheckoutRequest:
       type: object
-      required: [locale, customer, items]
+      required: [locale, customer, items, delivery, consents, expectedTotal]
       properties:
         locale: { type: string, enum: [cs, de, en] }
         customer:
           type: object
-          required: [name, email, country, address, postalCode, district]
+          required: [name, email, phone, contactChannel]
+          description: Street address, city and postal code are required for prague_personal and carrier_cz and ignored for pickup_andel.
           properties:
-            name: { type: string }
+            name: { type: string, maxLength: 160 }
             email: { type: string, format: email }
-            country: { type: string, enum: [CZ] }
-            address: { type: string }
+            phone: { type: string, description: '"+" and 9 to 15 digits once spaces are removed; a bare 9-digit number is taken as +420. Stored as +420777123456.' }
+            contactChannel: { type: string, enum: [whatsapp, telegram, phone] }
+            country: { type: string, enum: [CZ], default: CZ }
+            address: { type: string, maxLength: 255 }
+            city: { type: string, maxLength: 120 }
             postalCode: { type: string, pattern: '^\\d{3}\\s?\\d{2}$' }
-            district: { type: string, maxLength: 120 }
-        items:
-          type: array
-          minItems: 1
-          items:
-            type: object
-            required: [variantId, quantity]
-            properties:
-              variantId: { type: string, format: uuid }
-              quantity: { type: integer, minimum: 1, maximum: 10 }
+            district: { type: [string, 'null'], maxLength: 120 }
+            deliveryNote: { type: [string, 'null'], maxLength: 500 }
+        items: { type: array, minItems: 1, maxItems: 20, items: { $ref: '#/components/schemas/BasketItem' } }
+        delivery:
+          type: object
+          required: [method, fulfilment]
+          properties:
+            method: { $ref: '#/components/schemas/DeliveryMethod' }
+            fulfilment: { type: string, enum: [together, split] }
+        consents:
+          type: object
+          required: [privacy]
+          properties:
+            privacy: { type: boolean, description: 'Must be true; the time and the text version are stored with the order.' }
+            marketing: { type: boolean, default: false, description: 'Optional newsletter consent, stored with its own time.' }
+        expectedTotal: { type: integer, minimum: 0, description: 'total.amount of the chosen option in the quote the customer saw, haléře.' }
+        promotionCode: { type: [string, 'null'], description: 'Not available yet; anything but null is refused.' }
     ProductWriteRequest:
       type: object
       required: [slug, category, nameCs, nameDe, nameEn, shortCs, shortDe, shortEn, image, status, priceCzk, priceEur]
@@ -947,20 +1355,54 @@ components:
         inboundShippingMinor: { type: integer, minimum: 0, default: 0, description: Delivery to NODRA per unit in the offer currency. }
         fxRateCzk: { type: [integer, 'null'], minimum: 1, description: 'CZK per offer-currency unit in millionths. For CZK leave it out or send 1000000; for EUR/PLN null means unknown and the offer is not used for price or availability.' }
         fxRateDate: { type: [string, 'null'], format: date, description: Date of the exchange rate. }
+    OrderStatus:
+      type: string
+      enum: [requested, confirmed, completed, cancelled]
+      description: 'requested - NODRA still checks the offer and agrees price and date with the customer; confirmed - the customer agreed; completed - every active line delivered and paid; cancelled.'
+    PaymentStatus:
+      type: string
+      enum: [unpaid, partially_paid, paid, partially_refunded, refunded]
+      description: >-
+        From the ledger: unpaid - nothing received; partially_paid / paid - received less than / at least the current
+        total, no refund yet; partially_refunded / refunded - some / all of the money went back. A cancelled line or
+        order lowers the total, so money already taken stays `paid` and shows as refundDue until the refund is recorded.
+    ShipmentStatus:
+      type: string
+      enum: [planned, scheduled, handed_over, refused, cancelled]
     OrderReceipt:
       type: object
-      required: [reference, status, items, subtotal, shipping, total, lookupToken]
+      required: [reference, status, paymentStatus, createdAt, fulfilment, items, shipments, pickupNote, subtotal, shipping, total, paid, amountDue, lookupToken]
       properties:
         reference: { type: string }
-        status: { type: string, enum: [placed, processing, shipped, completed, cancelled] }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
+        createdAt: { type: string, format: date-time }
+        fulfilment: { type: string, enum: [together, split] }
         items: { type: array, items: { $ref: '#/components/schemas/ReceiptItem' } }
+        shipments:
+          type: array
+          items:
+            type: object
+            required: [number, method, status, fee, leadTimeMinDays, leadTimeMaxDays, scheduledFrom, scheduledTo]
+            properties:
+              number: { type: integer, minimum: 1 }
+              method: { $ref: '#/components/schemas/DeliveryMethod' }
+              status: { $ref: '#/components/schemas/ShipmentStatus' }
+              fee: { $ref: '#/components/schemas/Price' }
+              leadTimeMinDays: { type: [integer, 'null'], description: 'Slowest active line; null while a date is to be confirmed.' }
+              leadTimeMaxDays: { type: [integer, 'null'] }
+              scheduledFrom: { type: [string, 'null'], format: date-time, description: 'Agreed window, once scheduled.' }
+              scheduledTo: { type: [string, 'null'], format: date-time }
+        pickupNote: { type: [string, 'null'], description: 'Where and how pickup works, for pickup_andel shipments.' }
         subtotal: { $ref: '#/components/schemas/Price' }
         shipping: { $ref: '#/components/schemas/Price' }
         total: { $ref: '#/components/schemas/Price' }
+        paid: { $ref: '#/components/schemas/Price', description: Received minus refunded. }
+        amountDue: { $ref: '#/components/schemas/Price', description: Still to pay on receipt. }
         lookupToken: { type: string }
     ReceiptItem:
       type: object
-      required: [name, variant, sku, quantity, unitPrice, lineTotal]
+      required: [name, variant, sku, quantity, unitPrice, lineTotal, state, leadTimeMinDays, leadTimeMaxDays, shipment]
       properties:
         name: { type: string }
         variant: { type: string }
@@ -968,35 +1410,234 @@ components:
         quantity: { type: integer }
         unitPrice: { type: integer }
         lineTotal: { type: integer }
-    AdminOrderItem:
-      allOf:
-        - $ref: '#/components/schemas/ReceiptItem'
-        - type: object
-          description: 'Snapshot taken at checkout; null on orders placed before D02.'
-          required: [availabilityStatus, leadTimeMinDays, leadTimeMaxDays, supplierOfferId, unitCostCzkMinor]
-          properties:
-            availabilityStatus: { type: [string, 'null'], enum: [orderable, check_needed, unavailable, null] }
-            leadTimeMinDays: { type: [integer, 'null'] }
-            leadTimeMaxDays: { type: [integer, 'null'] }
-            supplierOfferId: { type: [string, 'null'], format: uuid }
-            unitCostCzkMinor: { type: [integer, 'null'], description: 'Landed cost per unit at checkout, in haléře.' }
+        state: { type: string, enum: [active, cancelled, returned] }
+        leadTimeMinDays: { type: [integer, 'null'], description: 'Days including handling; null while the date is to be confirmed.' }
+        leadTimeMaxDays: { type: [integer, 'null'] }
+        shipment: { type: integer, description: Number of the shipment the line travels in. }
+    CustomerAgreement:
+      type: object
+      required: [channel, note]
+      description: 'How the customer agreed; written to the journal.'
+      properties:
+        channel: { type: string, enum: [whatsapp, telegram, phone, email, in_person] }
+        note: { type: string, minLength: 1, maxLength: 500 }
+    ConfirmOrderRequest:
+      type: object
+      required: [customerAgreedVia]
+      properties:
+        customerAgreedVia: { $ref: '#/components/schemas/CustomerAgreement' }
+    ReasonRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    LineTermsRequest:
+      type: object
+      description: 'At least the price or the lead time. Lead time is set as a pair.'
+      properties:
+        unitPriceMinor: { type: [integer, 'null'], minimum: 0, description: New unit price in the order currency. }
+        leadTimeMinDays: { type: [integer, 'null'], minimum: 0, maximum: 365 }
+        leadTimeMaxDays: { type: [integer, 'null'], minimum: 0, maximum: 365 }
+        customerAgreedVia: { oneOf: [{ $ref: '#/components/schemas/CustomerAgreement' }, { type: 'null' }], description: 'Optional; a confirmed order goes back to requested anyway.' }
+    MarkOrderedRequest:
+      type: object
+      required: [supplierReference]
+      properties:
+        supplierReference: { type: string, minLength: 1, maxLength: 120, description: 'Supplier order number or link, admin-only.' }
+    ReplacementRequest:
+      type: object
+      required: [variantId, customerAgreedVia]
+      properties:
+        variantId: { type: string, format: uuid, description: Any active variant. }
+        quantity: { type: [integer, 'null'], minimum: 1, maximum: 10 }
+        unitPriceMinor: { type: [integer, 'null'], minimum: 0 }
+        customerAgreedVia: { $ref: '#/components/schemas/CustomerAgreement' }
+    ScheduleShipmentRequest:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time, description: After from. }
+    RecordPaymentRequest:
+      type: object
+      required: [kind, method, amountMinor]
+      properties:
+        kind: { type: string, enum: [payment, refund] }
+        method: { type: string, enum: [cash, bank_transfer, card, carrier_cod], description: 'Accepted now: cash, bank_transfer (app.payment.handover_methods); carrier_cod for payments once carrier cash on delivery is set up.' }
+        amountMinor: { type: integer, minimum: 1 }
+        shipmentId: { type: [string, 'null'], format: uuid, description: 'The shipment the money came with, optional.' }
+        note: { type: [string, 'null'], maxLength: 500 }
+    AdminOrderPage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, reference, status, paymentStatus, customerName, email, phone, country, total, createdAt]
+            properties:
+              id: { type: string, format: uuid }
+              reference: { type: string }
+              status: { $ref: '#/components/schemas/OrderStatus' }
+              paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
+              customerName: { type: string }
+              email: { type: string }
+              phone: { type: [string, 'null'], description: 'Null on orders placed before D04.' }
+              country: { type: string }
+              total: { $ref: '#/components/schemas/Price' }
+              createdAt: { type: string, format: date-time }
     AdminOrder:
-      allOf:
-        - $ref: '#/components/schemas/OrderReceipt'
-        - type: object
-          required: [id, customer, items]
+      type: object
+      required: [id, reference, status, paymentStatus, locale, currency, fulfilment, createdAt, customer, consents, items, shipments, payments, events, subtotal, shipping, total, paid, amountDue, refundDue, lookupToken, actions]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
+        locale: { type: string, enum: [cs, de, en] }
+        currency: { type: string, enum: [CZK, EUR] }
+        fulfilment: { type: string, enum: [together, split] }
+        createdAt: { type: string, format: date-time }
+        customer:
+          type: object
+          required: [name, email, phone, contactChannel, country, address, city, postalCode, district, deliveryNote, accountId]
           properties:
-            id: { type: string, format: uuid }
-            customer:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-                country: { type: string }
-                address: { type: string }
-                postalCode: { type: string }
-                district: { type: string }
-            items: { type: array, items: { $ref: '#/components/schemas/AdminOrderItem' } }
+            name: { type: string }
+            email: { type: string }
+            phone: { type: [string, 'null'] }
+            contactChannel: { type: [string, 'null'], enum: [whatsapp, telegram, phone, null] }
+            country: { type: string }
+            address: { type: string, description: Empty for pickup. }
+            city: { type: string }
+            postalCode: { type: string }
+            district: { type: string }
+            deliveryNote: { type: [string, 'null'] }
+            accountId: { type: [string, 'null'], format: uuid }
+        consents:
+          type: object
+          required: [privacyConsentedAt, privacyTextVersion, marketing, marketingConsentedAt]
+          properties:
+            privacyConsentedAt: { type: [string, 'null'], format: date-time, description: 'Null on orders placed before D04.' }
+            privacyTextVersion: { type: [string, 'null'] }
+            marketing: { type: boolean }
+            marketingConsentedAt: { type: [string, 'null'], format: date-time }
+        items: { type: array, items: { $ref: '#/components/schemas/AdminOrderItem' } }
+        shipments: { type: array, items: { $ref: '#/components/schemas/AdminShipment' } }
+        payments: { type: array, items: { $ref: '#/components/schemas/AdminPayment' } }
+        events:
+          type: array
+          description: 'The journal, oldest first. Nothing in it is ever edited or deleted.'
+          items:
+            type: object
+            required: [id, type, data, actor, createdAt]
+            properties:
+              id: { type: string, format: uuid }
+              type: { type: string, description: 'placed, confirmed, terms_changed, item_ordered, item_received, item_failed, item_cancelled, replacement_added, item_returned, shipment_scheduled, shipment_handed_over, shipment_refused, shipment_cancelled, payment_recorded, refund_recorded, cancelled, completed, loyalty_adjusted, migrated' }
+              data: { type: object, description: 'Details of the event, such as the line, the reason, customerAgreedVia or the amounts.' }
+              actor: { type: string, description: 'customer, system or the admin email.' }
+              createdAt: { type: string, format: date-time }
+        subtotal: { $ref: '#/components/schemas/Price', description: Active lines. }
+        shipping: { $ref: '#/components/schemas/Price', description: Fees of shipments that are not cancelled. }
+        total: { $ref: '#/components/schemas/Price' }
+        paid: { $ref: '#/components/schemas/Price', description: Payments minus refunds. }
+        amountDue: { $ref: '#/components/schemas/Price' }
+        refundDue: { $ref: '#/components/schemas/Price', description: Money taken above the current total. }
+        lookupToken: { type: string }
+        actions:
+          type: array
+          description: Order actions allowed right now.
+          items: { type: string, enum: [confirm, cancel, record_payment, record_refund] }
+    AdminOrderItem:
+      type: object
+      required: [id, variantId, name, variant, sku, quantity, unitPrice, lineTotal, state, procurementStatus, supplierReference, shipmentId, replacesItemId, availabilityStatus, leadTimeMinDays, leadTimeMaxDays, supplierOfferId, unitCostCzkMinor, actions]
+      properties:
+        id: { type: string, format: uuid }
+        variantId: { type: [string, 'null'], format: uuid }
+        name: { type: string }
+        variant: { type: string }
+        sku: { type: string }
+        quantity: { type: integer }
+        unitPrice: { type: integer }
+        lineTotal: { type: integer }
+        state: { type: string, enum: [active, cancelled, returned] }
+        procurementStatus: { type: string, enum: [from_stock, to_order, ordered, received, failed], description: 'from_stock - own stock reserved at checkout; to_order - to buy after confirmation; ordered; received; failed.' }
+        supplierReference: { type: [string, 'null'] }
+        shipmentId: { type: string, format: uuid }
+        replacesItemId: { type: [string, 'null'], format: uuid, description: The failed line this one replaces. }
+        availabilityStatus: { type: [string, 'null'], enum: [orderable, check_needed, unavailable, null], description: 'Snapshot taken at checkout; null on orders placed before D02.' }
+        leadTimeMinDays: { type: [integer, 'null'] }
+        leadTimeMaxDays: { type: [integer, 'null'] }
+        supplierOfferId: { type: [string, 'null'], format: uuid }
+        unitCostCzkMinor: { type: [integer, 'null'], description: 'Landed cost per unit at checkout, in haléře.' }
+        actions:
+          type: array
+          description: Line actions allowed right now.
+          items: { type: string, enum: [change_terms, mark_ordered, mark_received, mark_failed, cancel, replace, return] }
+    AdminShipment:
+      type: object
+      required: [id, number, method, status, fee, leadTimeMinDays, leadTimeMaxDays, scheduledFrom, scheduledTo, handedOverAt, ready, itemIds, actions]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: integer }
+        method: { $ref: '#/components/schemas/DeliveryMethod' }
+        status: { $ref: '#/components/schemas/ShipmentStatus' }
+        fee: { $ref: '#/components/schemas/Price', description: Fixed at checkout. }
+        leadTimeMinDays: { type: [integer, 'null'] }
+        leadTimeMaxDays: { type: [integer, 'null'] }
+        scheduledFrom: { type: [string, 'null'], format: date-time }
+        scheduledTo: { type: [string, 'null'], format: date-time }
+        handedOverAt: { type: [string, 'null'], format: date-time }
+        ready: { type: boolean, description: 'Every active line is from_stock or received; false for refused and cancelled shipments.' }
+        itemIds: { type: array, items: { type: string, format: uuid } }
+        actions:
+          type: array
+          items: { type: string, enum: [schedule, hand_over, refuse] }
+    AdminPayment:
+      type: object
+      required: [id, kind, method, amount, shipmentId, recordedAt, recordedBy, note]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [payment, refund] }
+        method: { type: string, enum: [cash, bank_transfer, card, carrier_cod] }
+        amount: { $ref: '#/components/schemas/Price' }
+        shipmentId: { type: [string, 'null'], format: uuid }
+        recordedAt: { type: string, format: date-time }
+        recordedBy: { type: string }
+        note: { type: [string, 'null'] }
+    AccountSummary:
+      type: object
+      required: [name, email, points, historyPage, historyPages, historyTotal, history, lastDelivery]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        points: { type: integer }
+        historyPage: { type: integer }
+        historyPages: { type: integer }
+        historyTotal: { type: integer }
+        history:
+          type: array
+          items:
+            type: object
+            required: [reference, points, reason, createdAt]
+            properties:
+              reference: { type: string }
+              points: { type: integer, description: Negative for a refund. }
+              reason: { type: string, enum: [earn, refund] }
+              createdAt: { type: string }
+        lastDelivery:
+          type: [object, 'null']
+          required: [phone, contactChannel, address, city, postalCode, district]
+          properties:
+            phone: { type: [string, 'null'] }
+            contactChannel: { type: [string, 'null'], enum: [whatsapp, telegram, phone, null] }
+            address: { type: [string, 'null'] }
+            city: { type: [string, 'null'] }
+            postalCode: { type: [string, 'null'] }
+            district: { type: [string, 'null'] }
     IdResponse:
       type: object
       required: [id]
