@@ -2,7 +2,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { addCart } from "@/lib/cart";
-import { copy, money, type Locale, type Product, type Spec } from "@/lib/shop";
+import {
+  availabilityOf,
+  availabilityText,
+  copy,
+  money,
+  type Locale,
+  type Product,
+  type Spec,
+} from "@/lib/shop";
 
 // Product specs with the variant's values on top, variant wins by key
 function mergeSpecs(product: Spec[], variant: Spec[]): Spec[] {
@@ -19,11 +27,29 @@ export function BuyBox({
   locale: Locale;
 }) {
   const [selected, setSelected] = useState(
-    product.variants.find((v) => v.stock > 0)?.id || product.variants[0]?.id,
+    (
+      product.variants.find(
+        (v) => v.stock > 0 && availabilityOf(v).status !== "unavailable",
+      ) ||
+      product.variants.find((v) => v.stock > 0) ||
+      product.variants[0]
+    )?.id,
   );
   const [added, setAdded] = useState(false);
   const variant = product.variants.find((v) => v.id === selected);
   const t = copy[locale];
+  // unavailable wins over the demo stock: nobody can source it at all.
+  // check_needed stays orderable, the shop confirms the date afterwards.
+  const unavailable =
+    !!variant && availabilityOf(variant).status === "unavailable";
+  const soldOut = !variant || variant.stock < 1;
+  const status =
+    unavailable || soldOut ? "unavailable" : availabilityOf(variant).status;
+  const statusText = unavailable
+    ? t.unavailable
+    : soldOut
+      ? t.out
+      : availabilityText(availabilityOf(variant), locale);
   const specs = mergeSpecs(product.specs, variant?.specs ?? []);
   const rows = [
     ...specs.map((spec) => ({
@@ -49,8 +75,8 @@ export function BuyBox({
           ? money(variant.price, locale)
           : money(product.fromPrice, locale)}
       </div>
-      <p className="product-availability">
-        {variant?.stock ? t.available : t.out}
+      <p className={`product-availability ${status}`} aria-live="polite">
+        {statusText}
       </p>
       <div className="variant-heading">
         <strong>{t.details}</strong>
@@ -74,9 +100,9 @@ export function BuyBox({
       </div>
       <button
         className="button button-dark add-button"
-        disabled={!variant || variant.stock < 1}
+        disabled={unavailable || soldOut}
         onClick={() => {
-          if (!variant) return;
+          if (!variant || unavailable || soldOut) return;
           addCart({
             variantId: variant.id,
             slug: product.slug,
@@ -89,7 +115,7 @@ export function BuyBox({
           setAdded(true);
         }}
       >
-        {variant?.stock ? t.add : t.out}
+        {unavailable || soldOut ? statusText : t.add}
         <span>↗</span>
       </button>
       {added && (
