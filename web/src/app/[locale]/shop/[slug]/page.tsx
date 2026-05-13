@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BuyBox } from "@/components/BuyBox";
-import { api, copy, isLocale, type Product } from "@/lib/shop";
+import { api, availabilityOf, copy, isLocale, type Product } from "@/lib/shop";
 export async function generateMetadata({
   params,
 }: {
@@ -95,9 +95,11 @@ export default async function ProductPage({
               "@type": "Offer",
               priceCurrency: product.fromPrice.currency,
               price: (product.fromPrice.amount / 100).toFixed(2),
-              availability: product.inStock
-                ? "https://schema.org/InStock"
-                : "https://schema.org/OutOfStock",
+              availability:
+                product.inStock &&
+                availabilityOf(product).status !== "unavailable"
+                  ? "https://schema.org/InStock"
+                  : "https://schema.org/OutOfStock",
             },
           }).replace(/</g, "\\u003c"),
         }}
