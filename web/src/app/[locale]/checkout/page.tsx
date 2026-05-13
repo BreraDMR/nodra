@@ -23,6 +23,13 @@ export default function Checkout() {
     });
   }, []);
   const total = items.reduce((n, x) => n + x.price.amount * x.quantity, 0);
+  // The API names the line it refuses in English wording ("Name (variant) cannot be
+  // ordered at the moment: ..."), so we keep the name and say the rest in the page language
+  function checkoutError(message: unknown): string {
+    if (typeof message !== "string" || !message) return t.orderFailed;
+    const refused = /^(.+?) cannot be ordered at the moment\b/.exec(message);
+    return refused ? t.cannotOrder.replace("{item}", refused[1]) : message;
+  }
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!items.length) return;
@@ -51,8 +58,8 @@ export default function Checkout() {
           })),
         }),
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message || t.orderFailed);
+      const result = await res.json().catch(() => null);
+      if (!res.ok || !result) throw new Error(checkoutError(result?.message));
       sessionStorage.setItem("nodra-last-order", JSON.stringify(result));
       writeCart([]);
       router.push(
