@@ -28,15 +28,21 @@ class StockMovement
     #[ORM\Column(length: 200)]
     private string $reason;
 
+    /** the order that reserved, released or returned the goods */
+    #[ORM\ManyToOne(targetEntity: ShopOrder::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?ShopOrder $order;
+
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(ProductVariant $variant, int $delta, string $reason)
+    public function __construct(ProductVariant $variant, int $delta, string $reason, ?ShopOrder $order = null)
     {
         $this->id = Uuid::v7();
         $this->variant = $variant;
         $this->delta = $delta;
         $this->reason = $reason;
+        $this->order = $order;
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -44,5 +50,6 @@ class StockMovement
     public function getVariant(): ProductVariant { return $this->variant; }
     public function getDelta(): int { return $this->delta; }
     public function getReason(): string { return $this->reason; }
+    public function getOrder(): ?ShopOrder { return $this->order; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 }
