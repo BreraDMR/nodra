@@ -14,7 +14,7 @@ final class AvailabilityService
     public function __construct(private Connection $db, private PricingData $data, private SourcingCalculator $calculator, private ClockInterface $clock) {}
 
     /**
-     * Two queries for a whole page: active variants, then all offers of those products.
+     * Two queries for a whole page: active variants with their own stock, then all offers of those products.
      *
      * @param list<string> $productIds
      *
@@ -26,7 +26,7 @@ final class AvailabilityService
             return [];
         }
         $variants = $this->db->fetchAllAssociative(
-            'SELECT id, product_id FROM product_variant WHERE product_id IN (:ids) AND active = TRUE',
+            'SELECT id, product_id, stock FROM product_variant WHERE product_id IN (:ids) AND active = TRUE',
             ['ids' => $productIds],
             ['ids' => ArrayParameterType::STRING],
         );
@@ -34,7 +34,8 @@ final class AvailabilityService
         $now = $this->clock->now();
         $byProduct = [];
         foreach ($variants as $variant) {
-            $byProduct[$variant['product_id']][$variant['id']] = $this->calculator->evaluate($variant['id'], $offers[$variant['product_id']] ?? [], $now);
+            $sourcing = $this->calculator->evaluate($variant['id'], $offers[$variant['product_id']] ?? [], $now);
+            $byProduct[$variant['product_id']][$variant['id']] = $this->calculator->withOwnStock($sourcing, (int) $variant['stock']);
         }
 
         $result = [];
@@ -50,7 +51,29 @@ final class AvailabilityService
     }
 
     /**
-     * Full sourcing, best offer and cost included, for checkout.
+     * Products with at least one orderable active variant, in the given order. Same calculation as the cards.
+     *
+     * @param list<string> $productIds
+     *
+     * @return list<string>
+     */
+    public function orderableProducts(array $productIds): array
+    {
+        $orderable = [];
+        foreach (array_chunk($productIds, 1000) as $chunk) {
+            foreach ($this->forProducts($chunk) as $productId => $availability) {
+                if ($availability['card']['status'] === Sourcing::ORDERABLE) {
+                    $orderable[] = (string) $productId;
+                }
+            }
+        }
+
+        return $orderable;
+    }
+
+    /**
+     * Offer-based sourcing, best offer and cost included, for checkout. Own stock is applied per line there,
+     * because it depends on the quantity.
      *
      * @param array<string, string> $productIdsByVariant variant id => product id
      *
