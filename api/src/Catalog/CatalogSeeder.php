@@ -116,14 +116,14 @@ final class CatalogSeeder
                 ++$newOffers;
             }
             foreach ($item['variants'] as $index => $option) {
-                // demo stock still comes from the source snapshot, D04 replaces it with order-request checkout
+                // stock is what NODRA physically holds (D04): a new card starts with none, the supplier snapshot stays on the offer
                 $variant = new ProductVariant(
                     $product,
                     'ND-'.strtoupper(substr(hash('sha256', $item['slug']), 0, 12)).'-'.($index + 1),
                     $option['label'],
                     $item['priceCzk'] + ($option['priceDeltaCzk'] ?? 0),
                     $item['priceEur'] + ($option['priceDeltaEur'] ?? 0),
-                    max(0, $item['stock'] - ($index * 3)),
+                    0,
                     $option['color'] ?? null,
                     $option['size'] ?? null,
                 );
