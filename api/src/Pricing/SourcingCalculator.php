@@ -10,6 +10,8 @@ namespace App\Pricing;
  * - unavailable: no offers, or every one is rejected or reports quantity 0;
  * - orderable: the best fresh matched offer (lowest landed cost, then shorter max lead time) has a known lead time;
  * - check_needed: anything else, i.e. only stale, snapshot or unmatched offers, no exchange rate, unknown lead time.
+ *
+ * Own stock is on top of that: see withOwnStock().
  */
 final class SourcingCalculator
 {
@@ -56,6 +58,19 @@ final class SourcingCalculator
             Sourcing::ORDERABLE, null, $best, $best->landedCostCzk(),
             $best->leadTimeMinDays + $this->settings->handlingDays, $best->leadTimeMaxDays + $this->settings->handlingDays,
         );
+    }
+
+    /**
+     * Goods NODRA holds make a variant orderable in the handling days, whatever the offers say. The best offer stays
+     * attached for the cost snapshot.
+     */
+    public function withOwnStock(Sourcing $offers, int $stock, int $quantity = 1): Sourcing
+    {
+        if ($stock < max(1, $quantity)) {
+            return $offers;
+        }
+
+        return new Sourcing(Sourcing::ORDERABLE, null, $offers->offer, $offers->landedCostCzk, $this->settings->handlingDays, $this->settings->handlingDays);
     }
 
     /** @param non-empty-list<OfferFacts> $usable */
