@@ -59,7 +59,15 @@ final class CatalogService
             $params['exact'] = preg_replace('/[\s-]/', '', $term);
         }
         if ($query->availableOnly) {
-            $where .= ' AND EXISTS (SELECT 1 FROM product_variant stock_variant WHERE stock_variant.product_id = p.id AND stock_variant.active = TRUE AND stock_variant.stock > 0)';
+            // "orderable" comes from the same calculation as the cards, so it's worked out in PHP for the candidates
+            $candidates = $this->db->fetchFirstColumn("SELECT p.id FROM product p WHERE $where", array_diff_key($params, ['locale' => true]), $types);
+            $orderable = $this->availability->orderableProducts($candidates);
+            if ($orderable === []) {
+                return ['items' => [], 'page' => 1, 'pages' => 1, 'total' => 0];
+            }
+            $where .= ' AND p.id IN (:orderableIds)';
+            $params['orderableIds'] = $orderable;
+            $types['orderableIds'] = ArrayParameterType::STRING;
         }
 
         $sort = match ($query->sort) {
