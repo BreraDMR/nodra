@@ -7,14 +7,10 @@ namespace App\Admin;
 use App\Catalog\AttributeSchema;
 use App\Catalog\CategoryIndex;
 use App\Catalog\Gtin;
-use App\Checkout\CheckoutService;
 use App\Entity\Category;
-use App\Entity\OrderItem;
-use App\Entity\LoyaltyEntry;
 use App\Entity\PriceChange;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
-use App\Entity\ShopOrder;
 use App\Entity\StockMovement;
 use App\Pricing\PriceHistory;
 use Doctrine\DBAL\ArrayParameterType;
@@ -25,12 +21,11 @@ use Symfony\Component\Uid\Uuid;
 
 final class AdminService
 {
-    public function __construct(private EntityManagerInterface $em, private Connection $db, private CheckoutService $checkout, private PriceHistory $history) {}
+    public function __construct(private EntityManagerInterface $em, private Connection $db, private PriceHistory $history) {}
 
     public function dashboard(): array
     {
-        $stats = $this->db->fetchAssociative("SELECT COUNT(*) AS orders, COALESCE(SUM(total_minor), 0) AS revenue,
-            COUNT(*) FILTER (WHERE status IN ('placed', 'processing')) AS open_orders FROM shop_order");
+        $stats = $this->db->fetchAssociative("SELECT COUNT(*) AS orders, COUNT(*) FILTER (WHERE status IN ('requested', 'confirmed')) AS open_orders FROM shop_order");
         $lowStock = $this->db->fetchAllAssociative("SELECT v.id, v.sku, v.stock, p.copy -> 'en' ->> 'name' AS product
             FROM product_variant v JOIN product p ON p.id = v.product_id
             WHERE p.status = 'published' AND v.active = TRUE AND v.stock <= 5 ORDER BY v.stock ASC, v.sku ASC LIMIT 8");
@@ -38,6 +33,8 @@ final class AdminService
         return [
             'orders' => (int) $stats['orders'],
             'openOrders' => (int) $stats['open_orders'],
+            'revenueCzkMinor' => (int) $this->db->fetchOne("SELECT COALESCE(SUM(total_minor), 0) FROM shop_order WHERE currency = 'CZK' AND status != 'cancelled'"),
+            // older demo orders only, new orders are always CZK
             'revenueEurMinor' => (int) $this->db->fetchOne("SELECT COALESCE(SUM(total_minor), 0) FROM shop_order WHERE currency = 'EUR' AND status != 'cancelled'"),
             'products' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM product WHERE status = 'published'"),
             'lowStock' => array_map(static fn (array $row): array => ['id' => $row['id'], 'sku' => $row['sku'], 'stock' => (int) $row['stock'], 'product' => $row['product']], $lowStock),
@@ -222,74 +219,43 @@ final class AdminService
 
     public function orders(AdminOrdersQuery $query): array
     {
-        $total = (int) $this->db->fetchOne('SELECT COUNT(*) FROM shop_order');
+        $where = [];
+        $params = [];
+        if ($query->status !== null) {
+            $where[] = 'status = :status';
+            $params['status'] = $query->status;
+        }
+        if ($query->paymentStatus !== null) {
+            $where[] = 'payment_status = :paymentStatus';
+            $params['paymentStatus'] = $query->paymentStatus;
+        }
+        $filter = $where === [] ? '' : ' WHERE '.implode(' AND ', $where);
+        $total = (int) $this->db->fetchOne('SELECT COUNT(*) FROM shop_order'.$filter, $params);
         $pages = max(1, (int) ceil($total / 30));
         $page = min($query->page, $pages);
 
         return [
-            'items' => $this->orderRows(30, ($page - 1) * 30),
+            'items' => $this->orderRows(30, ($page - 1) * 30, $filter, $params),
             'page' => $page,
             'pages' => $pages,
             'total' => $total,
         ];
     }
 
-    private function orderRows(int $limit, int $offset): array
+    private function orderRows(int $limit, int $offset, string $filter = '', array $params = []): array
     {
         $rows = $this->db->fetchAllAssociative(
-            'SELECT id, reference, status, customer_name, email, country, currency, total_minor, created_at FROM shop_order ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset',
-            ['limit' => $limit, 'offset' => $offset],
+            'SELECT id, reference, status, payment_status, customer_name, email, phone, country, currency, total_minor, created_at FROM shop_order'.$filter.' ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset',
+            $params + ['limit' => $limit, 'offset' => $offset],
             ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
         );
 
         return array_map(static fn (array $row): array => [
-            'id' => $row['id'], 'reference' => $row['reference'], 'status' => $row['status'],
-            'customerName' => $row['customer_name'], 'email' => $row['email'], 'country' => $row['country'],
-            'total' => ['amount' => (int) $row['total_minor'], 'currency' => $row['currency']], 'createdAt' => $row['created_at'],
+            'id' => $row['id'], 'reference' => $row['reference'], 'status' => $row['status'], 'paymentStatus' => $row['payment_status'],
+            'customerName' => $row['customer_name'], 'email' => $row['email'], 'phone' => $row['phone'], 'country' => $row['country'],
+            'total' => ['amount' => (int) $row['total_minor'], 'currency' => $row['currency']],
+            'createdAt' => (new \DateTimeImmutable($row['created_at']))->format(\DATE_ATOM),
         ], $rows);
-    }
-
-    public function order(string $id): ?array
-    {
-        $order = $this->em->find(ShopOrder::class, Uuid::fromString($id));
-        if ($order === null) {
-            return null;
-        }
-
-        return $this->checkout->receipt($order, internal: true) + [
-            'id' => $id,
-            'customer' => ['name' => $order->getCustomerName(), 'email' => $order->getEmail(), 'country' => $order->getCountry(), 'address' => $order->getAddress(), 'postalCode' => $order->getPostalCode(), 'district' => $order->getDistrict()],
-        ];
-    }
-
-    public function advanceOrder(string $id, string $status): ?array
-    {
-        return $this->db->transactional(function () use ($id, $status): ?array {
-            $this->db->fetchOne('SELECT id FROM shop_order WHERE id = :id FOR UPDATE', ['id' => $id]);
-            $order = $this->em->find(ShopOrder::class, Uuid::fromString($id));
-            if ($order === null) {
-                return null;
-            }
-            $order->advanceTo($status);
-            if ($status === 'completed' && $order->getAccount() !== null) {
-                $step = $order->getCurrency() === 'CZK' ? 10000 : 400;
-                $points = max(1, intdiv($order->getSubtotalMinor(), $step));
-                $this->em->persist(new LoyaltyEntry($order->getAccount(), $order, $points));
-            }
-            if ($status === 'cancelled') {
-                foreach ($this->em->getRepository(OrderItem::class)->findBy(['order' => $order]) as $item) {
-                    $variant = $item->getVariant();
-                    if ($variant === null) {
-                        continue;
-                    }
-                    $this->db->executeStatement('UPDATE product_variant SET stock = stock + :quantity WHERE id = :id', ['quantity' => $item->getQuantity(), 'id' => $variant->getId()->toRfc4122()]);
-                    $this->em->persist(new StockMovement($variant, $item->getQuantity(), 'Order '.$order->getReference().' cancelled'));
-                }
-            }
-            $this->em->flush();
-
-            return ['id' => $id, 'status' => $order->getStatus()];
-        });
     }
 
     private function copy(ProductWriteRequest $input, array $existing = []): array
