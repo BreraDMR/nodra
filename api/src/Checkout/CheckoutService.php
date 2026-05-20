@@ -4,110 +4,106 @@ declare(strict_types=1);
 
 namespace App\Checkout;
 
-use App\Entity\OrderItem;
+use App\Delivery\DeliveryOption;
+use App\Delivery\DeliveryRules;
 use App\Entity\CustomerAccount;
+use App\Entity\OrderEvent;
+use App\Entity\OrderItem;
 use App\Entity\ProductVariant;
+use App\Entity\Shipment;
 use App\Entity\ShopOrder;
 use App\Entity\SupplierOffer;
-use App\Pricing\AvailabilityService;
-use App\Pricing\Sourcing;
+use App\Order\OrderJournal;
+use App\Order\OrderLoader;
+use App\Order\OrderPresenter;
+use App\Order\OrderProblem;
+use App\Order\StockKeeper;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * Order request checkout. Nothing is paid here: NODRA confirms the request with the customer, buys what isn't in
+ * own stock, and takes the money on receipt.
+ */
 final class CheckoutService
 {
-    public function __construct(private EntityManagerInterface $em, private Connection $db, private AvailabilityService $availability) {}
+    public function __construct(
+        private EntityManagerInterface $em,
+        private Connection $db,
+        private BasketLoader $basket,
+        private QuoteBuilder $quotes,
+        private DeliveryRules $delivery,
+        private OrderJournal $journal,
+        private StockKeeper $stock,
+        private OrderLoader $orders,
+        private OrderPresenter $presenter,
+        #[Autowire(param: 'app.legal.privacy_version')] private string $privacyVersion,
+    ) {}
+
+    /** No writes, no locks. */
+    public function quote(QuoteRequest $request): array
+    {
+        $method = $request->delivery['method'];
+        if (!in_array($method, $this->delivery->offered(), true)) {
+            throw OrderProblem::unprocessable('method_unavailable', 'This delivery method is not offered');
+        }
+        $lines = $this->basket->lines(self::quantities($request->items), $request->locale);
+
+        return $this->quotes->build($lines, $method, $request->delivery['postalCode'] ?? null)->toArray();
+    }
 
     public function place(CheckoutRequest $request, string $key, ?CustomerAccount $account = null): array
     {
         if (strlen($key) < 16 || strlen($key) > 80) {
-            throw new \InvalidArgumentException('Idempotency-Key must contain 16 to 80 characters');
+            throw OrderProblem::unprocessable('invalid_idempotency_key', 'Idempotency-Key must contain 16 to 80 characters');
         }
-        $customer = $this->customer($request->customer);
-        if ($account !== null && strcasecmp($customer['email'], $account->getEmail()) !== 0) {
-            throw new \InvalidArgumentException('Use your account email for loyalty points');
-        }
-        $quantities = $this->quantities($request->items);
         if ($request->promotionCode !== null) {
-            throw new \InvalidArgumentException('Promotion codes are not available in this demo');
+            throw OrderProblem::invalid('promotionCode', 'Promotion codes are not available yet');
         }
-        $requestHash = hash('sha256', json_encode([$request->locale, $customer, $quantities, $account?->getId()->toRfc4122()], JSON_THROW_ON_ERROR));
-        $currency = $request->locale === 'cs' ? 'CZK' : 'EUR';
+        $method = $request->delivery['method'];
+        $fulfilment = $request->delivery['fulfilment'];
+        $customer = CustomerInput::normalize($request->customer, $method);
+        if ($account !== null && strcasecmp($customer['email'], $account->getEmail()) !== 0) {
+            throw OrderProblem::invalid('customer.email', 'Use your account email for loyalty points');
+        }
+        if (($request->consents['privacy'] ?? null) !== true) {
+            throw OrderProblem::invalid('consents.privacy', 'Consent to the processing of personal data is required');
+        }
+        $marketing = ($request->consents['marketing'] ?? false) === true;
+        $quantities = self::quantities($request->items);
+        // expectedTotal stays out: repeating a placed order with another expectation still returns that order
+        $requestHash = hash('sha256', json_encode([
+            $request->locale, $customer, $quantities, [$method, $fulfilment], [true, $marketing], $account?->getId()->toRfc4122(),
+        ], JSON_THROW_ON_ERROR));
 
         try {
-            $order = $this->db->transactional(function () use ($request, $key, $requestHash, $customer, $quantities, $currency, $account): ShopOrder {
+            $order = $this->db->transactional(function () use ($request, $key, $requestHash, $customer, $quantities, $method, $fulfilment, $marketing, $account): ShopOrder {
                 $this->db->fetchOne('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))', ['key' => $key]);
                 $existing = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key]);
                 if ($existing !== null) {
-                    if (!hash_equals($existing->getRequestHash(), $requestHash)) {
-                        throw new \DomainException('Idempotency key was used with different order details');
-                    }
-                    return $existing;
+                    return $this->sameRequest($existing, $requestHash);
                 }
 
-                $rows = [];
-                foreach ($quantities as $id => $quantity) {
-                    $row = $this->db->fetchAssociative('SELECT v.id, v.product_id, v.stock, v.active, v.price_czk, v.price_eur, v.label,
-                        p.status, p.copy FROM product_variant v JOIN product p ON p.id = v.product_id
-                        WHERE v.id = :id FOR UPDATE OF v', ['id' => $id]);
-                    if ($row === false || !$row['active'] || $row['status'] !== 'published') {
-                        throw new \DomainException('A selected product is no longer available');
-                    }
-                    $rows[$id] = $row;
-                }
-                // the same calculation the catalogue shows; the order keeps what it said at this moment
-                $sourcing = $this->availability->forVariants(array_column($rows, 'product_id', 'id'));
-
-                $lines = [];
-                $subtotal = 0;
-                foreach ($quantities as $id => $quantity) {
-                    $row = $rows[$id];
-                    $copy = json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR)[$request->locale];
-                    $label = json_decode($row['label'], true, flags: JSON_THROW_ON_ERROR)[$request->locale];
-                    if ($sourcing[$row['id']]->status === Sourcing::UNAVAILABLE) {
-                        throw new \InvalidArgumentException(sprintf('%s (%s) cannot be ordered at the moment: no supplier has it available', $copy['name'], $label));
-                    }
-                    if ((int) $row['stock'] < $quantity) {
-                        throw new \DomainException('There is not enough stock for one of the selected products');
-                    }
-                    $price = (int) $row[$currency === 'CZK' ? 'price_czk' : 'price_eur'];
-                    $subtotal += $price * $quantity;
-                    $lines[] = [$id, $quantity, $price, $copy['name'], $label, $sourcing[$row['id']]];
+                $quote = $this->quotes->build($this->basket->lines($quantities, $request->locale, lock: true), $method, $customer['postalCode']);
+                $option = $this->chosenOption($quote, $fulfilment);
+                if ($quote->subtotalMinor + $option->shippingMinor() !== $request->expectedTotal) {
+                    throw OrderProblem::conflict('quote_changed', 'Prices, availability or delivery changed; check the new total and send the order again', ['quote' => $quote->toArray()]);
                 }
 
-                $shipping = $currency === 'CZK' ? 8900 : 390;
-                $order = new ShopOrder($key, $requestHash, $request->locale, $currency, $customer['name'], $customer['email'], $customer['country'], $customer['address'], $customer['postalCode'], $customer['district'], $subtotal, $shipping);
-                if ($account !== null) {
-                    $order->assignAccount($account);
-                }
-                $this->em->persist($order);
-
-                foreach ($lines as [$id, $quantity, $price, $name, $label, $source]) {
-                    $variant = $this->em->find(ProductVariant::class, Uuid::fromString($id));
-                    $variant->adjustStock(-$quantity);
-                    $item = new OrderItem($order, $variant, $name, $label, $quantity, $price);
-                    $offer = $source->offer === null ? null : $this->em->getReference(SupplierOffer::class, Uuid::fromString($source->offer->id));
-                    $item->recordSourcing($source->status, $source->leadTimeMinDays, $source->leadTimeMaxDays, $offer, $source->landedCostCzk);
-                    $this->em->persist($item);
-                }
-                $this->em->flush();
-
-                return $order;
+                return $this->create($quote, $option, $key, $requestHash, $request->locale, $customer, $marketing, $account);
             });
         } catch (UniqueConstraintViolationException) {
+            // a parallel request with the same key won the insert
             $this->em->clear();
-            $order = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key]);
-            if ($order === null) {
-                throw new \DomainException('The order could not be completed');
-            }
-            if (!hash_equals($order->getRequestHash(), $requestHash)) {
-                throw new \DomainException('Idempotency key was used with different order details');
-            }
+            $order = $this->em->getRepository(ShopOrder::class)->findOneBy(['idempotencyKey' => $key])
+                ?? throw new \DomainException('The order could not be completed');
+            $this->sameRequest($order, $requestHash);
         }
 
-        return $this->receipt($order);
+        return $this->presenter->receipt($this->orders->state($order));
     }
 
     public function lookup(string $reference, string $token): ?array
@@ -117,75 +113,88 @@ final class CheckoutService
             return null;
         }
 
-        return $this->receipt($order);
+        return $this->presenter->receipt($this->orders->state($order));
     }
 
-    /** @param bool $internal adds the sourcing snapshot, for the admin only */
-    public function receipt(ShopOrder $order, bool $internal = false): array
+    private function chosenOption(Quote $quote, string $fulfilment): DeliveryOption
     {
-        $items = $this->em->getRepository(OrderItem::class)->findBy(['order' => $order]);
-        $price = fn (int $amount): array => ['amount' => $amount, 'currency' => $order->getCurrency()];
+        $unavailable = $quote->unavailableLine();
+        if ($unavailable !== null) {
+            throw OrderProblem::unprocessable('unavailable', sprintf('%s (%s) cannot be ordered at the moment: no supplier has it available', $unavailable->name, $unavailable->label), ['variantId' => $unavailable->variantId]);
+        }
+        if ($quote->methodProblem !== null) {
+            throw OrderProblem::unprocessable('method_unavailable', match ($quote->methodProblem) {
+                DeliveryRules::OUTSIDE_PRAGUE => 'Personal delivery covers Prague postal codes 100 00 to 199 99 only',
+                DeliveryRules::NOT_OFFERED => 'This delivery method is not offered',
+                default => 'This delivery method needs a Czech postal code',
+            }, ['reason' => $quote->methodProblem]);
+        }
 
-        return [
-            'reference' => $order->getReference(),
-            'status' => $order->getStatus(),
-            'items' => array_map(static fn (OrderItem $item): array => [
-                'name' => $item->getProductName(), 'variant' => $item->getVariantLabel(),
-                'sku' => $item->getSku(), 'quantity' => $item->getQuantity(),
-                'unitPrice' => $item->getUnitPriceMinor(), 'lineTotal' => $item->getLineTotalMinor(),
-            ] + (!$internal ? [] : [
-                'availabilityStatus' => $item->getAvailabilityStatus(),
-                'leadTimeMinDays' => $item->getLeadTimeMinDays(), 'leadTimeMaxDays' => $item->getLeadTimeMaxDays(),
-                'supplierOfferId' => $item->getSupplierOffer()?->getId()->toRfc4122(),
-                'unitCostCzkMinor' => $item->getUnitCostCzkMinor(),
-            ]), $items),
-            'subtotal' => $price($order->getSubtotalMinor()),
-            'shipping' => $price($order->getShippingMinor()),
-            'total' => $price($order->getTotalMinor()),
-            'lookupToken' => $order->getLookupToken(),
-        ];
+        return $quote->option($fulfilment)
+            ?? throw OrderProblem::unprocessable('split_unavailable', 'Every item arrives at the same time, so the order can only be delivered together');
     }
 
-    private function customer(array $input): array
+    private function create(Quote $quote, DeliveryOption $option, string $key, string $requestHash, string $locale, array $customer, bool $marketing, ?CustomerAccount $account): ShopOrder
     {
-        $fields = ['name', 'email', 'country', 'address', 'postalCode', 'district'];
-        foreach ($fields as $field) {
-            if (!isset($input[$field]) || !is_string($input[$field]) || trim($input[$field]) === '') {
-                throw new \InvalidArgumentException('Customer '.$field.' is required');
+        $order = new ShopOrder($key, $requestHash, $locale, $customer, $option->fulfilment, $this->privacyVersion, $marketing);
+        if ($account !== null) {
+            $order->assignAccount($account);
+        }
+        $order->setTotals($quote->subtotalMinor, $option->shippingMinor());
+        $this->em->persist($order);
+
+        $lines = [];
+        foreach ($quote->lines as $line) {
+            $lines[$line->variantId] = $line;
+        }
+        foreach ($option->shipments as $planned) {
+            $shipment = new Shipment($order, $planned->number, $quote->method, $planned->feeMinor);
+            $this->em->persist($shipment);
+            foreach ($planned->keys as $variantId) {
+                $line = $lines[$variantId];
+                $variant = $this->em->find(ProductVariant::class, Uuid::fromString($variantId));
+                $item = new OrderItem($order, $shipment, $variant, $line->name, $line->label, $line->quantity, $line->unitPriceMinor, $line->fromStock);
+                $source = $line->sourcing;
+                $offer = $source->offer === null ? null : $this->em->getReference(SupplierOffer::class, Uuid::fromString($source->offer->id));
+                $item->recordSourcing($source->status, $source->leadTimeMinDays, $source->leadTimeMaxDays, $offer, $source->landedCostCzk);
+                $this->em->persist($item);
+                // only goods NODRA holds are reserved; the rest is bought after confirmation
+                if ($line->fromStock && !$this->stock->take($variant->getId(), $line->quantity, $order, 'reserved at checkout')) {
+                    throw new \DomainException('Own stock changed during checkout, try again');
+                }
             }
         }
-        if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
-            throw new \InvalidArgumentException('A valid email is required');
-        }
-        $country = strtoupper(trim($input['country']));
-        if ($country !== 'CZ') {
-            throw new \InvalidArgumentException('Delivery is available only within Czechia');
-        }
-        $postalCode = trim($input['postalCode']);
-        if (!preg_match('/^\d{3}\s?\d{2}$/', $postalCode)) {
-            throw new \InvalidArgumentException('A Czech postal code is required');
-        }
+        $this->journal->record($order, 'placed', [
+            'method' => $quote->method, 'fulfilment' => $option->fulfilment, 'shipments' => count($option->shipments),
+            'totalMinor' => $order->getTotalMinor(),
+        ], OrderEvent::CUSTOMER);
+        $this->em->flush();
 
-        return [
-            'name' => mb_substr(trim($input['name']), 0, 160),
-            'email' => mb_substr(trim($input['email']), 0, 180),
-            'country' => $country,
-            'address' => mb_substr(trim($input['address']), 0, 255),
-            'postalCode' => $postalCode,
-            'district' => mb_substr(trim($input['district']), 0, 120),
-        ];
+        return $order;
     }
 
-    private function quantities(array $items): array
+    private function sameRequest(ShopOrder $order, string $requestHash): ShopOrder
+    {
+        if (!hash_equals($order->getRequestHash(), $requestHash)) {
+            throw OrderProblem::conflict('idempotency_conflict', 'Idempotency key was used with different order details');
+        }
+
+        return $order;
+    }
+
+    /** @return array<string, int> variant id => quantity, sorted by id */
+    private static function quantities(array $items): array
     {
         $quantities = [];
-        foreach ($items as $item) {
-            if (!is_array($item) || !isset($item['variantId'], $item['quantity']) || !Uuid::isValid($item['variantId']) || !is_int($item['quantity']) || $item['quantity'] < 1 || $item['quantity'] > 10) {
-                throw new \InvalidArgumentException('Each item needs a valid variant and quantity from 1 to 10');
+        foreach ($items as $index => $item) {
+            if (!is_array($item) || !isset($item['variantId'], $item['quantity']) || !is_string($item['variantId']) || !Uuid::isValid($item['variantId'])
+                || !is_int($item['quantity']) || $item['quantity'] < 1 || $item['quantity'] > 10) {
+                throw OrderProblem::invalid('items['.$index.']', 'Each item needs a valid variant and quantity from 1 to 10');
             }
-            $quantities[$item['variantId']] = ($quantities[$item['variantId']] ?? 0) + $item['quantity'];
-            if ($quantities[$item['variantId']] > 10) {
-                throw new \InvalidArgumentException('Only 10 units of one variant are allowed per order');
+            $id = strtolower($item['variantId']);
+            $quantities[$id] = ($quantities[$id] ?? 0) + $item['quantity'];
+            if ($quantities[$id] > 10) {
+                throw OrderProblem::invalid('items['.$index.']', 'Only 10 units of one variant are allowed per order');
             }
         }
         ksort($quantities);
