@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Account;
 
 use App\Entity\CustomerAccount;
+use App\Entity\ShopOrder;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,8 +44,8 @@ final class AccountService
         if ($created) {
             $messages = [
                 'cs' => ['Vítejte v NODRA', "Vítejte v NODRA, {$name}. Váš účet je připraven. Za každých 100 Kč hodnoty zboží získáte po dokončení ukázkové objednávky jeden bod. Platba ani zásilka neproběhne."],
-                'de' => ['Willkommen bei NODRA', "Willkommen bei NODRA, {$name}. Dein Konto ist bereit. Nach Abschluss einer Demo-Bestellung erhältst du einen Punkt pro 4 € Warenwert. Es erfolgt weder Zahlung noch Versand."],
-                'en' => ['Welcome to NODRA', "Welcome to NODRA, {$name}. Your account is ready. Earn one point per 4 € of products after a completed demo order. No payment or shipment takes place."],
+                'de' => ['Willkommen bei NODRA', "Willkommen bei NODRA, {$name}. Dein Konto ist bereit. Nach Abschluss einer Demo-Bestellung erhältst du einen Punkt pro 100 Kč Warenwert. Es erfolgt weder Zahlung noch Versand."],
+                'en' => ['Welcome to NODRA', "Welcome to NODRA, {$name}. Your account is ready. Earn one point per 100 Kč of products after a completed demo order. No payment or shipment takes place."],
             ];
             [$subject, $body] = $messages[$locale] ?? $messages['en'];
             try {
@@ -69,7 +70,7 @@ final class AccountService
         $historyPages = max(1, (int) ceil($historyTotal / 20));
         $historyPage = min($page, $historyPages);
         $history = $this->db->fetchAllAssociative(
-            'SELECT e.points, o.reference, e.created_at FROM loyalty_entry e JOIN shop_order o ON o.id = e.shop_order_id WHERE e.account_id = :id ORDER BY e.created_at DESC, e.id DESC LIMIT :limit OFFSET :offset',
+            'SELECT e.points, e.reason, o.reference, e.created_at FROM loyalty_entry e JOIN shop_order o ON o.id = e.shop_order_id WHERE e.account_id = :id ORDER BY e.created_at DESC, e.id DESC LIMIT :limit OFFSET :offset',
             ['id' => $id, 'limit' => 20, 'offset' => ($historyPage - 1) * 20],
             ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
         );
@@ -81,7 +82,24 @@ final class AccountService
             'historyPage' => $historyPage,
             'historyPages' => $historyPages,
             'historyTotal' => $historyTotal,
-            'history' => array_map(static fn (array $row): array => ['reference' => $row['reference'], 'points' => (int) $row['points'], 'createdAt' => $row['created_at']], $history),
+            'history' => array_map(static fn (array $row): array => ['reference' => $row['reference'], 'points' => (int) $row['points'], 'reason' => $row['reason'] ?? 'earn', 'createdAt' => $row['created_at']], $history),
+            'lastDelivery' => $this->lastDelivery($account),
+        ];
+    }
+
+    /** Contact and address of the account's latest order, to prefill checkout. Empty values (pickup) come back as null. */
+    private function lastDelivery(CustomerAccount $account): ?array
+    {
+        $order = $this->em->getRepository(ShopOrder::class)->findOneBy(['account' => $account], ['createdAt' => 'DESC', 'id' => 'DESC']);
+        if ($order === null) {
+            return null;
+        }
+        $value = static fn (?string $text): ?string => $text === null || trim($text) === '' ? null : $text;
+
+        return [
+            'phone' => $order->getPhone(), 'contactChannel' => $order->getContactChannel(),
+            'address' => $value($order->getAddress()), 'city' => $value($order->getCity()),
+            'postalCode' => $value($order->getPostalCode()), 'district' => $value($order->getDistrict()),
         ];
     }
 }
