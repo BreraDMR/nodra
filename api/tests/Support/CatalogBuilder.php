@@ -69,7 +69,8 @@ final class CatalogBuilder
         return $product;
     }
 
-    public function variant(Product $product, string $sku, array $attributes = [], bool $active = true, ?string $mpn = null, ?string $ean = null, int $stock = 3, int $priceCzk = 100000): ProductVariant
+    /** @param int $stock goods NODRA holds itself; none by default, as for a real card after D04 */
+    public function variant(Product $product, string $sku, array $attributes = [], bool $active = true, ?string $mpn = null, ?string $ean = null, int $stock = 0, int $priceCzk = 100000): ProductVariant
     {
         $labels = ['cs' => $sku.' cs', 'de' => $sku.' de', 'en' => $sku.' en'];
         $variant = new ProductVariant($product, $sku, $labels, $priceCzk, intdiv($priceCzk, 25), $stock);
