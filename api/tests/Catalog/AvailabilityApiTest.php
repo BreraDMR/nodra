@@ -47,6 +47,48 @@ final class AvailabilityApiTest extends ApiTestCase
         self::assertSame(self::CHECK, $this->getJson('/api/products/t-snapshot')['variants'][0]['availability']);
     }
 
+    public function testOwnStockMakesAVariantOrderableInTheHandlingDays(): void
+    {
+        $b = $this->builder();
+        $product = $b->product('t-held', $b->category('t-held-cat'));
+        $b->variant($product, 'T-HELD-STOCK', stock: 1);
+        $b->pricedOffer($product, $b->variant($product, 'T-HELD-OFFER'), 50000, leadTimeMinDays: 4, leadTimeMaxDays: 6);
+        $b->variant($product, 'T-HELD-NONE');
+
+        $detail = $this->getJson('/api/products/t-held');
+
+        self::assertSame([
+            'T-HELD-NONE' => self::UNAVAILABLE,
+            'T-HELD-OFFER' => ['status' => 'orderable', 'leadTimeMinDays' => 5, 'leadTimeMaxDays' => 7],
+            'T-HELD-STOCK' => ['status' => 'orderable', 'leadTimeMinDays' => 1, 'leadTimeMaxDays' => 1],
+        ], array_column($detail['variants'], 'availability', 'sku'));
+        self::assertSame(['status' => 'orderable', 'leadTimeMinDays' => 1, 'leadTimeMaxDays' => 1], $detail['availability']);
+    }
+
+    public function testAvailableOnlyMeansOrderable(): void
+    {
+        $b = $this->builder();
+        $category = $b->category('t-only');
+        $held = $b->product('t-only-held', $category);
+        $b->variant($held, 'T-ONLY-HELD', stock: 2);
+        $offered = $b->product('t-only-offered', $category);
+        $b->pricedOffer($offered, $b->variant($offered, 'T-ONLY-OFFERED'), 50000);
+        $snapshot = $b->product('t-only-snapshot', $category);
+        $b->variant($snapshot, 'T-ONLY-SNAPSHOT');
+        $b->pricedOffer($snapshot, null, 50000);
+        $nothing = $b->product('t-only-nothing', $category);
+        $b->variant($nothing, 'T-ONLY-NOTHING');
+
+        $all = $this->getJson('/api/products', ['category' => 't-only']);
+        $orderable = $this->getJson('/api/products', ['category' => 't-only', 'availableOnly' => 'true']);
+
+        self::assertSame(4, $all['total']);
+        self::assertSame(['t-only-held', 't-only-offered'], array_column($orderable['items'], 'slug'));
+        self::assertSame(2, $orderable['total']);
+        // a supplier's snapshot quantity is not NODRA's stock
+        self::assertSame([true, false], [$orderable['items'][0]['inStock'], $orderable['items'][1]['inStock']]);
+    }
+
     public function testOfferIsFreshForExactlySevenDays(): void
     {
         self::mockTime(new \DateTimeImmutable('2026-09-28T12:00:00+00:00'));
