@@ -18,6 +18,14 @@ final class CommerceInvariantTest extends TestCase
         return new ProductVariant($product, 'ND-SAMPLE', ['en' => '12 L'], 329000, 13900, 2);
     }
 
+    private function order(): ShopOrder
+    {
+        return new ShopOrder(str_repeat('a', 20), str_repeat('f', 64), 'en', [
+            'name' => 'Demo Rider', 'email' => 'rider@example.test', 'phone' => '+420777123456', 'contactChannel' => 'whatsapp',
+            'address' => 'Demo 12', 'city' => 'Praha', 'postalCode' => '110 00', 'district' => 'Praha 1', 'deliveryNote' => null,
+        ], 'together', 'draft-2026-09', false);
+    }
+
     public function testStockCannotBecomeNegative(): void
     {
         $variant = $this->variant();
@@ -27,23 +35,40 @@ final class CommerceInvariantTest extends TestCase
         $variant->adjustStock(-1);
     }
 
-    public function testOrderTotalAndTransitionSequence(): void
+    public function testNewOrderIsARequestInCzkWithItsConsent(): void
     {
-        $order = new ShopOrder(str_repeat('a', 20), str_repeat('f', 64), 'en', 'EUR', 'Demo Rider', 'rider@example.test', 'CZ', 'Demo 12', '11000', 'Praha', 13900, 390);
-        self::assertSame(14290, $order->getTotalMinor());
-        $order->advanceTo('processing');
-        $order->advanceTo('shipped');
-        $order->advanceTo('completed');
-        self::assertSame('completed', $order->getStatus());
-        $this->expectException(\DomainException::class);
-        $order->advanceTo('cancelled');
+        $order = $this->order();
+        $order->setTotals(13900, 14900);
+
+        self::assertSame(['requested', 'unpaid', 'CZK', 28800], [$order->getStatus(), $order->getPaymentStatus(), $order->getCurrency(), $order->getTotalMinor()]);
+        self::assertSame('draft-2026-09', $order->getPrivacyTextVersion());
+        self::assertNotNull($order->getPrivacyConsentedAt());
+        self::assertNull($order->getMarketingConsentedAt());
     }
 
-    public function testCancellationCannotBeShipped(): void
+    public function testOrderTransitionSequence(): void
     {
-        $order = new ShopOrder(str_repeat('b', 20), str_repeat('f', 64), 'cs', 'CZK', 'Demo Rider', 'rider@example.test', 'CZ', 'Demo 12', '11000', 'Praha', 329000, 8900);
-        $order->advanceTo('cancelled');
+        $order = $this->order();
+        $order->confirm();
+        // terms changed after the customer agreed
+        $order->reopen();
+        $order->confirm();
+        $order->complete();
+        self::assertSame('completed', $order->getStatus());
         $this->expectException(\DomainException::class);
-        $order->advanceTo('shipped');
+        $order->cancel();
+    }
+
+    public function testRequestCannotCompleteAndCancelledIsFinal(): void
+    {
+        $order = $this->order();
+        try {
+            $order->complete();
+            self::fail('A requested order completed');
+        } catch (\DomainException) {
+        }
+        $order->cancel();
+        $this->expectException(\DomainException::class);
+        $order->confirm();
     }
 }
