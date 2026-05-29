@@ -78,6 +78,22 @@ final class SourcingCalculatorTest extends TestCase
         self::assertSame(['quick', 4, 5], [$tie->offer?->id, $tie->leadTimeMinDays, $tie->leadTimeMaxDays]);
     }
 
+    public function testOwnStockIsOrderableInTheHandlingDaysAndKeepsTheOfferForTheCost(): void
+    {
+        $stale = $this->evaluate($this->offer('a', checkedAt: $this->now->modify('-30 days')));
+        $held = $this->calculator->withOwnStock($stale, 2);
+        self::assertSame(['status' => 'orderable', 'leadTimeMinDays' => 1, 'leadTimeMaxDays' => 1], $held->toPublic());
+
+        $offered = $this->evaluate($this->offer('a', leadMin: 2, leadMax: 5));
+        $covered = $this->calculator->withOwnStock($offered, 2, 2);
+        self::assertSame(['a', 120000, 1, 1], [$covered->offer?->id, $covered->landedCostCzk, $covered->leadTimeMinDays, $covered->leadTimeMaxDays]);
+
+        // stock that doesn't cover the quantity changes nothing, the line is bought from the supplier
+        self::assertSame($offered, $this->calculator->withOwnStock($offered, 2, 3));
+        self::assertSame(Sourcing::UNAVAILABLE, $this->calculator->withOwnStock($this->evaluate(), 0)->status);
+        self::assertSame(Sourcing::ORDERABLE, $this->calculator->withOwnStock($this->evaluate(), 1)->status);
+    }
+
     public function testCardShowsTheBestVariant(): void
     {
         $best = Sourcing::best([
