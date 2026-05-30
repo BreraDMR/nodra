@@ -52,8 +52,12 @@ final class RequestValidationTest extends ApiTestCase
         $error = $this->problem('POST', '/api/admin/products', 422, ['priceCzk' => 'cheap'] + $product, $token);
         self::assertContains('priceCzk', array_column($error['violations'], 'field'));
 
-        $error = $this->problem('PATCH', '/api/admin/orders/01890000-0000-7000-8000-000000000000/status', 422, ['status' => 'lost'], $token);
-        self::assertSame([['field' => 'status', 'message' => 'The value you selected is not a valid choice.']], $error['violations']);
+        $error = $this->problem('POST', '/api/admin/orders/01890000-0000-7000-8000-000000000000/confirm', 422, ['customerAgreedVia' => ['channel' => 'pigeon', 'note' => '']], $token);
+        self::assertEqualsCanonicalizing(['customerAgreedVia[channel]', 'customerAgreedVia[note]'], array_column($error['violations'], 'field'));
+        $error = $this->problem('POST', '/api/admin/orders/01890000-0000-7000-8000-000000000000/payments', 422, ['kind' => 'gift', 'method' => 'cash', 'amountMinor' => 0], $token);
+        self::assertEqualsCanonicalizing(['kind', 'amountMinor'], array_column($error['violations'], 'field'));
+        $error = $this->problem('POST', '/api/admin/orders/01890000-0000-7000-8000-000000000000/shipments/01890000-0000-7000-8000-000000000000/schedule', 422, ['from' => 'not a date', 'to' => '2026-10-01T19:00:00+02:00'], $token);
+        self::assertSame('from', $error['violations'][0]['field']);
         self::assertFalse($this->db()->fetchOne("SELECT id FROM product WHERE slug = 't-invalid'"));
     }
 
@@ -64,6 +68,7 @@ final class RequestValidationTest extends ApiTestCase
         self::assertSame('page', $this->problem('GET', '/api/admin/products?page=0', 422)['violations'][0]['field']);
         self::assertSame('q', $this->problem('GET', '/api/admin/products?q='.str_repeat('x', 81), 422)['violations'][0]['field']);
         self::assertSame('page', $this->problem('GET', '/api/admin/orders?page=last', 422)['violations'][0]['field']);
+        self::assertSame('paymentStatus', $this->problem('GET', '/api/admin/orders?paymentStatus=maybe', 422)['violations'][0]['field']);
     }
 
     public function testOtherRequestErrorsAreJsonToo(): void
