@@ -21,14 +21,14 @@ final class ShopContractTest extends ApiTestCase
                 continue;
             }
             foreach ($operations as $method => $operation) {
-                $uri = str_replace('{id}', '01890000-0000-7000-8000-000000000000', $path);
+                $uri = preg_replace('/\{[A-Za-z]+\}/', '01890000-0000-7000-8000-000000000000', $path);
                 $this->client->request(strtoupper($method), $uri, server: ['CONTENT_TYPE' => 'application/json'], content: '{}');
                 self::assertResponseStatusCodeSame(401, strtoupper($method).' '.$path);
                 self::assertContains('401', $this->codes($operation), strtoupper($method).' '.$path);
                 ++$checked;
             }
         }
-        self::assertGreaterThan(15, $checked);
+        self::assertGreaterThan(30, $checked);
     }
 
     public function testAdminCategoryMatchesTheListResponse(): void
@@ -78,8 +78,23 @@ final class ShopContractTest extends ApiTestCase
             'post /api/admin/products/{id}/variants' => ['201', '401', '403', '404', '409', '422'],
             'put /api/admin/variants/{id}' => ['200', '401', '403', '404', '409', '422'],
             'get /api/admin/orders' => ['200', '401', '422'],
-            'patch /api/admin/orders/{id}/status' => ['200', '401', '403', '404', '409', '422'],
+            'get /api/admin/orders/{id}' => ['200', '401', '404'],
+            'post /api/admin/orders/{id}/confirm' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/cancel' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/terms' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/ordered' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/received' => ['200', '401', '403', '404', '409'],
+            'post /api/admin/orders/{id}/items/{itemId}/failed' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/cancel' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/replacement' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/return' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/shipments/{shipmentId}/schedule' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/shipments/{shipmentId}/hand-over' => ['200', '401', '403', '404', '409'],
+            'post /api/admin/orders/{id}/shipments/{shipmentId}/refused' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/payments' => ['201', '401', '403', '404', '409', '422'],
+            'post /api/checkout/quote' => ['200', '422'],
             'post /api/checkout' => ['201', '409', '422'],
+            'get /api/orders/{reference}' => ['200', '404'],
             'get /api/admin/pricing-rules' => ['200', '401'],
             'post /api/admin/pricing-rules' => ['201', '401', '403', '409', '422'],
             'put /api/admin/pricing-rules/{id}' => ['200', '401', '403', '404', '409', '422'],
@@ -95,6 +110,10 @@ final class ShopContractTest extends ApiTestCase
             [$method, $path] = explode(' ', $operation);
             self::assertEqualsCanonicalizing($codes, $this->codes($this->contract()['paths'][$path][$method]), $operation);
         }
+        // the old one-field status change is gone, actions replaced it
+        self::assertArrayNotHasKey('/api/admin/orders/{id}/status', $this->contract()['paths']);
+        $this->client->request('PATCH', '/api/admin/orders/01890000-0000-7000-8000-000000000000/status', server: ['CONTENT_TYPE' => 'application/json'], content: '{"status":"processing"}');
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testPricingResponsesMatchTheSchemas(): void
@@ -136,26 +155,45 @@ final class ShopContractTest extends ApiTestCase
         $this->assertShape($schemas['Availability'], $detailVariant['availability'], 'variant availability');
     }
 
-    public function testAdminOrderItemsCarryTheDocumentedSnapshot(): void
+    public function testOrderResponsesMatchTheSchemas(): void
     {
         $b = $this->builder();
         $product = $b->product('t-contract-order', $b->category('t-contract'));
-        $variant = $b->variant($product, 'T-CONTRACT-ORDER');
-        $b->pricedOffer($product, $variant, 50000);
-        $this->client->request('POST', '/api/checkout', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))], content: json_encode([
-            'locale' => 'cs',
-            'customer' => ['name' => 'Rider', 'email' => 'rider@example.test', 'country' => 'CZ', 'address' => 'Demo 1', 'postalCode' => '11000', 'district' => 'Praha 1'],
-            'items' => [['variantId' => $variant->getId()->toRfc4122(), 'quantity' => 1]],
-        ], JSON_THROW_ON_ERROR));
-        $receipt = json_decode((string) $this->client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        $offered = $b->variant($product, 'T-CONTRACT-ORDER');
+        $b->pricedOffer($product, $offered, 50000);
+        $held = $b->variant($product, 'T-CONTRACT-HELD', stock: 2);
+        $items = [$offered->getId()->toRfc4122() => 1, $held->getId()->toRfc4122() => 1];
         $schemas = $this->contract()['components']['schemas'];
+
+        $quote = $this->quote($items);
+        $this->assertShape($schemas['CheckoutQuote'], $quote, 'CheckoutQuote');
+        $this->assertShape($schemas['CheckoutQuote']['properties']['lines']['items'], $quote['lines'][0], 'quote line');
+        $this->assertShape($schemas['CheckoutQuote']['properties']['methods']['items'], $quote['methods'][0], 'quote method');
+        $this->assertShape($schemas['DeliveryOption'], $quote['options']['split'], 'DeliveryOption');
+        $this->assertShape($schemas['DeliveryOption']['properties']['shipments']['items'], $quote['options']['split']['shipments'][0], 'quote shipment');
+
+        $receipt = $this->checkout($items, fulfilment: 'split');
+        self::assertResponseStatusCodeSame(201);
+        $this->assertShape($schemas['OrderReceipt'], $receipt, 'OrderReceipt');
         $this->assertShape($schemas['ReceiptItem'], $receipt['items'][0], 'ReceiptItem');
+        $this->assertShape($schemas['OrderReceipt']['properties']['shipments']['items'], $receipt['shipments'][0], 'receipt shipment');
 
-        $this->loginAdmin();
-        $order = $this->getJson('/api/admin/orders/'.$this->db()->fetchOne('SELECT id FROM shop_order WHERE reference = :ref', ['ref' => $receipt['reference']]));
+        $token = $this->loginAdmin();
+        $id = $this->orderId($receipt['reference']);
+        $this->sendJson('POST', '/api/admin/orders/'.$id.'/confirm', ['customerAgreedVia' => ['channel' => 'whatsapp', 'note' => 'OK']], $token);
+        $order = $this->sendJson('POST', '/api/admin/orders/'.$id.'/payments', ['kind' => 'payment', 'method' => 'cash', 'amountMinor' => 100], $token, ['HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))]);
+        self::assertResponseStatusCodeSame(201);
+        $this->assertShape($schemas['AdminOrder'], $order['order'], 'AdminOrder');
+        $this->assertShape($schemas['AdminOrderItem'], $order['order']['items'][0], 'AdminOrderItem');
+        $this->assertShape($schemas['AdminShipment'], $order['order']['shipments'][0], 'AdminShipment');
+        $this->assertShape($schemas['AdminPayment'], $order['payment'], 'AdminPayment');
+        $this->assertShape($schemas['AdminOrder']['properties']['events']['items'], $order['order']['events'][0], 'order event');
+        $this->assertShape($schemas['AdminOrder']['properties']['customer'], $order['order']['customer'], 'customer');
+        $this->assertShape($schemas['AdminOrder']['properties']['consents'], $order['order']['consents'], 'consents');
 
-        self::assertEqualsCanonicalizing([...$schemas['ReceiptItem']['required'], ...$schemas['AdminOrderItem']['allOf'][1]['required']], array_keys($order['items'][0]));
-        self::assertSame([], array_diff([...$schemas['OrderReceipt']['required'], ...$schemas['AdminOrder']['allOf'][1]['required']], array_keys($order)));
+        $page = $this->getJson('/api/admin/orders');
+        $this->assertShape($schemas['AdminOrderPage'], $page, 'AdminOrderPage');
+        $this->assertShape($schemas['AdminOrderPage']['properties']['items']['items'], $page['items'][0], 'admin order row');
     }
 
     public function testErrorShapeAndEanInputAreDescribed(): void
