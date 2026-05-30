@@ -52,10 +52,12 @@ export type Save = (
 ) => Promise<boolean | undefined>;
 // Like json() but with the session CSRF token on writes. Panels that need the status
 // code (409 stale, 409 overlap) use this instead of Save and handle errors themselves.
+// Extra headers are for things like Idempotency-Key on payments.
 export type Send = <T>(
   url: string,
   method?: string,
   body?: unknown,
+  headers?: Record<string, string>,
 ) => Promise<T>;
 
 export type AvailabilityStatus = "orderable" | "check_needed" | "unavailable";
@@ -188,14 +190,24 @@ export const suppliers = [
 export const offerStatuses = ["snapshot", "matched", "rejected"];
 
 // Keeps the status and the stale variant list of a failed request; still an Error,
-// so code that only shows e.message works as before
+// so code that only shows e.message works as before. code and body carry the rest of
+// the problem, e.g. "overpayment" with amountDueMinor.
 export class ApiError extends Error {
   status: number;
   staleVariantIds: string[];
-  constructor(message: string, status: number, staleVariantIds: string[]) {
+  code: string | null;
+  body: Record<string, unknown>;
+  constructor(
+    message: string,
+    status: number,
+    staleVariantIds: string[],
+    body: Record<string, unknown> = {},
+  ) {
     super(message);
     this.status = status;
     this.staleVariantIds = staleVariantIds;
+    this.code = typeof body.code === "string" ? body.code : null;
+    this.body = body;
   }
 }
 
@@ -212,9 +224,10 @@ export async function json(url: string, init?: RequestInit) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok)
     throw new ApiError(
-      data.message || data.detail || `Request failed (${r.status})`,
+      data?.message || data?.detail || `Request failed (${r.status})`,
       r.status,
-      Array.isArray(data.staleVariantIds) ? data.staleVariantIds : [],
+      Array.isArray(data?.staleVariantIds) ? data.staleVariantIds : [],
+      data && typeof data === "object" && !Array.isArray(data) ? data : {},
     );
   return data;
 }
@@ -362,6 +375,17 @@ export function formatDay(value: string | null): string {
     month: "short",
     year: "numeric",
     timeZone: "UTC",
+  });
+}
+
+// "28 Sept 2026, 14:05" in the browser's time zone
+export function formatDateTime(value: string | null): string {
+  if (!value) return "—";
+  const date = parseApiDate(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
   });
 }
 
