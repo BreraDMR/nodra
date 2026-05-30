@@ -53,7 +53,9 @@ final class AdminAccessTest extends ApiTestCase
 
         $this->getJson('/api/admin/orders/not-a-uuid');
         self::assertResponseStatusCodeSame(404);
-        $this->sendJson('PATCH', '/api/admin/orders/not-a-uuid/status', ['status' => 'processing'], $token);
+        $this->sendJson('POST', '/api/admin/orders/not-a-uuid/confirm', ['customerAgreedVia' => ['channel' => 'phone', 'note' => 'x']], $token);
+        self::assertResponseStatusCodeSame(404);
+        $this->sendJson('POST', '/api/admin/orders/01890000-0000-7000-8000-000000000000/items/not-a-uuid/received', [], $token);
         self::assertResponseStatusCodeSame(404);
         $this->sendJson('PUT', '/api/admin/variants/not-a-uuid', $variant, $token);
         self::assertResponseStatusCodeSame(404);
