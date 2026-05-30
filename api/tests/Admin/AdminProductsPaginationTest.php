@@ -6,9 +6,7 @@ namespace App\Tests\Admin;
 
 use App\Admin\AdminProductsQuery;
 use App\Admin\AdminService;
-use App\Checkout\CheckoutService;
 use App\Pricing\PriceHistory;
-use App\Tests\Support\PricingDefaults;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -52,7 +50,7 @@ final class AdminProductsPaginationTest extends TestCase
         );
         $em = $this->createStub(EntityManagerInterface::class);
         $history = new PriceHistory($em, $db, $this->createStub(Security::class), new MockClock());
-        $service = new AdminService($em, $db, new CheckoutService($em, $db, PricingDefaults::availability($db)), $history);
+        $service = new AdminService($em, $db, $history);
 
         $result = $service->products(new AdminProductsQuery(2));
 
