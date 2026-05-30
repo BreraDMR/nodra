@@ -12,8 +12,8 @@ use App\Tests\Support\ApiTestCase;
  */
 final class PublicResponsePrivacyTest extends ApiTestCase
 {
-    private const PRIVATE_KEY_PARTS = ['cost', 'supplier', 'seller', 'offer', 'url', 'fx', 'markup', 'margin', 'rrp', 'market', 'landed', 'rule'];
-    private const PRIVATE_VALUES = ['Secret Seller', 'supplier.example', 'maker.example', 'bike24', 'Heureka'];
+    private const PRIVATE_KEY_PARTS = ['cost', 'supplier', 'seller', 'offer', 'url', 'fx', 'markup', 'margin', 'rrp', 'market', 'landed', 'rule', 'procurement', 'actor', 'event', 'recorded'];
+    private const PRIVATE_VALUES = ['Secret Seller', 'supplier.example', 'maker.example', 'bike24', 'Heureka', 'SUP-REF-4711', 'test-admin@nodra.test'];
 
     public function testPublicResponsesCarryNoCostSupplierOrReferencePrice(): void
     {
@@ -25,6 +25,10 @@ final class PublicResponsePrivacyTest extends ApiTestCase
         $variant->setReferencePrices(2800, 'EUR', 'https://maker.example/rrp', new \DateTimeImmutable('2026-09-20'), 60000, 'Heureka', new \DateTimeImmutable('2026-09-27'));
         $b->pricedOffer($product, $variant, 2000, 'EUR', 25_000_000, 200);
         $b->pricedOffer($product, null, 49900);
+        // goods NODRA holds, with an offer still attached for the cost snapshot
+        $held = $b->variant($product, 'T-PRIVATE-2', stock: 2);
+        $b->pricedOffer($product, $held, 1500, 'EUR', 25_000_000);
+        $items = [$variant->getId()->toRfc4122() => 1, $held->getId()->toRfc4122() => 1];
 
         $responses = [];
         foreach (['cs', 'de', 'en'] as $locale) {
@@ -34,17 +38,29 @@ final class PublicResponsePrivacyTest extends ApiTestCase
             $responses['categories '.$locale] = $this->getJson('/api/categories', ['locale' => $locale]);
             $responses['facets '.$locale] = $this->getJson('/api/categories/t-private/facets', ['locale' => $locale]);
         }
-        $this->client->request('POST', '/api/checkout', server: ['CONTENT_TYPE' => 'application/json', 'HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))], content: json_encode([
-            'locale' => 'cs',
-            'customer' => ['name' => 'Rider', 'email' => 'rider@example.test', 'country' => 'CZ', 'address' => 'Demo 1', 'postalCode' => '11000', 'district' => 'Praha 1'],
-            'items' => [['variantId' => $variant->getId()->toRfc4122(), 'quantity' => 1]],
-        ], JSON_THROW_ON_ERROR));
+        foreach (['prague_personal', 'pickup_andel'] as $method) {
+            $responses['quote '.$method] = $this->quote($items, $method);
+        }
+        $responses['checkout'] = $this->checkout($items, fulfilment: 'split');
         self::assertResponseStatusCodeSame(201);
-        $responses['checkout'] = json_decode((string) $this->client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
-        $responses['order lookup'] = $this->getJson('/api/orders/'.$responses['checkout']['reference'], ['token' => $responses['checkout']['lookupToken']]);
+        $lookup = ['token' => $responses['checkout']['lookupToken']];
+        $responses['order lookup'] = $this->getJson('/api/orders/'.$responses['checkout']['reference'], $lookup);
+
+        // after the admin bought the line, recorded money and wrote the journal, the receipt still says nothing of it
+        $token = $this->loginAdmin();
+        $order = $this->getJson('/api/admin/orders/'.$this->orderId($responses['checkout']['reference']));
+        $toOrder = array_values(array_filter($order['items'], static fn (array $item): bool => $item['procurementStatus'] === 'to_order'))[0];
+        $this->sendJson('POST', '/api/admin/orders/'.$order['id'].'/confirm', ['customerAgreedVia' => ['channel' => 'phone', 'note' => 'Agreed']], $token);
+        $this->sendJson('POST', '/api/admin/orders/'.$order['id'].'/items/'.$toOrder['id'].'/ordered', ['supplierReference' => 'SUP-REF-4711'], $token);
+        self::assertResponseIsSuccessful();
+        $this->sendJson('POST', '/api/admin/orders/'.$order['id'].'/payments', ['kind' => 'payment', 'method' => 'cash', 'amountMinor' => 1000, 'note' => 'Secret Seller'], $token, ['HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))]);
+        self::assertResponseStatusCodeSame(201);
+        $responses['order lookup after admin'] = $this->getJson('/api/orders/'.$responses['checkout']['reference'], $lookup);
 
         // the walk must see real content, not empty pages
         self::assertSame('orderable', $responses['detail cs']['variants'][0]['availability']['status']);
+        self::assertCount(2, $responses['quote prague_personal']['options']['split']['shipments']);
+        self::assertSame(['confirmed', 1000], [$responses['order lookup after admin']['status'], $responses['order lookup after admin']['paid']['amount']]);
         self::assertSame('t-private-chain', $responses['list en']['items'][0]['slug']);
         foreach ($responses as $name => $payload) {
             foreach ($this->keys($payload) as $path) {
