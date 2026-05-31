@@ -95,11 +95,13 @@ export default async function ProductPage({
               "@type": "Offer",
               priceCurrency: product.fromPrice.currency,
               price: (product.fromPrice.amount / 100).toFixed(2),
+              // own stock is in stock, the rest is bought after the order
               availability:
-                product.inStock &&
-                availabilityOf(product).status !== "unavailable"
-                  ? "https://schema.org/InStock"
-                  : "https://schema.org/OutOfStock",
+                availabilityOf(product).status === "unavailable"
+                  ? "https://schema.org/OutOfStock"
+                  : product.inStock
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/BackOrder",
             },
           }).replace(/</g, "\\u003c"),
         }}
