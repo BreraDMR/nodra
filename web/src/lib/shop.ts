@@ -77,6 +77,134 @@ export type CartItem = {
   price: Money;
   quantity: number;
 };
+
+// Checkout and orders (contract 0.4.0). Every amount is haléře, orders are always CZK.
+export type DeliveryMethod = "pickup_andel" | "prague_personal" | "carrier_cz";
+export type ContactChannel = "whatsapp" | "telegram" | "phone";
+export type Fulfilment = "together" | "split";
+export type MethodReason =
+  | "postal_code_required"
+  | "invalid_postal_code"
+  | "outside_prague"
+  | "not_offered";
+export type QuoteLine = {
+  variantId: string;
+  name: string;
+  variant: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  availability: Availability;
+};
+export type QuoteMethod = {
+  method: DeliveryMethod;
+  available: boolean;
+  reason: MethodReason | null;
+  // per shipment, null when the method doesn't work for this postal code
+  fee: Money | null;
+  note: string | null;
+};
+export type QuoteShipment = {
+  number: number;
+  variantIds: string[];
+  leadTimeMinDays: number | null;
+  leadTimeMaxDays: number | null;
+  fee: Money;
+};
+export type DeliveryOption = {
+  fulfilment: Fulfilment;
+  shipments: QuoteShipment[];
+  shipping: Money;
+  total: Money;
+};
+export type CheckoutQuote = {
+  currency: "CZK";
+  lines: QuoteLine[];
+  subtotal: Money;
+  methods: QuoteMethod[];
+  delivery: { method: DeliveryMethod; postalCode: string | null };
+  // null while the method doesn't fit the postal code or a line is unavailable
+  options: { together: DeliveryOption; split: DeliveryOption | null } | null;
+  canCheckout: boolean;
+};
+export type OrderStatus = "requested" | "confirmed" | "completed" | "cancelled";
+export type PaymentStatus =
+  "unpaid" | "partially_paid" | "paid" | "partially_refunded" | "refunded";
+export type ShipmentStatus =
+  "planned" | "scheduled" | "handed_over" | "refused" | "cancelled";
+export type ReceiptItem = {
+  name: string;
+  variant: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  state: "active" | "cancelled" | "returned";
+  leadTimeMinDays: number | null;
+  leadTimeMaxDays: number | null;
+  shipment: number;
+};
+export type ReceiptShipment = {
+  number: number;
+  method: DeliveryMethod;
+  status: ShipmentStatus;
+  fee: Money;
+  leadTimeMinDays: number | null;
+  leadTimeMaxDays: number | null;
+  scheduledFrom: string | null;
+  scheduledTo: string | null;
+};
+export type OrderReceipt = {
+  reference: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  createdAt: string;
+  fulfilment: Fulfilment;
+  items: ReceiptItem[];
+  shipments: ReceiptShipment[];
+  pickupNote: string | null;
+  subtotal: Money;
+  shipping: Money;
+  total: Money;
+  paid: Money;
+  amountDue: Money;
+  lookupToken: string;
+};
+// Contact and address of the account's latest order; empty values come as null
+export type LastDelivery = {
+  phone: string | null;
+  contactChannel: ContactChannel | null;
+  address: string | null;
+  city: string | null;
+  postalCode: string | null;
+  district: string | null;
+};
+export type AccountSummary = {
+  name: string;
+  email: string;
+  points: number;
+  historyPage: number;
+  historyPages: number;
+  historyTotal: number;
+  // refund entries have negative points
+  history: {
+    reference: string;
+    points: number;
+    reason: "earn" | "refund";
+    createdAt: string;
+  }[];
+  lastDelivery: LastDelivery | null;
+};
+// Error body of every /api/ call; checkout adds a code and the extras below
+export type Problem = {
+  message: string;
+  code?: string;
+  violations?: { field: string | null; message: string }[];
+  variantId?: string;
+  reason?: MethodReason;
+  quote?: CheckoutQuote;
+};
 export const locales: Locale[] = ["cs", "de", "en"];
 export function isLocale(value: string): value is Locale {
   return locales.includes(value as Locale);
@@ -131,16 +259,16 @@ export const copy = {
     country: "Země",
     district: "Kraj / okres",
     czechOnly: "Doručení pouze v České republice",
-    place: "Dokončit ukázkovou objednávku",
-    demo: "Ukázkový obchod. Žádná platba ani zásilka nebude zpracována.",
-    thankYou: "Děkujeme. Objednávka je připravena.",
+    place: "Odeslat objednávku",
+    demo: "Objednávka je nejdřív žádost: cenu, dostupnost a termín s vámi potvrdíme přes zvolený kontakt. Platíte až při převzetí, hotově nebo převodem.",
+    thankYou: "Děkujeme. Objednávku jsme přijali.",
     order: "Číslo objednávky",
     noResults: "Nic jsme nenašli. Zkuste jiný výraz.",
     quantity: "Množství",
     remove: "Odebrat",
     details: "Detaily",
     contact: "Kontaktní údaje",
-    checkoutLabel: "UKÁZKOVÁ OBJEDNÁVKA",
+    checkoutLabel: "OBJEDNÁVKA K POTVRZENÍ",
     summaryLabel: "SOUHRN OBJEDNÁVKY",
     confirmationLabel: "POTVRZENÍ OBJEDNÁVKY",
     notesLabel: "O PRODUKTU",
@@ -201,7 +329,7 @@ export const copy = {
     account: "Mein Konto",
     points: "Treuepunkte",
     pointsRule:
-      "Für Waren im Wert von je 4 € erhalten Sie nach Abschluss der Bestellung 1 Punkt. Punkte können noch nicht eingelöst werden.",
+      "Für Waren im Wert von je 100 Kč erhalten Sie nach Abschluss der Bestellung 1 Punkt. Punkte können noch nicht eingelöst werden.",
     googleSignIn: "Mit Google anmelden",
     demoSignIn: "Demo-Konto ausprobieren",
     signOut: "Abmelden",
@@ -243,16 +371,16 @@ export const copy = {
     country: "Land",
     district: "Region / Bezirk",
     czechOnly: "Lieferung nur innerhalb Tschechiens",
-    place: "Demo-Bestellung abschließen",
-    demo: "Demo-Shop. Es erfolgt weder eine Zahlung noch ein Versand.",
-    thankYou: "Danke. Deine Bestellung ist eingegangen.",
+    place: "Bestellanfrage senden",
+    demo: "Eine Bestellung ist zuerst eine Anfrage: Preis, Verfügbarkeit und Termin bestätigen wir mit dir über den gewählten Kontaktweg. Bezahlt wird bei der Übergabe, bar oder per Überweisung.",
+    thankYou: "Danke. Deine Bestellanfrage ist eingegangen.",
     order: "Bestellnummer",
     noResults: "Keine Ergebnisse. Versuche einen anderen Begriff.",
     quantity: "Menge",
     remove: "Entfernen",
     details: "Details",
     contact: "Kontakt & Lieferung",
-    checkoutLabel: "DEMO-BESTELLUNG",
+    checkoutLabel: "BESTELLANFRAGE",
     summaryLabel: "BESTELLÜBERSICHT",
     confirmationLabel: "BESTELLBESTÄTIGUNG",
     notesLabel: "PRODUKTDETAILS",
@@ -313,7 +441,7 @@ export const copy = {
     account: "My account",
     points: "Loyalty points",
     pointsRule:
-      "Earn 1 point per 4 € of products after an order is completed. Points cannot yet be redeemed.",
+      "Earn 1 point per 100 Kč of products after an order is completed. Points cannot yet be redeemed.",
     googleSignIn: "Continue with Google",
     demoSignIn: "Try the demo account",
     signOut: "Sign out",
@@ -355,16 +483,16 @@ export const copy = {
     country: "Country",
     district: "Region / district",
     czechOnly: "Delivery within Czechia only",
-    place: "Place demo order",
-    demo: "This is a demo shop. No payment or shipment will be made.",
-    thankYou: "Thanks. Your order is in.",
+    place: "Send order request",
+    demo: "An order is a request first: we confirm the price, availability and date with you via the channel you choose. You pay on receipt, in cash or by bank transfer.",
+    thankYou: "Thanks. We've got your order request.",
     order: "Order reference",
     noResults: "Nothing matched. Try another search.",
     quantity: "Quantity",
     remove: "Remove",
     details: "Details",
     contact: "Contact & delivery",
-    checkoutLabel: "DEMO CHECKOUT",
+    checkoutLabel: "ORDER REQUEST",
     summaryLabel: "ORDER SUMMARY",
     confirmationLabel: "ORDER CONFIRMATION",
     notesLabel: "PRODUCT NOTES",
@@ -426,16 +554,22 @@ export function badgeName(locale: Locale, badge: string): string {
   };
   return labels[locale][badge] || badge;
 }
-// "Doručení za 3–5 dní"; one number when min and max match
-export function leadTime(locale: Locale, min: number, max: number): string {
+// "3–5 dní"; one number when min and max match
+export function dayCount(locale: Locale, min: number, max: number): string {
   const days = min === max ? String(max) : `${min}–${max}`;
   if (locale === "cs") {
     const word = max === 1 ? "den" : max >= 2 && max <= 4 ? "dny" : "dní";
-    return `Doručení za ${days} ${word}`;
+    return `${days} ${word}`;
   }
-  if (locale === "de")
-    return `Lieferung in ${days} ${max === 1 ? "Tag" : "Tagen"}`;
-  return `Delivery in ${days} ${max === 1 ? "day" : "days"}`;
+  if (locale === "de") return `${days} ${max === 1 ? "Tag" : "Tagen"}`;
+  return `${days} ${max === 1 ? "day" : "days"}`;
+}
+// "Doručení za 3–5 dní"
+export function leadTime(locale: Locale, min: number, max: number): string {
+  const days = dayCount(locale, min, max);
+  if (locale === "cs") return `Doručení za ${days}`;
+  if (locale === "de") return `Lieferung in ${days}`;
+  return `Delivery in ${days}`;
 }
 // A page cached before the API started sending availability (up to 15 s after a
 // deploy) has none; show it as "we'll check" instead of failing the whole page
@@ -459,11 +593,14 @@ export function availabilityText(
     return leadTime(locale, min, max);
   return copy[locale].checkNeeded;
 }
+export function intlLocale(locale: Locale): string {
+  return locale === "cs" ? "cs-CZ" : locale === "de" ? "de-DE" : "en-GB";
+}
 export function money(value: Money, locale: Locale): string {
-  return new Intl.NumberFormat(
-    locale === "cs" ? "cs-CZ" : locale === "de" ? "de-DE" : "en-GB",
-    { style: "currency", currency: value.currency },
-  ).format(value.amount / 100);
+  return new Intl.NumberFormat(intlLocale(locale), {
+    style: "currency",
+    currency: value.currency,
+  }).format(value.amount / 100);
 }
 export async function api<T>(path: string): Promise<T> {
   const res = await fetch(
