@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { AttributeFields } from "./AttributeFields";
 import { CategoriesPanel } from "./CategoriesPanel";
+import { Chip } from "./OrderPanel";
+import { formatPrice, type OrderRow } from "./orders";
+import { OrdersPanel } from "./OrdersPanel";
 import { PricingRulesPanel } from "./PricingRulesPanel";
 import { RepricePanel, type RepriceFilter } from "./RepricePanel";
 import { SupplierOffersPanel } from "./SupplierOffersPanel";
@@ -11,10 +14,9 @@ import { ProductPricingPanel } from "./VariantPricingPanel";
 import {
   attributePayload,
   attributeValues,
-  availabilityLabels,
   errorText,
   formatCzk,
-  formatDays,
+  formatMinor,
   indent,
   isVisible,
   json,
@@ -24,7 +26,6 @@ import {
   parseMinor,
   type AdminCategory,
   type AttributeValues,
-  type AvailabilityStatus,
   type PriceApplied,
   type PricingAlerts,
   type Save,
@@ -53,19 +54,6 @@ type Variant = {
   marketPriceSource: string | null;
   marketCheckedAt: string | null;
 };
-type OrderLine = {
-  name: string;
-  variant: string;
-  sku: string;
-  quantity: number;
-  lineTotal: number;
-  // checkout snapshot, all null on orders from before D02
-  availabilityStatus: AvailabilityStatus | null;
-  leadTimeMinDays: number | null;
-  leadTimeMaxDays: number | null;
-  supplierOfferId: string | null;
-  unitCostCzkMinor: number | null;
-};
 type Product = {
   id: string;
   slug: string;
@@ -82,23 +70,16 @@ type Product = {
   supplierOffers: SupplierOffer[];
   variants: Variant[];
 };
-type Order = {
-  id: string;
-  reference: string;
-  status: string;
-  customerName: string;
-  email: string;
-  country: string;
-  total: { amount: number; currency: string };
-  createdAt: string;
-};
 type Dashboard = {
   orders: number;
+  // requested + confirmed
   openOrders: number;
+  // CZK orders that aren't cancelled; EUR is only the older demo orders
+  revenueCzkMinor: number;
   revenueEurMinor: number;
   products: number;
   lowStock: { sku: string; stock: number; product: string }[];
-  recentOrders: Order[];
+  recentOrders: OrderRow[];
 };
 type Tab =
   "overview" | "products" | "categories" | "pricing" | "reprice" | "orders";
@@ -215,18 +196,8 @@ export default function AdminPage() {
     pages: 1,
     total: 0,
   });
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [orderPage, setOrderPage] = useState(1);
-  const [orderPagination, setOrderPagination] = useState({
-    page: 1,
-    pages: 1,
-    total: 0,
-  });
-  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
-  const [orderDetail, setOrderDetail] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
+  // a recent order clicked on the overview opens as soon as the orders screen mounts
+  const [orderToOpen, setOrderToOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [variantEditing, setVariantEditing] = useState<{
     productId: string;
@@ -251,34 +222,29 @@ export default function AdminPage() {
       setError(e instanceof Error ? e.message : "Could not load categories");
     }
   }, []);
-  const reload = useCallback(
-    async (page: number, search: string, ordersPage: number) => {
-      try {
-        const query = new URLSearchParams({ page: String(page) });
-        if (search) query.set("q", search);
-        const [d, p, o, a] = await Promise.all([
-          json("/api/admin/dashboard"),
-          json(`/api/admin/products?${query}`),
-          json(`/api/admin/orders?page=${ordersPage}`),
-          json("/api/admin/pricing/alerts"),
-        ]);
-        setDashboard(d);
-        setAlerts(a);
-        setProducts(p.items);
-        setProductPagination({ page: p.page, pages: p.pages, total: p.total });
-        setOrders(o.items);
-        setOrderPagination({ page: o.page, pages: o.pages, total: o.total });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not load admin data");
-      }
-    },
-    [],
-  );
+  // the orders screen loads its own list; order actions call this for the rest
+  const reload = useCallback(async (page: number, search: string) => {
+    try {
+      const query = new URLSearchParams({ page: String(page) });
+      if (search) query.set("q", search);
+      const [d, p, a] = await Promise.all([
+        json("/api/admin/dashboard"),
+        json(`/api/admin/products?${query}`),
+        json("/api/admin/pricing/alerts"),
+      ]);
+      setDashboard(d);
+      setAlerts(a);
+      setProducts(p.items);
+      setProductPagination({ page: p.page, pages: p.pages, total: p.total });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load admin data");
+    }
+  }, []);
   useEffect(() => {
     json("/api/admin/me")
       .then(async (u: User) => {
         setUser(u);
-        await Promise.all([reload(1, "", 1), loadCategories()]);
+        await Promise.all([reload(1, ""), loadCategories()]);
       })
       .catch(() => {})
       .finally(() => setReady(true));
@@ -298,7 +264,7 @@ export default function AdminPage() {
         }),
       });
       setUser(u);
-      await Promise.all([reload(1, "", 1), loadCategories()]);
+      await Promise.all([reload(1, ""), loadCategories()]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
@@ -308,24 +274,30 @@ export default function AdminPage() {
   // For panels that handle their own errors (409 stale or overlapping). Writes carry
   // the same CSRF token as mutate(); a DELETE goes out without a body.
   const send = useCallback<Send>(
-    (url, method = "GET", body) =>
+    (url, method = "GET", body, headers) =>
       json(url, {
         method,
         headers:
           method === "GET"
-            ? undefined
+            ? headers
             : {
                 ...(body === undefined
                   ? {}
                   : { "Content-Type": "application/json" }),
                 "X-CSRF-Token": user?.csrfToken || "",
+                ...headers,
               },
         body: body === undefined ? undefined : JSON.stringify(body),
       }),
     [user],
   );
+  // prices, stock or orders moved: dashboard, products and alerts follow
   function pricesChanged() {
-    void reload(productPage, productSearch, orderPage);
+    void reload(productPage, productSearch);
+  }
+  function openOrders(orderId: string | null) {
+    setOrderToOpen(orderId);
+    setTab("orders");
   }
   // Product PUT writes the form price into the base variant, so after an apply in
   // the product editor the form must follow, or "Save product" would undo it
@@ -364,7 +336,7 @@ export default function AdminPage() {
         body: JSON.stringify(body),
       });
       setMessage("Saved successfully.");
-      await reload(productPage, productSearch, orderPage);
+      await reload(productPage, productSearch);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -532,24 +504,6 @@ export default function AdminPage() {
       reason,
     });
   }
-  async function advance(order: Order, status: string) {
-    if (
-      status === "cancelled" &&
-      !confirm(`Cancel ${order.reference} and return stock?`)
-    )
-      return;
-    return await mutate(`/api/admin/orders/${order.id}/status`, "PATCH", {
-      status,
-    });
-  }
-  async function openOrder(id: string) {
-    setSelectedOrder(id);
-    try {
-      setOrderDetail(await json(`/api/admin/orders/${id}`));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load order");
-    }
-  }
   const field = (
     key: keyof Form,
     label: string,
@@ -685,10 +639,10 @@ export default function AdminPage() {
             <button
               aria-label="Orders"
               className={tab === "orders" ? "active" : ""}
-              onClick={() => setTab("orders")}
+              onClick={() => openOrders(null)}
             >
               ▤ <span>Orders</span>
-              <small>{orderPagination.total}</small>
+              <small>{dashboard?.orders ?? 0}</small>
             </button>
           </nav>
         </div>
@@ -754,18 +708,20 @@ export default function AdminPage() {
               <div className="metric-grid">
                 <div>
                   <span>01 / REVENUE</span>
-                  <strong>
-                    {new Intl.NumberFormat("de-DE", {
-                      style: "currency",
-                      currency: "EUR",
-                    }).format((dashboard?.revenueEurMinor || 0) / 100)}
-                  </strong>
-                  <small>Demo orders · EUR</small>
+                  <strong>{formatCzk(dashboard?.revenueCzkMinor || 0)}</strong>
+                  <small>
+                    Orders not cancelled
+                    {dashboard?.revenueEurMinor
+                      ? ` · plus ${formatMinor(dashboard.revenueEurMinor, "EUR")} older EUR demo orders`
+                      : ""}
+                  </small>
                 </div>
                 <div>
                   <span>02 / ORDERS</span>
                   <strong>{dashboard?.orders || 0}</strong>
-                  <small>{dashboard?.openOrders || 0} need attention</small>
+                  <small>
+                    {dashboard?.openOrders || 0} open · requested or confirmed
+                  </small>
                 </div>
                 <div>
                   <span>03 / PRODUCTS</span>
@@ -834,21 +790,25 @@ export default function AdminPage() {
                       <p className="eyebrow">LIVE OPERATIONS</p>
                       <h2>Recent orders</h2>
                     </div>
-                    <button onClick={() => setTab("orders")}>View all ↗</button>
+                    <button onClick={() => openOrders(null)}>View all ↗</button>
                   </div>
                   {dashboard?.recentOrders.length ? (
                     dashboard.recentOrders.map((o) => (
-                      <div className="mini-order" key={o.id}>
+                      <button
+                        type="button"
+                        className="mini-order"
+                        key={o.id}
+                        title={`Open ${o.reference}`}
+                        onClick={() => openOrders(o.id)}
+                      >
                         <span className="order-ref">{o.reference}</span>
                         <span>{o.customerName}</span>
-                        <span className={`status ${o.status}`}>{o.status}</span>
-                        <strong>
-                          {new Intl.NumberFormat("de-DE", {
-                            style: "currency",
-                            currency: o.total.currency,
-                          }).format(o.total.amount / 100)}
-                        </strong>
-                      </div>
+                        <span className="mini-order-status">
+                          <Chip value={o.status} />
+                          <Chip value={o.paymentStatus} />
+                        </span>
+                        <strong>{formatPrice(o.total)}</strong>
+                      </button>
                     ))
                   ) : (
                     <p className="admin-empty">
@@ -910,7 +870,7 @@ export default function AdminPage() {
                   setProductPage(1);
                   const search = productSearchDraft.trim();
                   setProductSearch(search);
-                  void reload(1, search, orderPage);
+                  void reload(1, search);
                 }}
               >
                 <input
@@ -1016,7 +976,7 @@ export default function AdminPage() {
                     onClick={() => {
                       const page = productPagination.page - 1;
                       setProductPage(page);
-                      void reload(page, productSearch, orderPage);
+                      void reload(page, productSearch);
                     }}
                   >
                     ← Previous
@@ -1026,7 +986,7 @@ export default function AdminPage() {
                     onClick={() => {
                       const page = productPagination.page + 1;
                       setProductPage(page);
-                      void reload(page, productSearch, orderPage);
+                      void reload(page, productSearch);
                     }}
                   >
                     Next →
@@ -1060,97 +1020,11 @@ export default function AdminPage() {
             />
           )}
           {tab === "orders" && (
-            <>
-              <div className="admin-heading compact">
-                <div>
-                  <p className="eyebrow">OPERATIONS / FULFILMENT</p>
-                  <h1>
-                    Orders<span>.</span>
-                  </h1>
-                  <p>From first click to the final mile.</p>
-                </div>
-              </div>
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>REFERENCE</th>
-                      <th>CUSTOMER</th>
-                      <th>DATE</th>
-                      <th>STATUS</th>
-                      <th>TOTAL</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((o) => (
-                      <tr key={o.id}>
-                        <td>
-                          <strong>{o.reference}</strong>
-                        </td>
-                        <td>
-                          <strong>{o.customerName}</strong>
-                          <small>{o.email}</small>
-                        </td>
-                        <td>
-                          {new Date(o.createdAt).toLocaleDateString("en-GB")}
-                        </td>
-                        <td>
-                          <span className={`status ${o.status}`}>
-                            {o.status}
-                          </span>
-                        </td>
-                        <td>
-                          {new Intl.NumberFormat("de-DE", {
-                            style: "currency",
-                            currency: o.total.currency,
-                          }).format(o.total.amount / 100)}
-                        </td>
-                        <td>
-                          <button
-                            className="admin-link"
-                            onClick={() => openOrder(o.id)}
-                          >
-                            Open ↗
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!orders.length && (
-                  <p className="admin-empty">No demo orders yet.</p>
-                )}
-              </div>
-              <div className="admin-pagination">
-                <span>
-                  {orderPagination.total} orders · Page {orderPagination.page}{" "}
-                  of {orderPagination.pages}
-                </span>
-                <div>
-                  <button
-                    disabled={orderPagination.page <= 1}
-                    onClick={() => {
-                      const page = orderPagination.page - 1;
-                      setOrderPage(page);
-                      void reload(productPage, productSearch, page);
-                    }}
-                  >
-                    ← Previous
-                  </button>
-                  <button
-                    disabled={orderPagination.page >= orderPagination.pages}
-                    onClick={() => {
-                      const page = orderPagination.page + 1;
-                      setOrderPage(page);
-                      void reload(productPage, productSearch, page);
-                    }}
-                  >
-                    Next →
-                  </button>
-                </div>
-              </div>
-            </>
+            <OrdersPanel
+              send={send}
+              initialOrderId={orderToOpen}
+              onChanged={pricesChanged}
+            />
           )}
         </div>
       </div>
@@ -1536,159 +1410,6 @@ export default function AdminPage() {
                 Save variant ↗
               </button>
             </form>
-          </div>
-        </div>
-      )}
-      {selectedOrder && orderDetail && (
-        <div
-          className="admin-modal-backdrop"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedOrder(null);
-          }}
-        >
-          <div className="admin-modal order-modal">
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">FULFILMENT / ORDER</p>
-                <h2>{String(orderDetail.reference)}</h2>
-              </div>
-              <button onClick={() => setSelectedOrder(null)} aria-label="Close">
-                ×
-              </button>
-            </div>
-            <div className="order-detail-meta">
-              <span>
-                Status: <b>{String(orderDetail.status)}</b>
-              </span>
-              <span>
-                {String((orderDetail.customer as { name: string })?.name)} ·{" "}
-                {String((orderDetail.customer as { email: string })?.email)}
-              </span>
-              <span>
-                {String((orderDetail.customer as { address: string })?.address)}
-                ,{" "}
-                {String(
-                  (orderDetail.customer as { postalCode: string })?.postalCode,
-                )}{" "}
-                ·{" "}
-                {String(
-                  (orderDetail.customer as { district: string })?.district,
-                )}{" "}
-                ·{" "}
-                {String((orderDetail.customer as { country: string })?.country)}
-              </span>
-            </div>
-            <div className="order-detail-lines">
-              {((orderDetail.items || []) as OrderLine[]).map((x, i) => (
-                <div key={i}>
-                  <div>
-                    {x.name} / {x.variant} × {x.quantity}
-                    {/* taken at checkout; orders from before D02 have none */}
-                    <dl className="order-snapshot">
-                      <dt>Availability</dt>
-                      <dd>
-                        {x.availabilityStatus
-                          ? availabilityLabels[x.availabilityStatus] ||
-                            x.availabilityStatus
-                          : "—"}
-                      </dd>
-                      <dt>Lead time</dt>
-                      <dd>
-                        {formatDays(x.leadTimeMinDays, x.leadTimeMaxDays)}
-                      </dd>
-                      <dt>Unit cost</dt>
-                      <dd>
-                        {x.unitCostCzkMinor === null
-                          ? "—"
-                          : formatCzk(x.unitCostCzkMinor)}
-                      </dd>
-                      <dt>Offer</dt>
-                      <dd title={x.supplierOfferId || undefined}>
-                        {x.supplierOfferId
-                          ? `${x.supplierOfferId.slice(0, 8)}…`
-                          : "—"}
-                      </dd>
-                    </dl>
-                  </div>
-                  <strong>
-                    {new Intl.NumberFormat("de-DE", {
-                      style: "currency",
-                      currency: (orderDetail.total as { currency: string })
-                        .currency,
-                    }).format(x.lineTotal / 100)}
-                  </strong>
-                </div>
-              ))}
-            </div>
-            <div className="order-detail-total">
-              <span>Total</span>
-              <strong>
-                {new Intl.NumberFormat("de-DE", {
-                  style: "currency",
-                  currency: (orderDetail.total as { currency: string })
-                    .currency,
-                }).format(
-                  (orderDetail.total as { amount: number }).amount / 100,
-                )}
-              </strong>
-            </div>
-            <div className="order-actions">
-              {orders.find((x) => x.id === selectedOrder)?.status ===
-                "placed" && (
-                <>
-                  <button
-                    onClick={async () => {
-                      const o = orders.find((x) => x.id === selectedOrder)!;
-                      if (await advance(o, "processing")) await openOrder(o.id);
-                    }}
-                  >
-                    Mark processing
-                  </button>
-                  <button
-                    className="danger"
-                    onClick={async () => {
-                      const o = orders.find((x) => x.id === selectedOrder)!;
-                      if (await advance(o, "cancelled")) await openOrder(o.id);
-                    }}
-                  >
-                    Cancel order
-                  </button>
-                </>
-              )}
-              {orders.find((x) => x.id === selectedOrder)?.status ===
-                "processing" && (
-                <>
-                  <button
-                    onClick={async () => {
-                      const o = orders.find((x) => x.id === selectedOrder)!;
-                      if (await advance(o, "shipped")) await openOrder(o.id);
-                    }}
-                  >
-                    Mark shipped
-                  </button>
-                  <button
-                    className="danger"
-                    onClick={async () => {
-                      const o = orders.find((x) => x.id === selectedOrder)!;
-                      if (await advance(o, "cancelled")) await openOrder(o.id);
-                    }}
-                  >
-                    Cancel order
-                  </button>
-                </>
-              )}
-              {orders.find((x) => x.id === selectedOrder)?.status ===
-                "shipped" && (
-                <button
-                  onClick={async () => {
-                    const o = orders.find((x) => x.id === selectedOrder)!;
-                    if (await advance(o, "completed")) await openOrder(o.id);
-                  }}
-                >
-                  Complete order
-                </button>
-              )}
-            </div>
           </div>
         </div>
       )}
