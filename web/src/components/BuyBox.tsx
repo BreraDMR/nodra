@@ -28,21 +28,21 @@ export function BuyBox({
 }) {
   const [selected, setSelected] = useState(
     (
+      product.variants.find((v) => availabilityOf(v).status === "orderable") ||
       product.variants.find(
-        (v) => v.stock > 0 && availabilityOf(v).status !== "unavailable",
+        (v) => availabilityOf(v).status !== "unavailable",
       ) ||
-      product.variants.find((v) => v.stock > 0) ||
       product.variants[0]
     )?.id,
   );
   const [added, setAdded] = useState(false);
   const variant = product.variants.find((v) => v.id === selected);
   const t = copy[locale];
-  // unavailable wins over the demo stock: nobody can source it at all.
-  // check_needed stays orderable, the shop confirms the date afterwards.
+  // Own stock doesn't gate ordering any more: NODRA buys the rest after the
+  // order. check_needed stays orderable, the shop confirms the date afterwards.
   const unavailable =
     !!variant && availabilityOf(variant).status === "unavailable";
-  const soldOut = !variant || variant.stock < 1;
+  const soldOut = !variant;
   const status =
     unavailable || soldOut ? "unavailable" : availabilityOf(variant).status;
   const statusText = unavailable
@@ -87,7 +87,7 @@ export function BuyBox({
           <button
             key={v.id}
             type="button"
-            disabled={v.stock < 1}
+            disabled={availabilityOf(v).status === "unavailable"}
             className={selected === v.id ? "active" : ""}
             onClick={() => {
               setSelected(v.id);
