@@ -3,17 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { copy, isLocale } from "@/lib/shop";
-
-type Account = {
-  name: string;
-  email: string;
-  points: number;
-  historyPage: number;
-  historyPages: number;
-  historyTotal: number;
-  history: { reference: string; points: number; createdAt: string }[];
-};
+import { copy, isLocale, type AccountSummary as Account } from "@/lib/shop";
 
 export default function AccountPage() {
   const { locale: raw } = useParams<{ locale: string }>();
@@ -89,10 +79,14 @@ export default function AccountPage() {
               <>
                 <p>{t.pointsHistory}</p>
                 <ul>
-                  {account.history.map((item) => (
-                    <li key={item.reference}>
+                  {/* an order can have an earn and later refund entries */}
+                  {account.history.map((item, i) => (
+                    <li key={`${item.reference}-${item.reason}-${i}`}>
                       <span>{item.reference}</span>
-                      <b>+{item.points}</b>
+                      <b>
+                        {item.points > 0 ? "+" : ""}
+                        {item.points}
+                      </b>
                     </li>
                   ))}
                 </ul>
