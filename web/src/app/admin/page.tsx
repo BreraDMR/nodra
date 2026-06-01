@@ -652,7 +652,12 @@ export default function AdminPage() {
           </Link>
           <button
             onClick={async () => {
-              await fetch("/api/admin/logout", { method: "POST" });
+              // Symfony answers the logout with a redirect to the API host; don't follow it,
+              // or CORS throws and the page never reloads to the login screen
+              await fetch("/api/admin/logout", {
+                method: "POST",
+                redirect: "manual",
+              }).catch(() => {});
               location.reload();
             }}
           >
