@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCartItems, writeCart } from "@/lib/cart";
+import { orderCopy } from "@/lib/order";
 import { copy, isLocale, money, type CartItem } from "@/lib/shop";
 import { useParams } from "next/navigation";
 export default function Basket() {
@@ -99,8 +100,10 @@ export default function Basket() {
               </strong>
             </div>
             <p>
-              {t.shipping} — {locale === "cs" ? "89 Kč" : "3,90 €"}
+              {t.shipping} — {t.shippingPending}
             </p>
+            {/* de/en show euro prices, the order itself is always CZK */}
+            {orderCopy[locale].czkNote && <p>{orderCopy[locale].czkNote}</p>}
             <Link href={`/${locale}/checkout`} className="button button-dark">
               {t.checkout} <span>↗</span>
             </Link>
