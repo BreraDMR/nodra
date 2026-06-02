@@ -70,6 +70,13 @@ export default function OrderPage() {
   const notFound = !reference || !token || failed;
   const receipt = loaded?.receipt;
   const currency = receipt?.total.currency ?? "CZK";
+  // once a line's shipment is past "planned", its status says more than a lead time
+  const lineShipmentStatus = (number: number) => {
+    const shipment = receipt?.shipments.find((s) => s.number === number);
+    return shipment && shipment.status !== "planned"
+      ? o.shipmentStatuses[shipment.status]
+      : null;
+  };
   const statusText =
     receipt &&
     o.statusText[receipt.status].replace(
@@ -130,13 +137,14 @@ export default function OrderPage() {
                   <span>
                     {x.name} · {x.variant} × {x.quantity}
                     <small>
-                      {x.state === "active"
-                        ? expectedText(
+                      {x.state !== "active"
+                        ? o.lineStates[x.state]
+                        : (lineShipmentStatus(x.shipment) ??
+                          expectedText(
                             locale,
                             x.leadTimeMinDays,
                             x.leadTimeMaxDays,
-                          )
-                        : o.lineStates[x.state]}
+                          ))}
                       {receipt.shipments.length > 1 &&
                         ` · ${o.shipment.replace("{n}", String(x.shipment))}`}
                     </small>
@@ -211,7 +219,8 @@ export default function OrderPage() {
           </section>
         </>
       )}
-      <p>{t.demo}</p>
+      {/* "an order is a request, we'll confirm…" only fits until it's confirmed */}
+      {(!receipt || receipt.status === "requested") && <p>{t.demo}</p>}
       <Link className="button button-dark" href={`/${locale}/shop`}>
         {t.back} ↗
       </Link>
