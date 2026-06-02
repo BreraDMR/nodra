@@ -936,12 +936,14 @@ p {
 }
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, …) so the columns can shrink below an input's own width on a phone */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 22px;
 }
 .form-grid label {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   font-size: 12px;
   font-weight: 700;
   gap: 8px;
