@@ -22,7 +22,10 @@ parameters:
     app.delivery.prague_free_from_minor: 50000    # goods subtotal from which every Prague shipment is free
     app.delivery.carrier_fee_minor: null          # carrier delivery outside Prague, off until the owner sets a tariff (D00.2)
     app.delivery.carrier_cod_fee_minor: null      # cash on delivery via the carrier, off with it
-    app.delivery.pickup_note: 'Anděl, place and time agreed by message'   # default until D00.3
+    app.delivery.pickup_note:                     # per language, default until D00.3
+        cs: 'Místo a čas předání na Andělu domluvíme zprávou.'
+        de: 'Ort und Zeit der Übergabe am Anděl vereinbaren wir per Nachricht.'
+        en: 'We agree the place and time at Anděl by message.'
     app.payment.handover_methods: [cash, bank_transfer]                   # card only once there is a terminal
     app.legal.privacy_version: 'draft-2026-09'    # stored with every privacy consent, default until the D00.7 texts exist
 
