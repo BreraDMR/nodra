@@ -29,7 +29,8 @@ export function ProductCard({
           sizes="(max-width: 720px) 48vw, (max-width: 1100px) 33vw, 25vw"
         />
         <span className="product-arrow">↗</span>
-        {product.badge && (
+        {/* "Bestseller" claims sales NODRA hasn't had yet, so it waits for real numbers */}
+        {product.badge && product.badge !== "Bestseller" && (
           <span className="product-badge">
             {badgeName(locale, product.badge)}
           </span>
