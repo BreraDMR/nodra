@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.4.0
+  version: 0.5.0
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -11,8 +11,9 @@ info:
     Money is always an integer in minor units (haléře for CZK, cents for EUR). Orders are always in CZK whatever the
     interface language; EUR is a display reference in the catalogue only (older EUR demo orders keep their currency).
     Percentages are basis points (100 = 1 %), exchange rates integer millionths (25.315 CZK per EUR = 25315000). Cost,
-    supplier, seller, offer id or URL, supplier order reference, exchange rate, markup, RRP, market price and journal
-    actors are admin-only and never appear in public responses.
+    supplier, seller, offer id or URL, supplier order reference, purchases, exchange rate, markup, margin, order
+    economics, RRP, market price and journal actors are admin-only and never appear in public responses.
+    Dates without a time (promisedDate, fxRateDate) are Prague calendar dates, YYYY-MM-DD.
 servers:
   - url: http://localhost:8000
 tags:
@@ -148,9 +149,11 @@ paths:
         slowest line) and `split` (one shipment per group of lines with the same maximum lead time; lines whose date is
         still to be confirmed form one group), or null when there is only one group. A line covered by NODRA's own stock
         is `orderable` with the handling days as lead time. Fees are computed here only: Prague personal delivery is
-        free from 500 Kč of goods and 149 Kč per shipment below that, pickup at Anděl is free, carrier delivery is not
-        offered until its tariff is set. `options` is null while the method isn't available for the postal code or a
-        line is `unavailable`; `canCheckout` says whether POST /api/checkout would accept this basket and method.
+        free from 500 Kč of goods (`freeFromMinor` on the method) and 149 Kč per shipment below that, pickup at Anděl
+        is free, carrier delivery is not offered until its tariff is set. The pickup note is in the request `locale`.
+        `options` is null while the method isn't available for the postal code or a line is `unavailable`;
+        `canCheckout` says whether POST /api/checkout would accept this basket and method. Asking for a method that
+        isn't offered at all is a 422 `method_unavailable` with `reason` `not_offered`.
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/QuoteRequest' } } }
@@ -205,7 +208,8 @@ paths:
       description: >-
         Requires the unguessable lookup token returned at checkout; never exposes customer information to a reference
         alone. Shows the order and payment status, the shipments with their fee, lead time and agreed window, and the
-        lead time of every line. Never shows cost, supplier, offer or procurement details.
+        lead time of every line, the contact channel the customer chose and the pickup note in the order language.
+        Never shows cost, supplier, offer, purchase or procurement details.
       parameters:
         - { name: reference, in: path, required: true, schema: { type: string } }
         - { name: token, in: query, required: true, schema: { type: string } }
@@ -231,7 +235,9 @@ paths:
                 password: { type: string }
       responses:
         '200': { description: Signed in. }
-        '401': { description: 'Invalid credentials. The body is {"error": "..."} from the Symfony login handler, not a Problem.' }
+        '401':
+          description: 'Wrong email or password: a Problem with code `invalid_credentials`, the same message for both.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
   /api/admin/me:
     get:
       tags: [Administration]
@@ -251,9 +257,38 @@ paths:
     get:
       tags: [Administration]
       summary: Read operational dashboard
-      description: 'Returns order counts (open = requested or confirmed), recent orders, low own-stock variants and revenue totals: revenueCzkMinor over CZK orders that are not cancelled, revenueEurMinor over the older EUR demo orders.'
+      description: 'Returns order counts (open = requested or confirmed), the work queue counts, recent orders, variants NODRA holds itself (own stock above zero, lowest first) and revenue totals: revenueCzkMinor over CZK orders that are not cancelled, revenueEurMinor over the older EUR demo orders.'
       responses:
-        '200': { description: Admin dashboard data. }
+        '200':
+          description: Admin dashboard data.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminDashboard' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/queues:
+    get:
+      tags: [Administration]
+      summary: Count orders in each work queue
+      description: >-
+        One aggregate over all orders; an order can be in several queues. review - status requested; problem - an
+        active line is failed; to_purchase - confirmed with an active to_order line; waiting - an active line is
+        ordered; delayed - an active ordered line is past its promised date (the Prague day the order was last
+        confirmed + the line's leadTimeMaxDays; late from the next day, never without a lead time); to_schedule -
+        confirmed with a planned shipment whose active lines all have their goods; delivering - a shipment is
+        scheduled; unpaid - a shipment was handed over and amountDue > 0; refund - refundDue > 0. Each is also a
+        `queue=` filter of GET /api/admin/orders.
+      responses:
+        '200':
+          description: Orders per queue.
+          content: { application/json: { schema: { $ref: '#/components/schemas/QueueCounts' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/settings:
+    get:
+      tags: [Administration]
+      summary: Read the order settings
+      description: Accepted payment and refund methods, delivery methods and fees, the pickup note per language and the privacy text version. Read-only, they are set in the API configuration.
+      responses:
+        '200':
+          description: Settings.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettings' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/admin/products:
     get:
@@ -433,11 +468,17 @@ paths:
     get:
       tags: [Administration]
       summary: List orders for fulfilment
-      description: Returns up to 30 orders per page, newest first, optionally only one order status and/or one payment status.
+      description: >-
+        Returns up to 30 orders per page, newest first, optionally only one order status, one payment status, one work
+        queue (see GET /api/admin/queues) and/or a search. `q` matches part of the reference, customer name, email or
+        a supplier order reference of a line (case-insensitive); a query of digits, spaces, +, -, ( ) with at least 3
+        digits also matches the phone by its digits. Every row carries the queues it is in and the delayed flag.
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: status, in: query, schema: { type: string, enum: [requested, confirmed, completed, cancelled] } }
         - { name: paymentStatus, in: query, schema: { type: string, enum: [unpaid, partially_paid, paid, partially_refunded, refunded] } }
+        - { name: queue, in: query, schema: { $ref: '#/components/schemas/OrderQueue' } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
       responses:
         '200':
           description: Admin order page.
@@ -449,9 +490,11 @@ paths:
       tags: [Administration]
       summary: Read an order for fulfilment
       description: >-
-        Customer and consents, lines with source, procurement status, supplier reference and the cost snapshot taken at
-        checkout, shipments with the computed `ready` flag, the payment ledger, the journal, and the actions allowed right
-        now on the order, on each line and on each shipment. Every action below answers with this same document.
+        Customer and consents, lines with the exact variant, source offer, procurement status, supplier reference, the
+        cost snapshot taken at checkout, the actual cost and reference of their purchase, promised date and delayed
+        flag, shipments with the computed `ready` flag, the payment ledger with voids, the journal, the queues the order
+        is in, its economics, and the actions and corrections allowed right now on the order, on each line, shipment
+        and ledger entry. Every action and correction below answers with this same document.
       parameters: [{ $ref: '#/components/parameters/OrderId' }]
       responses:
         '200':
@@ -682,9 +725,11 @@ paths:
       tags: [Administration]
       summary: Record a payment or a refund
       description: >-
-        Appends to the order's payment ledger; entries are never edited or deleted. A payment is accepted while the order
-        is `requested` or `confirmed`, with a handover method (`cash`, `bank_transfer`; `card` and `carrier_cod` only once
-        enabled), and never above what is still due (422 `overpayment`). A refund is accepted in any status up to the net
+        Appends to the order's payment ledger; entries are never edited or deleted (a mistake is voided, see
+        /payments/{paymentId}/void). A payment is accepted while the order is `requested` or `confirmed`, or
+        `completed` when money is owed again after a voided payment (its points come back), with a handover method
+        (`cash`, `bank_transfer`; `card` and `carrier_cod` only once enabled; see GET /api/admin/settings), and never
+        above what is still due (422 `overpayment`). A refund is accepted in any status up to the net
         amount received (422 `refund_exceeds_paid`); on a completed order it lowers the customer's points for the refunded
         amount, never below zero for that order. The payment status is recomputed from the ledger on every write, and the
         order completes when every active line is delivered and it is paid. The same Idempotency-Key again returns the
@@ -710,6 +755,199 @@ paths:
                 properties:
                   payment: { $ref: '#/components/schemas/AdminPayment' }
                   order: { $ref: '#/components/schemas/AdminOrder' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/move:
+    post:
+      tags: [Administration]
+      summary: Move a line to another shipment or a new part
+      description: >-
+        Correction. Allowed on an active line whose shipment is `planned` or `scheduled`, while the order is
+        `requested` or `confirmed`. `shipmentId` is another `planned` or `scheduled` shipment of the order (409
+        `shipment_closed` otherwise); null starts a new part with the same method and fee 0, since the owner split the
+        order. Moving never raises a fee; a shipment left without active lines is cancelled with its fee. Needs a
+        reason, written to the journal (`item_moved`) with the admin's email. Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/MoveLineRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/items/{itemId}/undo-received:
+    post:
+      tags: [Administration]
+      summary: Take back a mistaken "received"
+      description: >-
+        Correction. Allowed on an active `received` line whose shipment is `planned` or `scheduled` (not handed over,
+        not refused), while the order is `requested` or `confirmed`. The line is `ordered` again; a purchase it came
+        with keeps its status. Needs a reason (`item_receipt_undone` in the journal). Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/shipments/{shipmentId}/reschedule:
+    post:
+      tags: [Administration]
+      summary: Move an agreed window
+      description: >-
+        Correction. Allowed on a `scheduled` shipment of a `confirmed` order. Needs a reason; the journal keeps the
+        old and the new window (`shipment_rescheduled`). Requires X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ShipmentId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RescheduleShipmentRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/orders/{id}/payments/{paymentId}/void:
+    post:
+      tags: [Administration]
+      summary: Void a payment or refund entry
+      description: >-
+        Correction, in any order status. The ledger stays append-only: a `correction` entry with the same amount and
+        method points at the voided one (`correctsId`), and the voided entry gets `voidedById`. An entry is voided
+        once (409 `action_not_allowed` the second time); a correction can't be voided. A payment can't be voided when
+        that would leave less than nothing received (422 `void_exceeds_paid`, with `paidMinor`): void the refunds
+        first. Payment status is recomputed. On a completed order the order stays `completed` (it shows in the
+        `unpaid` queue when money is owed again and a payment can be recorded) and loyalty points follow the money:
+        points of the amount lost since completion are taken back, never more than earned, and given back when money
+        returns (loyalty entries with reason `correction`). Needs a reason (`entry_voided` in the journal). Requires
+        X-CSRF-Token.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/AdminOrderUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/to-purchase:
+    get:
+      tags: [Administration]
+      summary: List what is left to buy, by supplier
+      description: >-
+        Active `to_order` lines of confirmed orders, grouped by the supplier of the offer snapshotted at checkout
+        (suppliers by code, then one group with supplier null for lines without an offer). Each line has its order,
+        variant, quantity, the offer as it is now (link, seller, price, currency, rate) and the unit cost snapshot.
+      responses:
+        '200':
+          description: Lines to buy.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ToPurchase' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/purchases:
+    get:
+      tags: [Administration]
+      summary: List purchases
+      description: Up to 30 per page, newest first, optionally one status.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: status, in: query, schema: { type: string, enum: [ordered, received, cancelled] } }
+      responses:
+        '200':
+          description: Purchase page.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminPurchasePage' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Validation' }
+    post:
+      tags: [Administration]
+      summary: Record a purchase placed on a supplier's site
+      description: >-
+        A human places the order with the supplier; this records it for selected lines of one supplier. Every line
+        must be an active `to_order` line of a `confirmed` order (409 `line_not_purchasable`, with `itemId`) whose
+        checkout offer is from `supplier`; lines without an offer may join any supplier (422 `mixed_suppliers`, with
+        `itemId`, otherwise). An unknown line is a 422 `invalid_field`. `fxRateCzk` is required for EUR and PLN and
+        must be 1000000 or left out for CZK. Inbound shipping is split across the lines in proportion to unit price x
+        quantity, rounded down, the remainder to the largest line; actual unit cost CZK = round((unit price + allocated
+        shipping / quantity) x rate). The lines become `ordered` with `supplierReference` = `reference` (journal
+        `item_ordered` with the purchase id). Repeating the same Idempotency-Key and body returns the same purchase
+        (201 again); the same key with another body is a 409 `idempotency_conflict`. Requires X-CSRF-Token.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 16, maxLength: 80 }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreatePurchaseRequest' } } }
+      responses:
+        '201':
+          description: Purchase recorded, or the one recorded earlier with this key.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminPurchase' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/purchases/{id}:
+    get:
+      tags: [Administration]
+      summary: Read a purchase
+      parameters: [{ $ref: '#/components/parameters/PurchaseId' }]
+      responses:
+        '200':
+          description: Purchase with its lines.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminPurchase' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/purchases/{id}/receive:
+    post:
+      tags: [Administration]
+      summary: Receive a purchase
+      description: >-
+        Allowed while the purchase is `ordered`. Every line of it still `ordered` becomes `received` as with the line
+        action (a cancelled line's goods go to own stock); lines received one by one before are left as they are. The
+        purchase becomes `received`. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/PurchaseId' }]
+      responses:
+        '200': { $ref: '#/components/responses/PurchaseUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+  /api/admin/purchases/{id}/cancel:
+    post:
+      tags: [Administration]
+      summary: Cancel a purchase before anything arrived
+      description: >-
+        Allowed while the purchase is `ordered` and none of its lines is `received` (409 `purchase_partly_received`,
+        with `itemId`). Its `ordered` lines go back to `to_order` without a supplier reference (journal
+        `purchase_cancelled` on each order with the reason); `failed` lines stay failed. The purchase keeps its lines
+        for the record but no longer gives them an actual cost. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/PurchaseId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/PurchaseUpdated' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -865,7 +1103,7 @@ paths:
     get:
       tags: [Administration]
       summary: Count variants that need pricing attention
-      description: Active variants of published products whose suggestion is flagged margin_too_low, whose current price is more than the set threshold above the market price, or whose availability is check_needed.
+      description: Active variants of published products whose suggestion is flagged margin_too_low, whose current price is more than the set threshold above the market price, or whose availability is check_needed (variants with own stock left out, they sell from the shelf).
       responses:
         '200':
           description: Alert counts for the dashboard tile.
@@ -880,6 +1118,8 @@ components:
     OrderId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     ItemId: { name: itemId, in: path, required: true, description: 'Order line id; a line of another order is not found.', schema: { type: string, format: uuid } }
     ShipmentId: { name: shipmentId, in: path, required: true, description: 'Shipment id; a shipment of another order is not found.', schema: { type: string, format: uuid } }
+    PaymentId: { name: paymentId, in: path, required: true, description: 'Ledger entry id; an entry of another order is not found.', schema: { type: string, format: uuid } }
+    PurchaseId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
   responses:
     Unauthorized:
       description: No admin session.
@@ -898,10 +1138,15 @@ components:
       content: { application/json: { schema: { $ref: '#/components/schemas/AdminOrder' } } }
     ActionRefused:
       description: >-
-        The action isn't allowed in the order's current state (code `action_not_allowed`, the order's `actions` lists
-        what is), the Idempotency-Key was used with another body (code `idempotency_conflict`), or own stock no longer
-        covers a re-planned shipment (code `not_enough_stock`). Nothing was changed.
+        The action isn't allowed in the current state (code `action_not_allowed` with `action`; the order's `actions`
+        and `corrections`, or the purchase's `actions`, list what is), the Idempotency-Key was used with another body
+        (code `idempotency_conflict`), own stock no longer covers a re-planned shipment (code `not_enough_stock`), the
+        target shipment is closed (code `shipment_closed`), a line can't be bought (code `line_not_purchasable`) or a
+        purchase was partly received (code `purchase_partly_received`). Nothing was changed.
       content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    PurchaseUpdated:
+      description: Done; the purchase as it is now.
+      content: { application/json: { schema: { $ref: '#/components/schemas/AdminPurchase' } } }
     StalePrice:
       description: A suggested price changed since it was shown; nothing was applied. Load the preview or panel again.
       content:
@@ -923,14 +1168,18 @@ components:
           type: string
           description: >-
             Machine-readable reason of a business-rule error. Checkout and quote: invalid_field (with violations),
-            invalid_idempotency_key, product_unavailable, unavailable (both with variantId), method_unavailable,
-            split_unavailable, quote_changed, idempotency_conflict. Admin orders: action_not_allowed (with action),
-            idempotency_conflict, not_enough_stock, overpayment, refund_exceeds_paid, method_not_accepted, invalid_field.
+            invalid_idempotency_key, product_unavailable, unavailable (both with variantId), method_unavailable (with
+            reason), split_unavailable, quote_changed, idempotency_conflict. Admin orders: action_not_allowed (with
+            action), idempotency_conflict, not_enough_stock, overpayment, refund_exceeds_paid, method_not_accepted,
+            invalid_field, shipment_closed, void_exceeds_paid (with paidMinor). Purchases: invalid_idempotency_key,
+            idempotency_conflict, invalid_field, line_not_purchasable, mixed_suppliers, purchase_partly_received (all
+            three with itemId), action_not_allowed. Admin login: invalid_credentials.
         variantId: { type: string, format: uuid, description: The variant a checkout error is about. }
         action: { type: string, description: 'The refused admin action, with action_not_allowed.' }
         reason: { type: string, enum: [postal_code_required, invalid_postal_code, outside_prague, not_offered], description: 'Why the method is refused, with method_unavailable.' }
         amountDueMinor: { type: integer, description: 'What is still due, with overpayment.' }
-        paidMinor: { type: integer, description: 'Net amount received, with refund_exceeds_paid.' }
+        paidMinor: { type: integer, description: 'Net amount received, with refund_exceeds_paid and void_exceeds_paid.' }
+        itemId: { type: string, format: uuid, description: 'The order line a purchase error is about.' }
         violations:
           type: array
           items:
@@ -1091,13 +1340,14 @@ components:
           description: "Methods offered at all, with whether they work for this postal code. carrier_cz is missing while its tariff isn't set."
           items:
             type: object
-            required: [method, available, reason, fee, note]
+            required: [method, available, reason, fee, note, freeFromMinor]
             properties:
               method: { $ref: '#/components/schemas/DeliveryMethod' }
               available: { type: boolean }
               reason: { type: [string, 'null'], enum: [postal_code_required, invalid_postal_code, outside_prague, null] }
               fee: { oneOf: [{ $ref: '#/components/schemas/Price' }, { type: 'null' }], description: 'Fee per shipment for this basket, null when not available.' }
-              note: { type: [string, 'null'], description: Pickup place and time note for pickup_andel. }
+              note: { type: [string, 'null'], description: 'Pickup place and time note for pickup_andel, in the request locale.' }
+              freeFromMinor: { type: [integer, 'null'], description: 'Goods subtotal in haléře from which the method is free (50000 for prague_personal); null when its fee does not depend on it.' }
         delivery:
           type: object
           required: [method, postalCode]
@@ -1371,13 +1621,14 @@ components:
       enum: [planned, scheduled, handed_over, refused, cancelled]
     OrderReceipt:
       type: object
-      required: [reference, status, paymentStatus, createdAt, fulfilment, items, shipments, pickupNote, subtotal, shipping, total, paid, amountDue, lookupToken]
+      required: [reference, status, paymentStatus, createdAt, fulfilment, contactChannel, items, shipments, pickupNote, subtotal, shipping, total, paid, amountDue, lookupToken]
       properties:
         reference: { type: string }
         status: { $ref: '#/components/schemas/OrderStatus' }
         paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
         createdAt: { type: string, format: date-time }
         fulfilment: { type: string, enum: [together, split] }
+        contactChannel: { type: [string, 'null'], enum: [whatsapp, telegram, phone, null], description: 'How NODRA gets in touch, as chosen at checkout; null on orders placed before D04.' }
         items: { type: array, items: { $ref: '#/components/schemas/ReceiptItem' } }
         shipments:
           type: array
@@ -1393,7 +1644,7 @@ components:
               leadTimeMaxDays: { type: [integer, 'null'] }
               scheduledFrom: { type: [string, 'null'], format: date-time, description: 'Agreed window, once scheduled.' }
               scheduledTo: { type: [string, 'null'], format: date-time }
-        pickupNote: { type: [string, 'null'], description: 'Where and how pickup works, for pickup_andel shipments.' }
+        pickupNote: { type: [string, 'null'], description: 'Where and how pickup works, for pickup_andel shipments, in the order language.' }
         subtotal: { $ref: '#/components/schemas/Price' }
         shipping: { $ref: '#/components/schemas/Price' }
         total: { $ref: '#/components/schemas/Price' }
@@ -1474,25 +1725,95 @@ components:
         page: { type: integer }
         pages: { type: integer }
         total: { type: integer }
-        items:
+        items: { type: array, items: { $ref: '#/components/schemas/AdminOrderRow' } }
+    AdminOrderRow:
+      type: object
+      required: [id, reference, status, paymentStatus, customerName, email, phone, country, total, createdAt, delayed, queues]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
+        customerName: { type: string }
+        email: { type: string }
+        phone: { type: [string, 'null'], description: 'Null on orders placed before D04.' }
+        country: { type: string }
+        total: { $ref: '#/components/schemas/Price' }
+        createdAt: { type: string, format: date-time }
+        delayed: { type: boolean, description: 'An active ordered line is past its promised date.' }
+        queues: { type: array, items: { $ref: '#/components/schemas/OrderQueue' }, description: 'Queues the order is in, in the order of OrderQueue.' }
+    OrderQueue:
+      type: string
+      enum: [review, problem, to_purchase, waiting, delayed, to_schedule, delivering, unpaid, refund]
+      description: See GET /api/admin/queues for when an order is in each.
+    QueueCounts:
+      type: object
+      required: [review, problem, to_purchase, waiting, delayed, to_schedule, delivering, unpaid, refund]
+      properties:
+        review: { type: integer }
+        problem: { type: integer }
+        to_purchase: { type: integer }
+        waiting: { type: integer }
+        delayed: { type: integer }
+        to_schedule: { type: integer }
+        delivering: { type: integer }
+        unpaid: { type: integer }
+        refund: { type: integer }
+    AdminDashboard:
+      type: object
+      required: [orders, openOrders, revenueCzkMinor, revenueEurMinor, products, ownStock, ownStockVariants, queues, recentOrders]
+      properties:
+        orders: { type: integer }
+        openOrders: { type: integer, description: requested or confirmed. }
+        revenueCzkMinor: { type: integer }
+        revenueEurMinor: { type: integer, description: Older EUR demo orders only. }
+        products: { type: integer, description: Published products. }
+        ownStock:
           type: array
+          description: 'Up to 20 variants NODRA holds itself (stock above zero, any card state), lowest stock first.'
           items:
             type: object
-            required: [id, reference, status, paymentStatus, customerName, email, phone, country, total, createdAt]
+            required: [id, sku, stock, product]
             properties:
               id: { type: string, format: uuid }
-              reference: { type: string }
-              status: { $ref: '#/components/schemas/OrderStatus' }
-              paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
-              customerName: { type: string }
-              email: { type: string }
-              phone: { type: [string, 'null'], description: 'Null on orders placed before D04.' }
-              country: { type: string }
-              total: { $ref: '#/components/schemas/Price' }
-              createdAt: { type: string, format: date-time }
+              sku: { type: string }
+              stock: { type: integer, minimum: 1 }
+              product: { type: [string, 'null'], description: English product name. }
+        ownStockVariants: { type: integer, description: 'All variants with own stock, the list above shows up to 20.' }
+        queues: { $ref: '#/components/schemas/QueueCounts' }
+        recentOrders: { type: array, items: { $ref: '#/components/schemas/AdminOrderRow' }, description: The 5 newest orders. }
+    AdminSettings:
+      type: object
+      required: [currency, payment, delivery, privacyVersion]
+      properties:
+        currency: { type: string, enum: [CZK], description: Currency of every new order. }
+        payment:
+          type: object
+          required: [handoverMethods, paymentMethods, refundMethods]
+          properties:
+            handoverMethods: { type: array, items: { type: string, enum: [cash, bank_transfer, card] }, description: 'Taken at handover.' }
+            paymentMethods: { type: array, items: { type: string, enum: [cash, bank_transfer, card, carrier_cod] }, description: 'Accepted for kind payment: the handover methods, plus carrier_cod once carrier cash on delivery is set up.' }
+            refundMethods: { type: array, items: { type: string, enum: [cash, bank_transfer, card] }, description: 'Accepted for kind refund.' }
+        delivery:
+          type: object
+          required: [methods, pragueFeeMinor, pragueFreeFromMinor, carrierFeeMinor, carrierCodFeeMinor, pickupNote]
+          properties:
+            methods: { type: array, items: { $ref: '#/components/schemas/DeliveryMethod' }, description: Methods offered at checkout. }
+            pragueFeeMinor: { type: integer }
+            pragueFreeFromMinor: { type: integer }
+            carrierFeeMinor: { type: [integer, 'null'], description: Null while carrier delivery is off. }
+            carrierCodFeeMinor: { type: [integer, 'null'] }
+            pickupNote:
+              type: object
+              required: [cs, de, en]
+              properties:
+                cs: { type: string }
+                de: { type: string }
+                en: { type: string }
+        privacyVersion: { type: string, description: Stored with every privacy consent. }
     AdminOrder:
       type: object
-      required: [id, reference, status, paymentStatus, locale, currency, fulfilment, createdAt, customer, consents, items, shipments, payments, events, subtotal, shipping, total, paid, amountDue, refundDue, lookupToken, actions]
+      required: [id, reference, status, paymentStatus, locale, currency, fulfilment, createdAt, confirmedAt, queues, delayed, customer, consents, items, shipments, payments, events, subtotal, shipping, total, paid, amountDue, refundDue, economics, lookupToken, actions]
       properties:
         id: { type: string, format: uuid }
         reference: { type: string }
@@ -1500,8 +1821,11 @@ components:
         paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
         locale: { type: string, enum: [cs, de, en] }
         currency: { type: string, enum: [CZK, EUR] }
-        fulfilment: { type: string, enum: [together, split] }
+        fulfilment: { type: string, enum: [together, split], description: 'As chosen at checkout; moving lines later does not change it.' }
         createdAt: { type: string, format: date-time }
+        confirmedAt: { type: [string, 'null'], format: date-time, description: 'Latest customer agreement; promised dates count from it. Null before confirmation and on orders confirmed before D05 without a journal entry.' }
+        queues: { type: array, items: { $ref: '#/components/schemas/OrderQueue' } }
+        delayed: { type: boolean, description: 'An active ordered line is past its promised date.' }
         customer:
           type: object
           required: [name, email, phone, contactChannel, country, address, city, postalCode, district, deliveryNote, accountId]
@@ -1536,7 +1860,7 @@ components:
             required: [id, type, data, actor, createdAt]
             properties:
               id: { type: string, format: uuid }
-              type: { type: string, description: 'placed, confirmed, terms_changed, item_ordered, item_received, item_failed, item_cancelled, replacement_added, item_returned, shipment_scheduled, shipment_handed_over, shipment_refused, shipment_cancelled, payment_recorded, refund_recorded, cancelled, completed, loyalty_adjusted, migrated' }
+              type: { type: string, description: 'placed, confirmed, terms_changed, item_ordered (with purchaseId when bought in a purchase), item_received (likewise), item_failed, item_cancelled, replacement_added, item_returned, shipment_scheduled, shipment_handed_over, shipment_refused, shipment_cancelled, payment_recorded, refund_recorded, cancelled, completed, loyalty_adjusted, migrated; corrections (each with reason): item_moved, item_receipt_undone, shipment_rescheduled, entry_voided; purchase_cancelled' }
               data: { type: object, description: 'Details of the event, such as the line, the reason, customerAgreedVia or the amounts.' }
               actor: { type: string, description: 'customer, system or the admin email.' }
               createdAt: { type: string, format: date-time }
@@ -1546,20 +1870,49 @@ components:
         paid: { $ref: '#/components/schemas/Price', description: Payments minus refunds. }
         amountDue: { $ref: '#/components/schemas/Price' }
         refundDue: { $ref: '#/components/schemas/Price', description: Money taken above the current total. }
+        economics: { oneOf: [{ $ref: '#/components/schemas/OrderEconomics' }, { type: 'null' }], description: 'Null on the older EUR demo orders.' }
         lookupToken: { type: string }
         actions:
           type: array
           description: Order actions allowed right now.
           items: { type: string, enum: [confirm, cancel, record_payment, record_refund] }
+    OrderEconomics:
+      type: object
+      description: 'CZK orders only, all haléře. Active lines count; cost is the actual unit cost of a line where it was bought in a purchase, else its checkout snapshot, times quantity.'
+      required: [goodsRevenueMinor, shippingChargedMinor, costMinor, expectedResultMinor, marginBp, costComplete, unknownCostLines]
+      properties:
+        goodsRevenueMinor: { type: integer, description: Active lines. }
+        shippingChargedMinor: { type: integer, description: 'Shown next to the result, not in it.' }
+        costMinor: { type: integer }
+        expectedResultMinor: { type: integer, description: goodsRevenueMinor - costMinor. }
+        marginBp: { type: [integer, 'null'], description: 'Result over cost in basis points, rounded down, the way the pricing panel shows margins; null while cost is 0.' }
+        costComplete: { type: boolean, description: 'Every active line has an actual cost from a purchase (never for own stock lines).' }
+        unknownCostLines: { type: integer, description: 'Active lines with neither an actual nor a snapshot cost; they count as 0.' }
+    OfferSource:
+      type: object
+      description: 'The supplier offer a line was priced from at checkout, as it is now. Admin-only.'
+      required: [id, supplier, seller, url, currency, priceMinor, inboundShippingMinor, fxRateCzk, fxRateDate]
+      properties:
+        id: { type: string, format: uuid }
+        supplier: { type: string }
+        seller: { type: [string, 'null'] }
+        url: { type: string }
+        currency: { type: string, enum: [CZK, EUR, PLN] }
+        priceMinor: { type: integer, description: Offer currency. }
+        inboundShippingMinor: { type: integer, description: 'Per unit, offer currency.' }
+        fxRateCzk: { type: [integer, 'null'] }
+        fxRateDate: { type: [string, 'null'], format: date }
     AdminOrderItem:
       type: object
-      required: [id, variantId, name, variant, sku, quantity, unitPrice, lineTotal, state, procurementStatus, supplierReference, shipmentId, replacesItemId, availabilityStatus, leadTimeMinDays, leadTimeMaxDays, supplierOfferId, unitCostCzkMinor, actions]
+      required: [id, variantId, name, variant, sku, mpn, ean, quantity, unitPrice, lineTotal, state, procurementStatus, supplierReference, shipmentId, replacesItemId, availabilityStatus, leadTimeMinDays, leadTimeMaxDays, supplierOfferId, offer, unitCostCzkMinor, actualUnitCostCzkMinor, purchase, promisedDate, delayed, actions, corrections]
       properties:
         id: { type: string, format: uuid }
         variantId: { type: [string, 'null'], format: uuid }
         name: { type: string }
         variant: { type: string }
         sku: { type: string }
+        mpn: { type: [string, 'null'], description: "The exact variant's manufacturer part number, as the variant has it now." }
+        ean: { type: [string, 'null'] }
         quantity: { type: integer }
         unitPrice: { type: integer }
         lineTotal: { type: integer }
@@ -1572,14 +1925,29 @@ components:
         leadTimeMinDays: { type: [integer, 'null'] }
         leadTimeMaxDays: { type: [integer, 'null'] }
         supplierOfferId: { type: [string, 'null'], format: uuid }
-        unitCostCzkMinor: { type: [integer, 'null'], description: 'Landed cost per unit at checkout, in haléře.' }
+        offer: { oneOf: [{ $ref: '#/components/schemas/OfferSource' }, { type: 'null' }], description: 'Null without an offer at checkout or when it was deleted since.' }
+        unitCostCzkMinor: { type: [integer, 'null'], description: 'Landed cost per unit at checkout (snapshot), in haléře.' }
+        actualUnitCostCzkMinor: { type: [integer, 'null'], description: 'From the purchase line when the line was bought in a purchase that is not cancelled; null otherwise (also after the one-line mark ordered action).' }
+        purchase:
+          type: [object, 'null']
+          required: [id, reference, status]
+          properties:
+            id: { type: string, format: uuid }
+            reference: { type: string }
+            status: { type: string, enum: [ordered, received] }
+        promisedDate: { type: [string, 'null'], format: date, description: 'Prague day the order was last confirmed + leadTimeMaxDays; null without either.' }
+        delayed: { type: boolean, description: 'Active, still ordered, and today is after promisedDate.' }
         actions:
           type: array
           description: Line actions allowed right now.
           items: { type: string, enum: [change_terms, mark_ordered, mark_received, mark_failed, cancel, replace, return] }
+        corrections:
+          type: array
+          description: Corrections allowed right now (each needs a reason).
+          items: { type: string, enum: [move, undo_received] }
     AdminShipment:
       type: object
-      required: [id, number, method, status, fee, leadTimeMinDays, leadTimeMaxDays, scheduledFrom, scheduledTo, handedOverAt, ready, itemIds, actions]
+      required: [id, number, method, status, fee, leadTimeMinDays, leadTimeMaxDays, scheduledFrom, scheduledTo, handedOverAt, ready, itemIds, actions, corrections]
       properties:
         id: { type: string, format: uuid }
         number: { type: integer }
@@ -1596,18 +1964,165 @@ components:
         actions:
           type: array
           items: { type: string, enum: [schedule, hand_over, refuse] }
+        corrections:
+          type: array
+          description: 'reschedule on a scheduled shipment of a confirmed order (schedule still accepts it too, without a reason).'
+          items: { type: string, enum: [reschedule] }
     AdminPayment:
       type: object
-      required: [id, kind, method, amount, shipmentId, recordedAt, recordedBy, note]
+      required: [id, kind, method, amount, shipmentId, recordedAt, recordedBy, note, correctsId, voidedById, corrections]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [payment, refund] }
+        kind: { type: string, enum: [payment, refund, correction], description: 'A correction cancels the amount of the entry it points at.' }
         method: { type: string, enum: [cash, bank_transfer, card, carrier_cod] }
         amount: { $ref: '#/components/schemas/Price' }
         shipmentId: { type: [string, 'null'], format: uuid }
         recordedAt: { type: string, format: date-time }
         recordedBy: { type: string }
+        note: { type: [string, 'null'], description: 'For a correction, the reason it was voided.' }
+        correctsId: { type: [string, 'null'], format: uuid, description: 'The entry a correction voids.' }
+        voidedById: { type: [string, 'null'], format: uuid, description: 'The correction that voided this entry.' }
+        corrections:
+          type: array
+          description: 'void, once, on a payment or refund.'
+          items: { type: string, enum: [void] }
+    MoveLineRequest:
+      type: object
+      required: [reason]
+      properties:
+        shipmentId: { type: [string, 'null'], format: uuid, description: 'Another planned or scheduled shipment of the order; null or missing starts a new part with fee 0.' }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    RescheduleShipmentRequest:
+      type: object
+      required: [from, to, reason]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time, description: After from. }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    CreatePurchaseRequest:
+      type: object
+      required: [supplier, reference, currency, lines]
+      properties:
+        supplier: { type: string, enum: [allegro_cz, allegro_pl, bikeinn, bike24, bike_discount, other], description: 'Supplier code, as on offers. Every line with an offer must come from it.' }
+        seller: { type: [string, 'null'], maxLength: 120 }
+        reference: { type: string, minLength: 1, maxLength: 120, description: "The supplier's order number; becomes the lines' supplierReference." }
+        currency: { type: string, enum: [CZK, EUR, PLN] }
+        fxRateCzk: { type: [integer, 'null'], minimum: 1, description: 'CZK per currency unit in millionths, as paid. Required for EUR and PLN; 1000000 or left out for CZK.' }
+        fxRateDate: { type: [string, 'null'], format: date }
+        inboundShippingMinor: { type: integer, minimum: 0, default: 0, description: 'Delivery to NODRA for the whole purchase, purchase currency.' }
+        note: { type: [string, 'null'], maxLength: 500 }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/PurchaseLineRequest' }
+    PurchaseLineRequest:
+      type: object
+      required: [itemId, unitPriceMinor]
+      properties:
+        itemId: { type: string, format: uuid, description: 'Order line id, any confirmed order; each line once. The whole line quantity is bought.' }
+        unitPriceMinor: { type: integer, minimum: 0, description: 'Per unit, purchase currency; prefill it from the offer.' }
+    AdminPurchase:
+      type: object
+      required: [id, supplier, seller, reference, currency, fxRateCzk, fxRateDate, inboundShippingMinor, status, orderedAt, receivedAt, cancelledAt, cancelReason, note, createdBy, goodsMinor, costCzkMinor, lines, actions]
+      properties:
+        id: { type: string, format: uuid }
+        supplier: { type: string }
+        seller: { type: [string, 'null'] }
+        reference: { type: string }
+        currency: { type: string, enum: [CZK, EUR, PLN] }
+        fxRateCzk: { type: integer }
+        fxRateDate: { type: [string, 'null'], format: date }
+        inboundShippingMinor: { type: integer }
+        status: { type: string, enum: [ordered, received, cancelled] }
+        orderedAt: { type: string, format: date-time }
+        receivedAt: { type: [string, 'null'], format: date-time }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+        cancelReason: { type: [string, 'null'] }
         note: { type: [string, 'null'] }
+        createdBy: { type: string, description: Admin email. }
+        goodsMinor: { type: integer, description: 'Sum of unit price x quantity, purchase currency.' }
+        costCzkMinor: { type: integer, description: 'Sum of actual unit cost x quantity, haléře (shipping included).' }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [id, itemId, orderId, orderReference, sku, name, variant, quantity, unitPriceMinor, allocatedShippingMinor, unitCostCzkMinor, snapshotUnitCostCzkMinor, procurementStatus, lineState]
+            properties:
+              id: { type: string, format: uuid }
+              itemId: { type: string, format: uuid }
+              orderId: { type: string, format: uuid }
+              orderReference: { type: string }
+              sku: { type: string }
+              name: { type: string }
+              variant: { type: string }
+              quantity: { type: integer }
+              unitPriceMinor: { type: integer }
+              allocatedShippingMinor: { type: integer, description: "This line's share of the inbound shipping, purchase currency." }
+              unitCostCzkMinor: { type: integer, description: Actual landed cost per unit. }
+              snapshotUnitCostCzkMinor: { type: [integer, 'null'], description: 'The checkout snapshot, to compare.' }
+              procurementStatus: { type: string, enum: [from_stock, to_order, ordered, received, failed], description: 'The order line now.' }
+              lineState: { type: string, enum: [active, cancelled, returned] }
+        actions:
+          type: array
+          description: 'receive and cancel while ordered; cancel is still refused once a line was received.'
+          items: { type: string, enum: [receive, cancel] }
+    AdminPurchasePage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, supplier, seller, reference, currency, status, orderedAt, receivedAt, lineCount, goodsMinor, inboundShippingMinor, costCzkMinor]
+            properties:
+              id: { type: string, format: uuid }
+              supplier: { type: string }
+              seller: { type: [string, 'null'] }
+              reference: { type: string }
+              currency: { type: string, enum: [CZK, EUR, PLN] }
+              status: { type: string, enum: [ordered, received, cancelled] }
+              orderedAt: { type: string, format: date-time }
+              receivedAt: { type: [string, 'null'], format: date-time }
+              lineCount: { type: integer }
+              goodsMinor: { type: integer }
+              inboundShippingMinor: { type: integer }
+              costCzkMinor: { type: integer }
+    ToPurchase:
+      type: object
+      required: [groups, lineCount]
+      properties:
+        lineCount: { type: integer }
+        groups:
+          type: array
+          items:
+            type: object
+            required: [supplier, lines]
+            properties:
+              supplier: { type: [string, 'null'], description: 'Null for the lines without an offer ("no source"), always the last group.' }
+              lines: { type: array, items: { $ref: '#/components/schemas/ToPurchaseLine' } }
+    ToPurchaseLine:
+      type: object
+      required: [itemId, orderId, orderReference, confirmedAt, variantId, name, variant, sku, quantity, unitPrice, snapshotUnitCostCzkMinor, leadTimeMaxDays, promisedDate, offer]
+      properties:
+        itemId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        orderReference: { type: string }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        variantId: { type: [string, 'null'], format: uuid }
+        name: { type: string }
+        variant: { type: string }
+        sku: { type: string }
+        quantity: { type: integer }
+        unitPrice: { $ref: '#/components/schemas/Price', description: 'Selling price per unit.' }
+        snapshotUnitCostCzkMinor: { type: [integer, 'null'] }
+        leadTimeMaxDays: { type: [integer, 'null'] }
+        promisedDate: { type: [string, 'null'], format: date }
+        offer: { oneOf: [{ $ref: '#/components/schemas/OfferSource' }, { type: 'null' }] }
     AccountSummary:
       type: object
       required: [name, email, points, historyPage, historyPages, historyTotal, history, lastDelivery]
@@ -1625,8 +2140,8 @@ components:
             required: [reference, points, reason, createdAt]
             properties:
               reference: { type: string }
-              points: { type: integer, description: Negative for a refund. }
-              reason: { type: string, enum: [earn, refund] }
+              points: { type: integer, description: 'Negative for a refund; a correction (a voided payment or refund on a completed order) can go either way.' }
+              reason: { type: string, enum: [earn, refund, correction] }
               createdAt: { type: string }
         lastDelivery:
           type: [object, 'null']
