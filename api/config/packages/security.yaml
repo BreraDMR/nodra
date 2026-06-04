@@ -22,6 +22,8 @@ security:
                 check_path: /api/admin/login
                 username_path: email
                 password_path: password
+                # a wrong password answers as a Problem like every other API error
+                failure_handler: App\Security\AdminLoginFailureHandler
             logout:
                 path: /api/admin/logout
 
