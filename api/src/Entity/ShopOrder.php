@@ -111,6 +111,10 @@ class ShopOrder
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** the latest customer agreement; promised dates count from it. Null until confirmed and on migrated orders */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $confirmedAt = null;
+
     /**
      * @param array{name: string, email: string, phone: string, contactChannel: string, address: string, city: string, postalCode: string, district: string, deliveryNote: ?string} $customer
      */
@@ -168,6 +172,7 @@ class ShopOrder
     public function getShippingMinor(): int { return $this->shippingMinor; }
     public function getTotalMinor(): int { return $this->totalMinor; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getConfirmedAt(): ?\DateTimeImmutable { return $this->confirmedAt; }
 
     public function assignAccount(CustomerAccount $account): void { $this->account = $account; }
 
@@ -186,7 +191,11 @@ class ShopOrder
         $this->paymentStatus = $status;
     }
 
-    public function confirm(): void { $this->move(OrderStatus::CONFIRMED, [OrderStatus::REQUESTED]); }
+    public function confirm(): void
+    {
+        $this->move(OrderStatus::CONFIRMED, [OrderStatus::REQUESTED]);
+        $this->confirmedAt = new \DateTimeImmutable();
+    }
 
     /** Terms changed after the customer agreed: the order waits for a new agreement. */
     public function reopen(): void { $this->move(OrderStatus::REQUESTED, [OrderStatus::CONFIRMED]); }
