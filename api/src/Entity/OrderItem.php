@@ -158,6 +158,24 @@ class OrderItem
 
     public function markReceived(): void { $this->moveProcurement(Procurement::RECEIVED, [Procurement::ORDERED]); }
 
+    /** A mistaken "received": the goods are still on their way. */
+    public function undoReceived(): void { $this->moveProcurement(Procurement::ORDERED, [Procurement::RECEIVED]); }
+
+    /** The purchase was cancelled, the line has to be bought again. */
+    public function backToOrder(): void
+    {
+        $this->moveProcurement(Procurement::TO_ORDER, [Procurement::ORDERED]);
+        $this->supplierReference = null;
+    }
+
+    public function moveTo(Shipment $shipment): void
+    {
+        if (!$shipment->getOrder()->getId()->equals($this->order->getId())) {
+            throw new \DomainException('A line can only move to a shipment of its own order');
+        }
+        $this->shipment = $shipment;
+    }
+
     public function markFailed(): void { $this->moveProcurement(Procurement::FAILED, [Procurement::TO_ORDER, Procurement::ORDERED]); }
 
     /** Goods of a refused shipment went to own stock and are taken from it again. */
