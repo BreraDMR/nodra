@@ -8,7 +8,10 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 
-/** Points ledger: one `earn` entry per completed order, negative `refund` entries after money went back. */
+/**
+ * Points ledger: one `earn` entry per completed order, negative `refund` entries after money went back, and
+ * `correction` entries (either sign) when a voided ledger entry changed what the customer paid.
+ */
 #[ORM\Entity]
 #[ORM\Table(name: 'loyalty_entry')]
 #[ORM\Index(columns: ['shop_order_id'], name: 'idx_loyalty_order')]
@@ -17,6 +20,7 @@ class LoyaltyEntry
 {
     public const EARN = 'earn';
     public const REFUND = 'refund';
+    public const CORRECTION = 'correction';
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
