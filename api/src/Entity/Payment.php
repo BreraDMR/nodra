@@ -9,7 +9,10 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 
-/** One line of the append-only payment ledger. There are no setters on purpose: entries are never edited. */
+/**
+ * One line of the append-only payment ledger. There are no setters on purpose: entries are never edited. A mistaken
+ * entry is voided by a `correction` that cancels its amount and points at it, once.
+ */
 #[ORM\Entity]
 #[ORM\Table(name: 'payment')]
 #[ORM\Index(columns: ['order_id', 'recorded_at'], name: 'idx_payment_order')]
@@ -17,6 +20,9 @@ class Payment
 {
     public const PAYMENT = 'payment';
     public const REFUND = 'refund';
+    /** voids the entry it points at */
+    public const CORRECTION = 'correction';
+    /** what the admin records by hand; corrections come only from voiding */
     public const KINDS = [self::PAYMENT, self::REFUND];
     public const METHODS = ['cash', 'bank_transfer', 'card', 'carrier_cod'];
 
@@ -32,7 +38,7 @@ class Payment
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Shipment $shipment;
 
-    #[ORM\Column(length: 8)]
+    #[ORM\Column(length: 12)]
     private string $kind;
 
     #[ORM\Column(length: 16)]
@@ -56,6 +62,11 @@ class Payment
     #[ORM\Column(length: 64)]
     private string $requestHash;
 
+    /** the entry a correction voids; unique, so an entry is voided once */
+    #[ORM\OneToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?self $corrects = null;
+
     public function __construct(ShopOrder $order, ?Shipment $shipment, string $kind, string $method, int $amountMinor, string $recordedBy, ?string $note, string $idempotencyKey, string $requestHash)
     {
         if ($amountMinor <= 0) {
@@ -74,6 +85,19 @@ class Payment
         $this->requestHash = $requestHash;
     }
 
+    /** A correction that cancels the amount of a payment or a refund. */
+    public static function voiding(self $entry, string $reason, string $recordedBy): self
+    {
+        if ($entry->kind === self::CORRECTION) {
+            throw new \DomainException('A correction cannot be voided');
+        }
+        $id = $entry->id->toRfc4122();
+        $correction = new self($entry->order, $entry->shipment, self::CORRECTION, $entry->method, $entry->amountMinor, $recordedBy, $reason, 'void-'.$id, hash('sha256', 'void '.$id));
+        $correction->corrects = $entry;
+
+        return $correction;
+    }
+
     public function getId(): Uuid { return $this->id; }
     public function getOrder(): ShopOrder { return $this->order; }
     public function getShipment(): ?Shipment { return $this->shipment; }
@@ -85,4 +109,5 @@ class Payment
     public function getNote(): ?string { return $this->note; }
     public function getIdempotencyKey(): string { return $this->idempotencyKey; }
     public function getRequestHash(): string { return $this->requestHash; }
+    public function getCorrects(): ?self { return $this->corrects; }
 }
