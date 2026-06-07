@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Order;
 
 use App\Checkout\BasketLoader;
-use App\Entity\OrderEvent;
+use App\Entity\LoyaltyEntry;
 use App\Entity\OrderItem;
 use App\Entity\Payment;
 use App\Entity\ProductVariant;
@@ -30,16 +30,16 @@ final class OrderActions
         private OrderRules $rules,
         private OrderJournal $journal,
         private StockKeeper $stock,
-        private Loyalty $loyalty,
         private PaymentSettings $paymentSettings,
         private BasketLoader $basket,
         private OrderPresenter $presenter,
+        private OrderTransaction $tx,
     ) {}
 
     /** @param array{channel: string, note: string} $agreement */
     public function confirm(string $orderId, array $agreement, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($agreement, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($agreement, $actor): void {
             $this->rules->require(OrderRules::CONFIRM, $this->rules->orderActions($s), 'order');
             $s->order->confirm();
             $this->journal->record($s->order, 'confirmed', ['customerAgreedVia' => $agreement], $actor);
@@ -48,7 +48,7 @@ final class OrderActions
 
     public function cancel(string $orderId, string $reason, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($reason, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($reason, $actor): void {
             $this->rules->require(OrderRules::CANCEL, $this->rules->orderActions($s), 'order');
             $cancelled = [];
             foreach ($s->activeItems() as $item) {
@@ -69,7 +69,7 @@ final class OrderActions
     /** @param ?array{channel: string, note: string} $agreement */
     public function changeTerms(string $orderId, string $itemId, ?int $unitPriceMinor, ?int $leadTimeMinDays, ?int $leadTimeMaxDays, ?array $agreement, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $unitPriceMinor, $leadTimeMinDays, $leadTimeMaxDays, $agreement, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $unitPriceMinor, $leadTimeMinDays, $leadTimeMaxDays, $agreement, $actor): void {
             $item = $this->item($s, $itemId, OrderRules::CHANGE_TERMS);
             if (($leadTimeMinDays === null) !== ($leadTimeMaxDays === null)) {
                 throw OrderProblem::invalid('leadTimeMaxDays', 'Send the minimum and the maximum lead time together');
@@ -102,7 +102,7 @@ final class OrderActions
 
     public function markOrdered(string $orderId, string $itemId, string $supplierReference, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $supplierReference, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $supplierReference, $actor): void {
             $item = $this->item($s, $itemId, OrderRules::MARK_ORDERED);
             $item->markOrdered($supplierReference);
             $this->journal->record($s->order, 'item_ordered', ['itemId' => $item->getId()->toRfc4122(), 'sku' => $item->getSku(), 'supplierReference' => $supplierReference], $actor);
@@ -111,21 +111,31 @@ final class OrderActions
 
     public function markReceived(string $orderId, string $itemId, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $actor): void {
-            $item = $this->item($s, $itemId, OrderRules::MARK_RECEIVED);
-            $item->markReceived();
-            // the line was cancelled while the goods were on their way: they are NODRA's own stock now
-            $toStock = !$item->isActive() && $item->getVariant() !== null;
-            if ($toStock) {
-                $this->stock->put($item->getVariant()->getId(), $item->getQuantity(), $s->order, 'goods of a cancelled line received');
-            }
-            $this->journal->record($s->order, 'item_received', ['itemId' => $item->getId()->toRfc4122(), 'sku' => $item->getSku(), 'toOwnStock' => $toStock], $actor);
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $actor): void {
+            $this->receiveGoods($s, $this->item($s, $itemId, OrderRules::MARK_RECEIVED), $actor);
         });
+    }
+
+    /**
+     * The goods of an ordered line arrived; purchases receive their lines through here too.
+     *
+     * @param array<string, mixed> $journal extra journal fields, such as the purchase
+     */
+    public function receiveGoods(OrderState $s, OrderItem $item, string $actor, array $journal = []): void
+    {
+        $this->rules->require(OrderRules::MARK_RECEIVED, $this->rules->itemActions($s, $item), 'line');
+        $item->markReceived();
+        // the line was cancelled while the goods were on their way: they are NODRA's own stock now
+        $toStock = !$item->isActive() && $item->getVariant() !== null;
+        if ($toStock) {
+            $this->stock->put($item->getVariant()->getId(), $item->getQuantity(), $s->order, 'goods of a cancelled line received');
+        }
+        $this->journal->record($s->order, 'item_received', ['itemId' => $item->getId()->toRfc4122(), 'sku' => $item->getSku(), 'toOwnStock' => $toStock] + $journal, $actor);
     }
 
     public function markFailed(string $orderId, string $itemId, string $reason, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $reason, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $reason, $actor): void {
             $item = $this->item($s, $itemId, OrderRules::MARK_FAILED);
             $item->markFailed();
             $this->journal->record($s->order, 'item_failed', ['itemId' => $item->getId()->toRfc4122(), 'sku' => $item->getSku(), 'reason' => $reason], $actor);
@@ -134,7 +144,7 @@ final class OrderActions
 
     public function cancelItem(string $orderId, string $itemId, string $reason, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $reason, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $reason, $actor): void {
             $item = $this->item($s, $itemId, OrderRules::CANCEL_LINE);
             $this->release($s, $item, 'line cancelled');
             $item->cancel();
@@ -145,7 +155,7 @@ final class OrderActions
     /** @param array{channel: string, note: string} $agreement */
     public function replace(string $orderId, string $itemId, string $variantId, ?int $quantity, ?int $unitPriceMinor, array $agreement, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $variantId, $quantity, $unitPriceMinor, $agreement, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $variantId, $quantity, $unitPriceMinor, $agreement, $actor): void {
             $failed = $this->item($s, $itemId, OrderRules::REPLACE);
             $quantity ??= $failed->getQuantity();
             $line = $this->basket->lines([strtolower($variantId) => $quantity], $s->order->getLocale(), lock: true, publishedOnly: false)[0];
@@ -175,7 +185,7 @@ final class OrderActions
 
     public function returnItem(string $orderId, string $itemId, string $reason, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($itemId, $reason, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($itemId, $reason, $actor): void {
             $item = $this->item($s, $itemId, OrderRules::RETURN);
             $item->markReturned();
             if ($item->getVariant() !== null) {
@@ -187,7 +197,7 @@ final class OrderActions
 
     public function schedule(string $orderId, string $shipmentId, \DateTimeImmutable $from, \DateTimeImmutable $to, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($shipmentId, $from, $to, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($shipmentId, $from, $to, $actor): void {
             $shipment = $this->shipment($s, $shipmentId, OrderRules::SCHEDULE);
             if ($to <= $from) {
                 throw OrderProblem::invalid('to', 'The window must end after it starts');
@@ -212,7 +222,7 @@ final class OrderActions
 
     public function handOver(string $orderId, string $shipmentId, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($shipmentId, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($shipmentId, $actor): void {
             $shipment = $this->shipment($s, $shipmentId, OrderRules::HAND_OVER);
             $shipment->handOver();
             $this->journal->record($s->order, 'shipment_handed_over', ['shipmentId' => $shipment->getId()->toRfc4122(), 'number' => $shipment->getPosition()], $actor);
@@ -221,7 +231,7 @@ final class OrderActions
 
     public function refuse(string $orderId, string $shipmentId, string $reason, string $actor): ?array
     {
-        return $this->run($orderId, $actor, function (OrderState $s) use ($shipmentId, $reason, $actor): void {
+        return $this->tx->run($orderId, $actor, function (OrderState $s) use ($shipmentId, $reason, $actor): void {
             $shipment = $this->shipment($s, $shipmentId, OrderRules::REFUSE);
             foreach ($s->activeItemsOf($shipment) as $item) {
                 if ($item->getVariant() !== null) {
@@ -271,8 +281,10 @@ final class OrderActions
         }
         $this->em->clear();
         $payment = $this->em->find(Payment::class, Uuid::fromString($paymentId));
+        $order = $this->presenter->admin($payment->getOrder()->getId()->toRfc4122());
+        $entry = array_values(array_filter($order['payments'], static fn (array $entry): bool => $entry['id'] === $paymentId))[0];
 
-        return ['payment' => $this->presenter->payment($payment), 'order' => $this->presenter->admin($payment->getOrder()->getId()->toRfc4122())];
+        return ['payment' => $entry, 'order' => $order];
     }
 
     private function appendPayment(OrderState $s, string $key, string $requestHash, string $kind, string $method, int $amountMinor, ?string $shipmentId, ?string $note, string $actor): Payment
@@ -300,23 +312,13 @@ final class OrderActions
             'paymentId' => $payment->getId()->toRfc4122(), 'method' => $method, 'amountMinor' => $amountMinor,
             'shipmentId' => $shipment?->getId()->toRfc4122(), 'note' => $note,
         ], $actor);
-        $this->settle($s, $actor);
-        if ($refund && $completedBefore) {
-            $this->takeBackPoints($s);
+        $this->tx->settle($s, $actor);
+        // a payment on a completed order only comes after a voided one, so it gives back what the void took
+        if ($completedBefore) {
+            $this->tx->reconcilePoints($s, $refund ? LoyaltyEntry::REFUND : LoyaltyEntry::CORRECTION);
         }
 
         return $payment;
-    }
-
-    /** Points for money refunded after completion go back; the completion event knows what was refunded before. */
-    private function takeBackPoints(OrderState $s): void
-    {
-        $completed = $this->em->getRepository(OrderEvent::class)->findOneBy(['order' => $s->order, 'type' => 'completed']);
-        $refundedBefore = (int) ($completed?->getData()['refundedBeforeMinor'] ?? 0);
-        $points = $this->loyalty->afterRefund($s->order, $s->refundsMinor() - $refundedBefore);
-        if ($points !== 0) {
-            $this->journal->record($s->order, 'loyalty_adjusted', ['points' => $points], OrderEvent::SYSTEM);
-        }
     }
 
     private function samePayment(Payment $payment, string $requestHash): string
@@ -326,58 +328,6 @@ final class OrderActions
         }
 
         return $payment->getId()->toRfc4122();
-    }
-
-    /** @param callable(OrderState): void $action */
-    private function run(string $orderId, string $actor, callable $action): ?array
-    {
-        $done = $this->db->transactional(function () use ($orderId, $actor, $action): bool {
-            $s = $this->loader->load($orderId, lock: true);
-            if ($s === null) {
-                return false;
-            }
-            $action($s);
-            $this->settle($s, $actor);
-            $this->em->flush();
-
-            return true;
-        });
-        if (!$done) {
-            return null;
-        }
-        $this->em->clear();
-
-        return $this->presenter->admin($orderId);
-    }
-
-    /** Everything that follows from the lines, shipments and ledger, after any change. */
-    private function settle(OrderState $s, string $actor): void
-    {
-        $order = $s->order;
-        foreach ($s->shipments() as $shipment) {
-            if (in_array($shipment->getStatus(), [ShipmentStatus::PLANNED, ShipmentStatus::SCHEDULED, ShipmentStatus::REFUSED], true) && $s->activeItemsOf($shipment) === []) {
-                $shipment->cancel();
-                $this->journal->record($order, 'shipment_cancelled', ['shipmentId' => $shipment->getId()->toRfc4122(), 'number' => $shipment->getPosition(), 'reason' => 'no active lines left'], $actor);
-            }
-        }
-        if (in_array($order->getStatus(), [OrderStatus::REQUESTED, OrderStatus::CONFIRMED], true) && $s->activeItems() === []) {
-            $order->cancel();
-            $this->journal->record($order, 'cancelled', ['reason' => 'no active lines left'], $actor);
-        }
-
-        // fees were fixed at checkout: a cancelled shipment drops its fee, nothing ever raises one
-        $subtotal = array_sum(array_map(static fn (OrderItem $item): int => $item->getLineTotalMinor(), $s->activeItems()));
-        $shipping = array_sum(array_map(static fn (Shipment $shipment): int => $shipment->isCharged() ? $shipment->getFeeMinor() : 0, $s->shipments()));
-        $order->setTotals($subtotal, $shipping);
-        $order->setPaymentStatus(PaymentStatus::of($s->paymentsMinor(), $s->refundsMinor(), $order->getTotalMinor()));
-
-        if ($this->rules->shouldComplete($s)) {
-            $order->complete();
-            $points = $this->loyalty->earn($order);
-            $this->journal->record($order, 'completed', [
-                'goodsMinor' => $subtotal, 'points' => $points, 'refundedBeforeMinor' => $s->refundsMinor(),
-            ], OrderEvent::SYSTEM);
-        }
     }
 
     /** Stock effects of cancelling a line that wasn't handed over. */
