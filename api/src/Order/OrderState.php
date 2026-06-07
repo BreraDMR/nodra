@@ -32,6 +32,8 @@ final class OrderState
 
     public function addPayment(Payment $payment): void { $this->payments[] = $payment; }
 
+    public function addShipment(Shipment $shipment): void { $this->shipments[] = $shipment; }
+
     public function item(string $id): ?OrderItem
     {
         foreach ($this->items as $item) {
@@ -48,6 +50,29 @@ final class OrderState
         foreach ($this->shipments as $shipment) {
             if ($shipment->getId()->toRfc4122() === strtolower($id)) {
                 return $shipment;
+            }
+        }
+
+        return null;
+    }
+
+    public function payment(string $id): ?Payment
+    {
+        foreach ($this->payments as $payment) {
+            if ($payment->getId()->toRfc4122() === strtolower($id)) {
+                return $payment;
+            }
+        }
+
+        return null;
+    }
+
+    /** The correction that voided this entry, if any. */
+    public function correctionOf(Payment $entry): ?Payment
+    {
+        foreach ($this->payments as $payment) {
+            if ($payment->getCorrects()?->getId()->equals($entry->getId())) {
+                return $payment;
             }
         }
 
@@ -104,8 +129,10 @@ final class OrderState
         return $items === [] ? [null, null] : [$min, $max];
     }
 
+    /** Payments received, voided ones left out. */
     public function paymentsMinor(): int { return $this->sum(Payment::PAYMENT); }
 
+    /** Refunds given back, voided ones left out. */
     public function refundsMinor(): int { return $this->sum(Payment::REFUND); }
 
     public function netPaidMinor(): int { return $this->paymentsMinor() - $this->refundsMinor(); }
@@ -120,6 +147,8 @@ final class OrderState
         foreach ($this->payments as $payment) {
             if ($payment->getKind() === $kind) {
                 $total += $payment->getAmountMinor();
+            } elseif ($payment->getKind() === Payment::CORRECTION && $payment->getCorrects()?->getKind() === $kind) {
+                $total -= $payment->getAmountMinor();
             }
         }
 
