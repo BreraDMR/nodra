@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Order;
 
 use App\Entity\OrderItem;
+use App\Entity\Payment;
 use App\Entity\Shipment;
 
 /**
@@ -30,6 +31,11 @@ final class OrderRules
     public const SCHEDULE = 'schedule';
     public const HAND_OVER = 'hand_over';
     public const REFUSE = 'refuse';
+    // corrections, each with a reason in the journal
+    public const MOVE = 'move';
+    public const UNDO_RECEIVED = 'undo_received';
+    public const RESCHEDULE = 'reschedule';
+    public const VOID = 'void';
 
     /** How the customer can agree to a confirmation or a replacement. */
     public const AGREEMENT_CHANNELS = ['whatsapp', 'telegram', 'phone', 'email', 'in_person'];
@@ -46,7 +52,8 @@ final class OrderRules
         if ($open && !self::anyHandedOver($s)) {
             $actions[] = self::CANCEL;
         }
-        if ($open && $s->amountDueMinor() > 0) {
+        // a completed order owes money again only after a payment was voided
+        if (($open || $status === OrderStatus::COMPLETED) && $s->amountDueMinor() > 0) {
             $actions[] = self::RECORD_PAYMENT;
         }
         if ($s->netPaidMinor() > 0) {
@@ -114,6 +121,38 @@ final class OrderRules
         }
 
         return $actions;
+    }
+
+    /**
+     * Fixing a line: move it to another open shipment or a new part, or take back a mistaken "received". Only while
+     * the order is open and the line's shipment is planned or scheduled; a refused shipment gave its goods to own stock.
+     *
+     * @return list<string>
+     */
+    public function itemCorrections(OrderState $s, OrderItem $item): array
+    {
+        if (!$item->isActive() || !self::isOpen($s->order->getStatus())
+            || !in_array($item->getShipment()->getStatus(), [ShipmentStatus::PLANNED, ShipmentStatus::SCHEDULED], true)) {
+            return [];
+        }
+        $corrections = [self::MOVE];
+        if ($item->getProcurementStatus() === Procurement::RECEIVED) {
+            $corrections[] = self::UNDO_RECEIVED;
+        }
+
+        return $corrections;
+    }
+
+    /** @return list<string> */
+    public function shipmentCorrections(OrderState $s, Shipment $shipment): array
+    {
+        return $s->order->getStatus() === OrderStatus::CONFIRMED && $shipment->getStatus() === ShipmentStatus::SCHEDULED ? [self::RESCHEDULE] : [];
+    }
+
+    /** A payment or a refund can be voided once, in any order status; a correction itself can't. @return list<string> */
+    public function paymentCorrections(OrderState $s, Payment $entry): array
+    {
+        return $entry->getKind() !== Payment::CORRECTION && $s->correctionOf($entry) === null ? [self::VOID] : [];
     }
 
     /** @param list<string> $allowed */
