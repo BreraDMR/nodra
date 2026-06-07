@@ -12,23 +12,26 @@ use App\Entity\PriceChange;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\StockMovement;
+use App\Order\OrderQueues;
 use App\Pricing\PriceHistory;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\Uid\Uuid;
 
 final class AdminService
 {
-    public function __construct(private EntityManagerInterface $em, private Connection $db, private PriceHistory $history) {}
+    public function __construct(private EntityManagerInterface $em, private Connection $db, private PriceHistory $history, private ClockInterface $clock) {}
 
     public function dashboard(): array
     {
         $stats = $this->db->fetchAssociative("SELECT COUNT(*) AS orders, COUNT(*) FILTER (WHERE status IN ('requested', 'confirmed')) AS open_orders FROM shop_order");
-        $lowStock = $this->db->fetchAllAssociative("SELECT v.id, v.sku, v.stock, p.copy -> 'en' ->> 'name' AS product
+        // goods NODRA holds itself, whatever the card's state: they are money on the shelf
+        $ownStock = $this->db->fetchAllAssociative("SELECT v.id, v.sku, v.stock, p.copy -> 'en' ->> 'name' AS product
             FROM product_variant v JOIN product p ON p.id = v.product_id
-            WHERE p.status = 'published' AND v.active = TRUE AND v.stock <= 5 ORDER BY v.stock ASC, v.sku ASC LIMIT 8");
+            WHERE v.stock > 0 ORDER BY v.stock ASC, v.sku ASC LIMIT 20");
 
         return [
             'orders' => (int) $stats['orders'],
@@ -37,9 +40,19 @@ final class AdminService
             // older demo orders only, new orders are always CZK
             'revenueEurMinor' => (int) $this->db->fetchOne("SELECT COALESCE(SUM(total_minor), 0) FROM shop_order WHERE currency = 'EUR' AND status != 'cancelled'"),
             'products' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM product WHERE status = 'published'"),
-            'lowStock' => array_map(static fn (array $row): array => ['id' => $row['id'], 'sku' => $row['sku'], 'stock' => (int) $row['stock'], 'product' => $row['product']], $lowStock),
+            'ownStock' => array_map(static fn (array $row): array => ['id' => $row['id'], 'sku' => $row['sku'], 'stock' => (int) $row['stock'], 'product' => $row['product']], $ownStock),
+            'ownStockVariants' => (int) $this->db->fetchOne('SELECT COUNT(*) FROM product_variant WHERE stock > 0'),
+            'queues' => $this->queues(),
             'recentOrders' => $this->orderRows(5, 0),
         ];
+    }
+
+    /** @return array<string, int> orders in each work queue */
+    public function queues(): array
+    {
+        $counts = $this->db->fetchAssociative(OrderQueueSql::countsQuery(), ['today' => OrderQueueSql::today($this->clock->now())]);
+
+        return array_map('intval', $counts);
     }
 
     public function products(AdminProductsQuery $query): array
@@ -222,15 +235,32 @@ final class AdminService
         $where = [];
         $params = [];
         if ($query->status !== null) {
-            $where[] = 'status = :status';
+            $where[] = 'o.status = :status';
             $params['status'] = $query->status;
         }
         if ($query->paymentStatus !== null) {
-            $where[] = 'payment_status = :paymentStatus';
+            $where[] = 'o.payment_status = :paymentStatus';
             $params['paymentStatus'] = $query->paymentStatus;
         }
+        if ($query->queue !== null) {
+            $where[] = '('.OrderQueueSql::conditions()[$query->queue].')';
+            $params['today'] = OrderQueueSql::today($this->clock->now());
+        }
+        $search = trim((string) $query->q);
+        if ($search !== '') {
+            $params['search'] = '%'.strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
+            $match = ['o.reference ILIKE :search', 'o.customer_name ILIKE :search', 'o.email ILIKE :search',
+                'EXISTS (SELECT 1 FROM order_item si WHERE si.order_id = o.id AND si.supplier_reference ILIKE :search)'];
+            // a phone is looked up by its digits, whatever spaces or dashes were typed
+            $digits = preg_replace('/\D/', '', $search);
+            if (preg_match('/^[+\d\s().\/-]+$/', $search) && strlen($digits) >= 3) {
+                $match[] = "regexp_replace(COALESCE(o.phone, ''), '[^0-9]', '', 'g') LIKE :phone";
+                $params['phone'] = '%'.$digits.'%';
+            }
+            $where[] = '('.implode(' OR ', $match).')';
+        }
         $filter = $where === [] ? '' : ' WHERE '.implode(' AND ', $where);
-        $total = (int) $this->db->fetchOne('SELECT COUNT(*) FROM shop_order'.$filter, $params);
+        $total = (int) $this->db->fetchOne('SELECT COUNT(*) FROM shop_order o'.$filter, $params);
         $pages = max(1, (int) ceil($total / 30));
         $page = min($query->page, $pages);
 
@@ -245,8 +275,9 @@ final class AdminService
     private function orderRows(int $limit, int $offset, string $filter = '', array $params = []): array
     {
         $rows = $this->db->fetchAllAssociative(
-            'SELECT id, reference, status, payment_status, customer_name, email, phone, country, currency, total_minor, created_at FROM shop_order'.$filter.' ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset',
-            $params + ['limit' => $limit, 'offset' => $offset],
+            'SELECT o.id, o.reference, o.status, o.payment_status, o.customer_name, o.email, o.phone, o.country, o.currency, o.total_minor, o.created_at, '
+                .OrderQueueSql::flagColumns().' FROM shop_order o'.$filter.' ORDER BY o.created_at DESC, o.id DESC LIMIT :limit OFFSET :offset',
+            ['today' => OrderQueueSql::today($this->clock->now())] + $params + ['limit' => $limit, 'offset' => $offset],
             ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
         );
 
@@ -255,6 +286,8 @@ final class AdminService
             'customerName' => $row['customer_name'], 'email' => $row['email'], 'phone' => $row['phone'], 'country' => $row['country'],
             'total' => ['amount' => (int) $row['total_minor'], 'currency' => $row['currency']],
             'createdAt' => (new \DateTimeImmutable($row['created_at']))->format(\DATE_ATOM),
+            'delayed' => (bool) $row['q_'.OrderQueues::DELAYED],
+            'queues' => array_values(array_filter(OrderQueues::ALL, static fn (string $queue): bool => (bool) $row['q_'.$queue])),
         ], $rows);
     }
 
