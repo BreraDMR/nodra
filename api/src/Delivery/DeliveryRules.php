@@ -51,8 +51,14 @@ final class DeliveryRules
         };
     }
 
-    public function note(string $method): ?string
+    public function note(string $method, string $locale): ?string
     {
-        return $method === DeliveryMethod::PICKUP_ANDEL ? $this->settings->pickupNote : null;
+        return $method === DeliveryMethod::PICKUP_ANDEL ? $this->settings->pickupNote($locale) : null;
+    }
+
+    /** Goods subtotal from which the method costs nothing, or null when the fee doesn't depend on it. */
+    public function freeFrom(string $method): ?int
+    {
+        return $method === DeliveryMethod::PRAGUE_PERSONAL ? $this->settings->pragueFreeFromMinor : null;
     }
 }
