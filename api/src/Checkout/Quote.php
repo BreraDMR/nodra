@@ -12,7 +12,7 @@ final readonly class Quote
 {
     /**
      * @param list<BasketLine> $lines
-     * @param list<array{method: string, available: bool, reason: ?string, feeMinor: ?int, note: ?string}> $methods
+     * @param list<array{method: string, available: bool, reason: ?string, feeMinor: ?int, note: ?string, freeFromMinor: ?int}> $methods
      * @param ?string $methodProblem why the chosen method can't deliver here, null when it can
      * @param ?array{together: DeliveryOption, split: ?DeliveryOption} $options null while the method or a line is unavailable
      */
@@ -67,6 +67,7 @@ final readonly class Quote
             'methods' => array_map(static fn (array $m): array => [
                 'method' => $m['method'], 'available' => $m['available'], 'reason' => $m['reason'],
                 'fee' => $m['feeMinor'] === null ? null : $price($m['feeMinor']), 'note' => $m['note'],
+                'freeFromMinor' => $m['freeFromMinor'],
             ], $this->methods),
             'delivery' => ['method' => $this->method, 'postalCode' => $this->postalCode],
             'options' => $this->options === null ? null : ['together' => $option($this->options['together']), 'split' => $option($this->options['split'])],
