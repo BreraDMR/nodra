@@ -64,7 +64,7 @@ final class PricingData
     public function variants(string $where, array $params = [], array $types = []): array
     {
         return $this->db->fetchAllAssociative(
-            "SELECT v.id, v.product_id, v.sku, v.active, v.price_czk, v.price_eur, v.rrp_minor, v.rrp_currency, v.rrp_source, v.rrp_checked_at,
+            "SELECT v.id, v.product_id, v.sku, v.active, v.stock, v.price_czk, v.price_eur, v.rrp_minor, v.rrp_currency, v.rrp_source, v.rrp_checked_at,
                 v.market_price_minor, v.market_price_source, v.market_checked_at, p.category_id, p.status,
                 p.copy -> 'en' ->> 'name' AS product_name, c.slug AS category_slug
             FROM product_variant v JOIN product p ON p.id = v.product_id JOIN category c ON c.id = p.category_id
