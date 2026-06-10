@@ -136,16 +136,21 @@ final class PricingService
         });
     }
 
-    /** Counts for the dashboard tile, over active variants of published products. */
+    /**
+     * Counts for the dashboard tile, over active variants of published products. A variant NODRA holds itself is
+     * sold from own stock, so its offers needing a check isn't an alert.
+     */
     public function alerts(): array
     {
-        $pricing = $this->evaluate($this->data->variants("v.active = TRUE AND p.status = 'published'"));
+        $rows = $this->data->variants("v.active = TRUE AND p.status = 'published'");
+        $pricing = $this->evaluate($rows);
+        $held = array_column(array_filter($rows, static fn (array $row): bool => (int) $row['stock'] > 0), 'id', 'id');
         $count = static fn (callable $test): int => count(array_filter($pricing, $test));
 
         return [
             'marginTooLow' => $count(static fn (VariantPricing $p): bool => in_array(VariantPricing::MARGIN_TOO_LOW, $p->flags(), true)),
             'aboveMarket' => $count(static fn (VariantPricing $p): bool => $p->aboveMarket),
-            'checkNeeded' => $count(static fn (VariantPricing $p): bool => $p->sourcing->status === Sourcing::CHECK_NEEDED),
+            'checkNeeded' => $count(static fn (VariantPricing $p): bool => $p->sourcing->status === Sourcing::CHECK_NEEDED && !isset($held[$p->variant->id])),
         ];
     }
 
