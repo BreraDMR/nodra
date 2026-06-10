@@ -48,11 +48,11 @@ final class CheckoutService
     {
         $method = $request->delivery['method'];
         if (!in_array($method, $this->delivery->offered(), true)) {
-            throw OrderProblem::unprocessable('method_unavailable', 'This delivery method is not offered');
+            throw OrderProblem::unprocessable('method_unavailable', 'This delivery method is not offered', ['reason' => DeliveryRules::NOT_OFFERED]);
         }
         $lines = $this->basket->lines(self::quantities($request->items), $request->locale);
 
-        return $this->quotes->build($lines, $method, $request->delivery['postalCode'] ?? null)->toArray();
+        return $this->quotes->build($lines, $method, $request->delivery['postalCode'] ?? null, $request->locale)->toArray();
     }
 
     public function place(CheckoutRequest $request, string $key, ?CustomerAccount $account = null): array
@@ -87,7 +87,7 @@ final class CheckoutService
                     return $this->sameRequest($existing, $requestHash);
                 }
 
-                $quote = $this->quotes->build($this->basket->lines($quantities, $request->locale, lock: true), $method, $customer['postalCode']);
+                $quote = $this->quotes->build($this->basket->lines($quantities, $request->locale, lock: true), $method, $customer['postalCode'], $request->locale);
                 $option = $this->chosenOption($quote, $fulfilment);
                 if ($quote->subtotalMinor + $option->shippingMinor() !== $request->expectedTotal) {
                     throw OrderProblem::conflict('quote_changed', 'Prices, availability or delivery changed; check the new total and send the order again', ['quote' => $quote->toArray()]);
