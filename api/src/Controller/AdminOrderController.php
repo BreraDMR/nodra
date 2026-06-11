@@ -9,11 +9,14 @@ use App\Admin\AdminService;
 use App\Admin\ConfirmOrderRequest;
 use App\Admin\LineTermsRequest;
 use App\Admin\MarkOrderedRequest;
+use App\Admin\MoveLineRequest;
 use App\Admin\ReasonRequest;
 use App\Admin\RecordPaymentRequest;
 use App\Admin\ReplacementRequest;
+use App\Admin\RescheduleShipmentRequest;
 use App\Admin\ScheduleShipmentRequest;
 use App\Order\OrderActions;
+use App\Order\OrderCorrections;
 use App\Order\OrderPresenter;
 use App\Order\OrderProblem;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,10 +30,16 @@ use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 /** Order handling in the admin: every write needs X-CSRF-Token and answers with the order as it is now. */
-#[Route('/api/admin/orders', requirements: ['id' => Requirement::UUID, 'itemId' => Requirement::UUID, 'shipmentId' => Requirement::UUID])]
+#[Route('/api/admin/orders', requirements: ['id' => Requirement::UUID, 'itemId' => Requirement::UUID, 'shipmentId' => Requirement::UUID, 'paymentId' => Requirement::UUID])]
 final class AdminOrderController extends AbstractController
 {
-    public function __construct(private AdminService $admin, private OrderActions $actions, private OrderPresenter $presenter, private CsrfTokenManagerInterface $csrf) {}
+    public function __construct(
+        private AdminService $admin,
+        private OrderActions $actions,
+        private OrderCorrections $corrections,
+        private OrderPresenter $presenter,
+        private CsrfTokenManagerInterface $csrf,
+    ) {}
 
     #[Route('', methods: ['GET'])]
     public function list(#[MapQueryString] AdminOrdersQuery $query): JsonResponse
@@ -131,6 +140,30 @@ final class AdminOrderController extends AbstractController
             $id, $request->headers->get('Idempotency-Key', ''), $payload->kind, $payload->method, $payload->amountMinor,
             $payload->shipmentId, $note === '' ? null : $note, $actor,
         ), 201);
+    }
+
+    #[Route('/{id}/items/{itemId}/move', methods: ['POST'])]
+    public function move(string $id, string $itemId, #[MapRequestPayload] MoveLineRequest $payload, Request $request): JsonResponse
+    {
+        return $this->write($request, fn (string $actor): ?array => $this->corrections->moveLine($id, $itemId, $payload->shipmentId, trim($payload->reason), $actor));
+    }
+
+    #[Route('/{id}/items/{itemId}/undo-received', methods: ['POST'])]
+    public function undoReceived(string $id, string $itemId, #[MapRequestPayload] ReasonRequest $payload, Request $request): JsonResponse
+    {
+        return $this->write($request, fn (string $actor): ?array => $this->corrections->undoReceived($id, $itemId, trim($payload->reason), $actor));
+    }
+
+    #[Route('/{id}/shipments/{shipmentId}/reschedule', methods: ['POST'])]
+    public function reschedule(string $id, string $shipmentId, #[MapRequestPayload] RescheduleShipmentRequest $payload, Request $request): JsonResponse
+    {
+        return $this->write($request, fn (string $actor): ?array => $this->corrections->reschedule($id, $shipmentId, $payload->from, $payload->to, trim($payload->reason), $actor));
+    }
+
+    #[Route('/{id}/payments/{paymentId}/void', methods: ['POST'])]
+    public function void(string $id, string $paymentId, #[MapRequestPayload] ReasonRequest $payload, Request $request): JsonResponse
+    {
+        return $this->write($request, fn (string $actor): ?array => $this->corrections->void($id, $paymentId, trim($payload->reason), $actor));
     }
 
     /** @param callable(string): ?array $action gets the admin email for the journal */
