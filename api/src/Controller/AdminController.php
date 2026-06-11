@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Admin\AdminService;
 use App\Admin\AdminProductsQuery;
 use App\Admin\ProductWriteRequest;
+use App\Admin\SettingsView;
 use App\Admin\StockAdjustmentRequest;
 use App\Admin\VariantWriteRequest;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,10 +23,16 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 #[Route('/api/admin')]
 final class AdminController extends AbstractController
 {
-    public function __construct(private AdminService $admin, private CsrfTokenManagerInterface $csrf) {}
+    public function __construct(private AdminService $admin, private SettingsView $settings, private CsrfTokenManagerInterface $csrf) {}
 
     #[Route('/dashboard', methods: ['GET'])]
     public function dashboard(): JsonResponse { return $this->json($this->admin->dashboard()); }
+
+    #[Route('/queues', methods: ['GET'])]
+    public function queues(): JsonResponse { return $this->json($this->admin->queues()); }
+
+    #[Route('/settings', methods: ['GET'])]
+    public function settings(): JsonResponse { return $this->json($this->settings->toArray()); }
 
     #[Route('/products', methods: ['GET'])]
     public function products(#[MapQueryString] AdminProductsQuery $query): JsonResponse { return $this->json($this->admin->products($query)); }
