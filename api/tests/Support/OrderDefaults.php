@@ -11,9 +11,15 @@ use App\Delivery\ShipmentPlanner;
 /** The D04 delivery settings (same as config/services.yaml), for tests that build services by hand. */
 final class OrderDefaults
 {
+    public const PICKUP_NOTES = [
+        'cs' => 'Místo a čas předání na Andělu domluvíme zprávou.',
+        'de' => 'Ort und Zeit der Übergabe am Anděl vereinbaren wir per Nachricht.',
+        'en' => 'We agree the place and time at Anděl by message.',
+    ];
+
     public static function settings(?int $carrierFeeMinor = null): DeliverySettings
     {
-        return new DeliverySettings(14900, 50000, $carrierFeeMinor, null, 'Anděl, place and time agreed by message');
+        return new DeliverySettings(14900, 50000, $carrierFeeMinor, null, self::PICKUP_NOTES);
     }
 
     public static function rules(?int $carrierFeeMinor = null): DeliveryRules
