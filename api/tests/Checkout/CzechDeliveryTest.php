@@ -20,6 +20,7 @@ use App\Tests\Support\PricingDefaults;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 
 final class CzechDeliveryTest extends TestCase
 {
@@ -33,7 +34,7 @@ final class CzechDeliveryTest extends TestCase
             $em, $db,
             new BasketLoader($db, PricingDefaults::availability($db), new SourcingCalculator(PricingDefaults::settings())),
             new QuoteBuilder(OrderDefaults::rules(), OrderDefaults::planner()), OrderDefaults::rules(),
-            new OrderJournal($em), new StockKeeper($em, $db), $loader, new OrderPresenter($em, $loader, new OrderRules(), OrderDefaults::settings()),
+            new OrderJournal($em), new StockKeeper($em, $db), $loader, new OrderPresenter($em, $loader, new OrderRules(), OrderDefaults::settings(), $db, new MockClock()),
             'draft-2026-09',
         );
         $request = new CheckoutRequest('en', [
