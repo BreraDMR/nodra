@@ -38,6 +38,8 @@ final class CheckoutApiTest extends ApiTestCase
 
         $lookup = $this->getJson('/api/orders/'.$receipt['reference'], ['token' => $receipt['lookupToken']]);
         self::assertSame($receipt, $lookup);
+        // the receipt says how NODRA will get in touch, the storefront doesn't have to remember it
+        self::assertSame('whatsapp', $lookup['contactChannel']);
         $this->getJson('/api/orders/'.$receipt['reference'], ['token' => 'wrong']);
         self::assertResponseStatusCodeSame(404);
     }
@@ -140,7 +142,9 @@ final class CheckoutApiTest extends ApiTestCase
         $receipt = $this->checkout([$snapshot->getId()->toRfc4122() => 1], 'pickup_andel', customer: ['address' => '', 'city' => '', 'postalCode' => '']);
 
         self::assertResponseStatusCodeSame(201);
-        self::assertSame(['pickup_andel', 0, 'Anděl, place and time agreed by message'], [$receipt['shipments'][0]['method'], $receipt['shipping']['amount'], $receipt['pickupNote']]);
+        self::assertSame(['pickup_andel', 0, 'Místo a čas předání na Andělu domluvíme zprávou.'], [$receipt['shipments'][0]['method'], $receipt['shipping']['amount'], $receipt['pickupNote']]);
+        $english = $this->checkout([$snapshot->getId()->toRfc4122() => 1], 'pickup_andel', customer: ['address' => '', 'city' => '', 'postalCode' => ''], locale: 'en');
+        self::assertSame('We agree the place and time at Anděl by message.', $english['pickupNote'], 'the note follows the order language');
         self::assertSame(['', '', ''], array_values($this->db()->fetchAssociative('SELECT address, city, postal_code FROM shop_order WHERE reference = :ref', ['ref' => $receipt['reference']])));
     }
 
