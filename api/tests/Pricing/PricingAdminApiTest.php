@@ -283,6 +283,17 @@ final class PricingAdminApiTest extends ApiTestCase
         self::assertSame(['marginTooLow' => 1, 'aboveMarket' => 1, 'checkNeeded' => 1], $this->getJson('/api/admin/pricing/alerts'));
     }
 
+    public function testCheckNeededLeavesOutVariantsSoldFromOwnStock(): void
+    {
+        $b = $this->builder();
+        $b->pricedOffer($this->product, $b->variant($this->product, 'T-AL-STALE-2'), 60000, checkedAt: new \DateTimeImmutable('-8 days'));
+        // NODRA holds two, the stale offer doesn't matter until they're sold
+        $b->pricedOffer($this->product, $b->variant($this->product, 'T-AL-HELD', stock: 2), 60000, checkedAt: new \DateTimeImmutable('-8 days'));
+        $this->flush();
+
+        self::assertSame(1, $this->getJson('/api/admin/pricing/alerts')['checkNeeded']);
+    }
+
     private function ruleAndPrice(ProductVariant $variant): array
     {
         $panel = $this->panel($variant);
