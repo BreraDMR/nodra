@@ -50,7 +50,7 @@ final class AdminProductsPaginationTest extends TestCase
         );
         $em = $this->createStub(EntityManagerInterface::class);
         $history = new PriceHistory($em, $db, $this->createStub(Security::class), new MockClock());
-        $service = new AdminService($em, $db, $history);
+        $service = new AdminService($em, $db, $history, new MockClock());
 
         $result = $service->products(new AdminProductsQuery(2));
 
