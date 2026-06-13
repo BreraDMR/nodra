@@ -38,8 +38,10 @@ final class DeliveryRulesTest extends TestCase
         self::assertSame(0, $rules->fee('prague_personal', 50000));
         self::assertSame(0, $rules->fee('prague_personal', 50001));
         self::assertSame(0, $rules->fee('pickup_andel', 100));
-        self::assertSame('Anděl, place and time agreed by message', $rules->note('pickup_andel'));
-        self::assertNull($rules->note('prague_personal'));
+        self::assertSame('Místo a čas předání na Andělu domluvíme zprávou.', $rules->note('pickup_andel', 'cs'));
+        self::assertSame('We agree the place and time at Anděl by message.', $rules->note('pickup_andel', 'en'));
+        self::assertNull($rules->note('prague_personal', 'cs'));
+        self::assertSame([50000, null, null], [$rules->freeFrom('prague_personal'), $rules->freeFrom('pickup_andel'), $rules->freeFrom('carrier_cz')]);
     }
 
     public function testCarrierIsOffWhileItsFeeIsNull(): void
