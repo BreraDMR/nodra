@@ -65,7 +65,7 @@ final class AdminOrderActionsTest extends ApiTestCase
             ['payment_recorded', 'test-admin@nodra.test'], ['completed', 'system'],
         ], array_map(static fn (array $e): array => [$e['type'], $e['actor']], $order['events']));
         // jsonb keeps its own key order
-        self::assertEquals(['goodsMinor' => 70000, 'points' => 7, 'refundedBeforeMinor' => 0], $order['events'][10]['data']);
+        self::assertEquals(['goodsMinor' => 70000, 'points' => 7, 'refundedBeforeMinor' => 0, 'netPaidMinor' => 70000], $order['events'][10]['data']);
 
         $me = $this->getJson('/api/account/me');
         self::assertSame(7, $me['points']);
