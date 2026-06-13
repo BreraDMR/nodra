@@ -29,7 +29,9 @@ final class QuoteApiTest extends ApiTestCase
 
         $free = $this->quote([$exactly => 1]);
         self::assertSame([50000, 0, 50000], [$free['subtotal']['amount'], $free['options']['together']['shipping']['amount'], $free['options']['together']['total']['amount']]);
-        self::assertSame(['method' => 'prague_personal', 'available' => true, 'reason' => null, 'fee' => ['amount' => 0, 'currency' => 'CZK'], 'note' => null], $free['methods'][1]);
+        self::assertSame(['method' => 'prague_personal', 'available' => true, 'reason' => null, 'fee' => ['amount' => 0, 'currency' => 'CZK'], 'note' => null, 'freeFromMinor' => 50000], $free['methods'][1]);
+        // the threshold comes with the method so the storefront can say "free from 500 Kč"
+        self::assertSame([null, 50000], array_column($cheap['methods'], 'freeFromMinor'));
     }
 
     public function testSplitPaysEveryPartBelow500AndNoneFrom500(): void
@@ -60,7 +62,7 @@ final class QuoteApiTest extends ApiTestCase
         self::assertSame(['status' => 'check_needed', 'leadTimeMinDays' => null, 'leadTimeMaxDays' => null], $lines[$snapshotId]);
         self::assertSame([[$offered], [$snapshotId]], array_column($quote['options']['split']['shipments'], 'variantIds'));
         self::assertNull($quote['options']['together']['shipments'][0]['leadTimeMaxDays']);
-        self::assertSame(['Anděl, place and time agreed by message', 0], [$quote['methods'][0]['note'], $quote['options']['split']['shipping']['amount']]);
+        self::assertSame(['Místo a čas předání na Andělu domluvíme zprávou.', 0], [$quote['methods'][0]['note'], $quote['options']['split']['shipping']['amount']]);
         self::assertTrue($quote['canCheckout']);
     }
 
@@ -77,7 +79,23 @@ final class QuoteApiTest extends ApiTestCase
 
         $carrier = $this->quote($item, 'carrier_cz', '602 00');
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('method_unavailable', $carrier['code']);
+        self::assertSame(['method_unavailable', 'not_offered'], [$carrier['code'], $carrier['reason']]);
+    }
+
+    public function testPickupNoteIsInTheLanguageOfTheQuote(): void
+    {
+        $item = [$this->offered('T-Q-NOTE', 30000) => 1];
+
+        $notes = [];
+        foreach (['cs', 'de', 'en'] as $locale) {
+            $notes[$locale] = $this->quote($item, 'pickup_andel', null, $locale)['methods'][0]['note'];
+        }
+
+        self::assertSame([
+            'cs' => 'Místo a čas předání na Andělu domluvíme zprávou.',
+            'de' => 'Ort und Zeit der Übergabe am Anděl vereinbaren wir per Nachricht.',
+            'en' => 'We agree the place and time at Anděl by message.',
+        ], $notes);
     }
 
     public function testUnavailableLineBlocksTheOptionsAndUnknownVariantIsRefused(): void
