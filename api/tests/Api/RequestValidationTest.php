@@ -69,6 +69,24 @@ final class RequestValidationTest extends ApiTestCase
         self::assertSame('q', $this->problem('GET', '/api/admin/products?q='.str_repeat('x', 81), 422)['violations'][0]['field']);
         self::assertSame('page', $this->problem('GET', '/api/admin/orders?page=last', 422)['violations'][0]['field']);
         self::assertSame('paymentStatus', $this->problem('GET', '/api/admin/orders?paymentStatus=maybe', 422)['violations'][0]['field']);
+        self::assertSame('queue', $this->problem('GET', '/api/admin/orders?queue=someday', 422)['violations'][0]['field']);
+        self::assertSame('q', $this->problem('GET', '/api/admin/orders?q='.str_repeat('x', 101), 422)['violations'][0]['field']);
+        self::assertSame('status', $this->problem('GET', '/api/admin/purchases?status=lost', 422)['violations'][0]['field']);
+    }
+
+    public function testBadPurchaseAndCorrectionPayloadsAreA422WithViolations(): void
+    {
+        $token = $this->loginAdmin();
+        $order = '/api/admin/orders/01890000-0000-7000-8000-000000000000';
+        $uuid = '01890000-0000-7000-8000-000000000000';
+
+        $error = $this->problem('POST', '/api/admin/purchases', 422, ['supplier' => 'ebay', 'reference' => ' ', 'currency' => 'USD', 'lines' => [['itemId' => 'nope', 'unitPriceMinor' => -1]], 'inboundShippingMinor' => -5], $token);
+        self::assertEqualsCanonicalizing(['supplier', 'reference', 'currency', 'lines[0].itemId', 'lines[0].unitPriceMinor', 'inboundShippingMinor'], array_column($error['violations'], 'field'));
+        self::assertSame('lines', $this->problem('POST', '/api/admin/purchases', 422, ['supplier' => 'bike24', 'reference' => 'R', 'currency' => 'CZK', 'lines' => []], $token)['violations'][0]['field']);
+        self::assertSame('shipmentId', $this->problem('POST', $order.'/items/'.$uuid.'/move', 422, ['shipmentId' => 'part two', 'reason' => 'x'], $token)['violations'][0]['field']);
+        self::assertSame('reason', $this->problem('POST', $order.'/shipments/'.$uuid.'/reschedule', 422, ['from' => '2026-10-01T17:00:00+02:00', 'to' => '2026-10-01T19:00:00+02:00', 'reason' => '   '], $token)['violations'][0]['field']);
+        self::assertSame('reason', $this->problem('POST', $order.'/payments/'.$uuid.'/void', 422, ['reason' => ''], $token)['violations'][0]['field']);
+        self::assertSame('reason', $this->problem('POST', $order.'/items/'.$uuid.'/undo-received', 422, [], $token)['violations'][0]['field']);
     }
 
     public function testOtherRequestErrorsAreJsonToo(): void
