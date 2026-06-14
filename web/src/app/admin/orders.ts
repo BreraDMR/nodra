@@ -39,7 +39,24 @@ export const paymentMethods = [
   "carrier_cod",
 ] as const;
 export type PaymentMethod = (typeof paymentMethods)[number];
+// what the admin can record; "correction" entries only come from voiding one
 export type PaymentKind = "payment" | "refund";
+export type LedgerKind = PaymentKind | "correction";
+
+// Work queues, in the API's order; one order can sit in several
+export const orderQueues = [
+  "review",
+  "problem",
+  "to_purchase",
+  "waiting",
+  "delayed",
+  "to_schedule",
+  "delivering",
+  "unpaid",
+  "refund",
+] as const;
+export type OrderQueue = (typeof orderQueues)[number];
+export type QueueCounts = Record<OrderQueue, number>;
 
 export type OrderAction =
   "confirm" | "cancel" | "record_payment" | "record_refund";
@@ -52,6 +69,10 @@ export type ItemAction =
   | "replace"
   | "return";
 export type ShipmentAction = "schedule" | "hand_over" | "refuse";
+// corrections always need a reason; they come in their own lists next to actions
+export type ItemCorrection = "move" | "undo_received";
+export type ShipmentCorrection = "reschedule";
+export type PaymentCorrection = "void";
 
 // One row of GET /api/admin/orders, also used by the dashboard's recent orders
 export type OrderRow = {
@@ -65,6 +86,8 @@ export type OrderRow = {
   country: string;
   total: Price;
   createdAt: string;
+  delayed: boolean;
+  queues: OrderQueue[];
 };
 export type Agreement = { channel: AgreementChannel; note: string };
 export type AdminOrderItem = {
@@ -73,6 +96,8 @@ export type AdminOrderItem = {
   name: string;
   variant: string;
   sku: string;
+  mpn: string | null;
+  ean: string | null;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -87,8 +112,19 @@ export type AdminOrderItem = {
   leadTimeMinDays: number | null;
   leadTimeMaxDays: number | null;
   supplierOfferId: string | null;
+  offer: OfferSource | null;
+  // snapshot at checkout vs what its purchase actually cost
   unitCostCzkMinor: number | null;
+  actualUnitCostCzkMinor: number | null;
+  purchase: {
+    id: string;
+    reference: string;
+    status: "ordered" | "received";
+  } | null;
+  promisedDate: string | null;
+  delayed: boolean;
   actions: ItemAction[];
+  corrections: ItemCorrection[];
 };
 export type AdminShipment = {
   id: string;
@@ -104,16 +140,21 @@ export type AdminShipment = {
   ready: boolean;
   itemIds: string[];
   actions: ShipmentAction[];
+  corrections: ShipmentCorrection[];
 };
 export type AdminPayment = {
   id: string;
-  kind: PaymentKind;
+  kind: LedgerKind;
   method: PaymentMethod;
   amount: Price;
   shipmentId: string | null;
   recordedAt: string;
   recordedBy: string;
+  // for a correction, the reason it voided the other entry
   note: string | null;
+  correctsId: string | null;
+  voidedById: string | null;
+  corrections: PaymentCorrection[];
 };
 export type OrderEvent = {
   id: string;
@@ -131,6 +172,9 @@ export type AdminOrder = {
   currency: string;
   fulfilment: "together" | "split";
   createdAt: string;
+  confirmedAt: string | null;
+  queues: OrderQueue[];
+  delayed: boolean;
   customer: {
     name: string;
     email: string;
@@ -160,8 +204,53 @@ export type AdminOrder = {
   paid: Price;
   amountDue: Price;
   refundDue: Price;
+  // null on the older EUR demo orders
+  economics: OrderEconomics | null;
   lookupToken: string;
   actions: OrderAction[];
+};
+
+// GET /api/admin/settings, read-only on the server side
+export type AdminSettings = {
+  currency: string;
+  payment: {
+    handoverMethods: PaymentMethod[];
+    paymentMethods: PaymentMethod[];
+    refundMethods: PaymentMethod[];
+  };
+  delivery: {
+    methods: string[];
+    pragueFeeMinor: number;
+    pragueFreeFromMinor: number;
+    carrierFeeMinor: number | null;
+    carrierCodFeeMinor: number | null;
+    pickupNote: { cs: string; de: string; en: string };
+  };
+  privacyVersion: string;
+};
+
+// The supplier offer a line was priced from, as it is now (admin only)
+export type OfferSource = {
+  id: string;
+  supplier: string;
+  seller: string | null;
+  url: string;
+  currency: string;
+  priceMinor: number;
+  // per unit, offer currency
+  inboundShippingMinor: number;
+  fxRateCzk: number | null;
+  fxRateDate: string | null;
+};
+export type OrderEconomics = {
+  goodsRevenueMinor: number;
+  shippingChargedMinor: number;
+  costMinor: number;
+  expectedResultMinor: number;
+  // result over cost, null while the cost is 0
+  marginBp: number | null;
+  costComplete: boolean;
+  unknownCostLines: number;
 };
 
 // Readable names for API values; a value the admin doesn't know yet shows as it is
@@ -186,6 +275,7 @@ const statusLabels: Record<string, string> = {
   failed: "Failed",
   active: "Active",
   returned: "Returned",
+  correction: "Correction",
 };
 export const statusLabel = (value: string) =>
   statusLabels[value] ?? value.replaceAll("_", " ");
@@ -228,6 +318,46 @@ export const shipmentActionLabels: Record<ShipmentAction, string> = {
   hand_over: "Hand over",
   refuse: "Customer refused",
 };
+export const itemCorrectionLabels: Record<ItemCorrection, string> = {
+  move: "Move to another part",
+  undo_received: "Undo received",
+};
+export const shipmentCorrectionLabels: Record<ShipmentCorrection, string> = {
+  reschedule: "Reschedule",
+};
+export const paymentCorrectionLabels: Record<PaymentCorrection, string> = {
+  void: "Void entry",
+};
+export const queueLabels: Record<OrderQueue, string> = {
+  review: "Review",
+  problem: "Problem",
+  to_purchase: "To purchase",
+  waiting: "Waiting for goods",
+  delayed: "Delayed",
+  to_schedule: "To schedule",
+  delivering: "Delivering",
+  unpaid: "Unpaid",
+  refund: "Refund due",
+};
+// one line under each dashboard tile, says when an order lands there
+export const queueHints: Record<OrderQueue, string> = {
+  review: "Requested, agree price and date with the customer",
+  problem: "A line failed, contact the customer",
+  to_purchase: "Confirmed, lines still to buy from suppliers",
+  waiting: "Lines ordered, goods on the way",
+  delayed: "Ordered lines past their promised date",
+  to_schedule: "Goods in hand, agree a handover window",
+  delivering: "Handover window agreed",
+  unpaid: "Handed over, money still due",
+  refund: "Money to pay back",
+};
+// queues that mean something went wrong or money is open
+export const urgentQueues = new Set<OrderQueue>([
+  "problem",
+  "delayed",
+  "unpaid",
+  "refund",
+]);
 const eventLabels: Record<string, string> = {
   placed: "Order request placed",
   confirmed: "Confirmed with the customer",
@@ -248,6 +378,11 @@ const eventLabels: Record<string, string> = {
   completed: "Order completed",
   loyalty_adjusted: "Loyalty points adjusted",
   migrated: "Moved over from the old order model",
+  item_moved: "Line moved to another part",
+  item_receipt_undone: "Line receipt undone",
+  shipment_rescheduled: "Shipment rescheduled",
+  entry_voided: "Ledger entry voided",
+  purchase_cancelled: "Purchase cancelled",
 };
 export const eventLabel = (type: string) =>
   eventLabels[type] ?? type.replaceAll("_", " ");
@@ -294,10 +429,22 @@ function termsText(before: unknown, after: unknown, currency: string) {
 
 // Keys of the event data in the order they read best; ids are skipped because the sku
 // or the shipment number next to them says the same for a human
-const skippedKeys = new Set(["itemId", "shipmentId", "paymentId", "after"]);
+const skippedKeys = new Set([
+  "itemId",
+  "shipmentId",
+  "paymentId",
+  "after",
+  "fromShipmentId",
+  "toShipmentId",
+  "voidedId",
+]);
 const keyOrder = [
+  "kind",
   "sku",
   "number",
+  "fromNumber",
+  "toNumber",
+  "newPart",
   "quantity",
   "method",
   "fulfilment",
@@ -308,8 +455,11 @@ const keyOrder = [
   "goodsMinor",
   "points",
   "refundedBeforeMinor",
+  "netPaidMinor",
   "procurementStatus",
+  "reference",
   "supplierReference",
+  "purchaseId",
   "replacesItemId",
   "itemIds",
   "from",
@@ -324,6 +474,11 @@ const keyOrder = [
   "note",
 ];
 
+function windowOf(value: unknown): string {
+  const { from, to } = (value ?? {}) as { from?: string; to?: string };
+  return from ? `${formatDateTime(from)} – ${formatDateTime(to ?? null)}` : "—";
+}
+
 // One line of journal details from the event data
 export function eventSummary(event: OrderEvent, order: AdminOrder): string {
   const data = event.data || {};
@@ -333,10 +488,27 @@ export function eventSummary(event: OrderEvent, order: AdminOrder): string {
       : String(value);
   const describe = (key: string, value: unknown): string | null => {
     switch (key) {
+      case "kind":
+        // entry_voided says which kind of entry it cancelled
+        return event.type === "entry_voided"
+          ? `voided ${value === "refund" ? "a refund" : "a payment"}`
+          : `kind: ${value}`;
       case "sku":
         return String(value);
       case "number":
         return `shipment #${value}`;
+      case "fromNumber":
+        return `shipment #${value} → ${data.newPart ? `new part #${data.toNumber} (no fee)` : `#${data.toNumber}`}`;
+      case "toNumber":
+      case "newPart":
+        return null; // shown with fromNumber
+      case "netPaidMinor":
+        return `net paid ${money(value)}`;
+      case "reference":
+        return `purchase ${value}`;
+      case "purchaseId":
+        // purchase_cancelled already names its reference
+        return event.type === "purchase_cancelled" ? null : "via a purchase";
       case "quantity":
         return `quantity ${value}`;
       case "method":
@@ -376,7 +548,9 @@ export function eventSummary(event: OrderEvent, order: AdminOrder): string {
       case "to":
         return null; // shown with "from"
       case "before":
-        return termsText(value, data.after, order.currency);
+        return event.type === "shipment_rescheduled"
+          ? `window ${windowOf(value)} → ${windowOf(data.after)}`
+          : termsText(value, data.after, order.currency);
       case "reopened":
         return value ? "order back to requested" : null;
       case "replanned":
@@ -436,6 +610,10 @@ export function problemText(
       return "Not recorded: this payment key was already used for a different entry. Check the ledger below; the next try gets a new key.";
     case "method_not_accepted":
       return `Not recorded: ${e.message}. Card and carrier cash on delivery work only once they are enabled on the server.`;
+    case "shipment_closed":
+      return "Not moved: the target shipment was handed over, refused or cancelled in the meantime. The order was reloaded; pick another part or a new one.";
+    case "void_exceeds_paid":
+      return `Not voided: that would leave less than nothing received (net received now ${amount("paidMinor")}). Void the refunds first.`;
   }
   if (e.status === 401)
     return "The admin session ended. Reload the page and sign in again.";
