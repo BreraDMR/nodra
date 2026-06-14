@@ -440,6 +440,17 @@ export function costBand(rule: {
     : `${formatCzk(rule.minCostCzkMinor)} – under ${formatCzk(rule.maxCostCzkMinor)}`;
 }
 
+// A fresh Idempotency-Key: prefix + 32 random hex chars. getRandomValues works on
+// plain http too, randomUUID doesn't
+export function newKey(prefix: string): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return (
+    prefix +
+    "-" +
+    Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
+  );
+}
+
 export function errorText(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
 }
