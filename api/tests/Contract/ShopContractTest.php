@@ -92,6 +92,20 @@ final class ShopContractTest extends ApiTestCase
             'post /api/admin/orders/{id}/shipments/{shipmentId}/hand-over' => ['200', '401', '403', '404', '409'],
             'post /api/admin/orders/{id}/shipments/{shipmentId}/refused' => ['200', '401', '403', '404', '409', '422'],
             'post /api/admin/orders/{id}/payments' => ['201', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/move' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/items/{itemId}/undo-received' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/shipments/{shipmentId}/reschedule' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/orders/{id}/payments/{paymentId}/void' => ['200', '401', '403', '404', '409', '422'],
+            'get /api/admin/dashboard' => ['200', '401'],
+            'get /api/admin/queues' => ['200', '401'],
+            'get /api/admin/settings' => ['200', '401'],
+            'get /api/admin/to-purchase' => ['200', '401'],
+            'get /api/admin/purchases' => ['200', '401', '422'],
+            'post /api/admin/purchases' => ['201', '401', '403', '409', '422'],
+            'get /api/admin/purchases/{id}' => ['200', '401', '404'],
+            'post /api/admin/purchases/{id}/receive' => ['200', '401', '403', '404', '409'],
+            'post /api/admin/purchases/{id}/cancel' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/login' => ['200', '401'],
             'post /api/checkout/quote' => ['200', '422'],
             'post /api/checkout' => ['201', '409', '422'],
             'get /api/orders/{reference}' => ['200', '404'],
@@ -191,9 +205,72 @@ final class ShopContractTest extends ApiTestCase
         $this->assertShape($schemas['AdminOrder']['properties']['customer'], $order['order']['customer'], 'customer');
         $this->assertShape($schemas['AdminOrder']['properties']['consents'], $order['order']['consents'], 'consents');
 
+        $this->assertShape($schemas['OrderEconomics'], $order['order']['economics'], 'OrderEconomics');
+        $this->assertShape($schemas['OfferSource'], array_values(array_filter(array_column($order['order']['items'], 'offer')))[0], 'OfferSource');
+
         $page = $this->getJson('/api/admin/orders');
         $this->assertShape($schemas['AdminOrderPage'], $page, 'AdminOrderPage');
-        $this->assertShape($schemas['AdminOrderPage']['properties']['items']['items'], $page['items'][0], 'admin order row');
+        $this->assertShape($schemas['AdminOrderRow'], $page['items'][0], 'admin order row');
+        $this->assertShape($schemas['QueueCounts'], $this->getJson('/api/admin/queues'), 'QueueCounts');
+        self::assertSame($schemas['OrderQueue']['enum'], array_keys($this->getJson('/api/admin/queues')));
+
+        $dashboard = $this->getJson('/api/admin/dashboard');
+        $this->assertShape($schemas['AdminDashboard'], $dashboard, 'AdminDashboard');
+        $this->assertShape($schemas['AdminDashboard']['properties']['ownStock']['items'], $dashboard['ownStock'][0], 'own stock row');
+        $this->assertShape($schemas['AdminOrderRow'], $dashboard['recentOrders'][0], 'recent order');
+
+        $settings = $this->getJson('/api/admin/settings');
+        $this->assertShape($schemas['AdminSettings'], $settings, 'AdminSettings');
+        $this->assertShape($schemas['AdminSettings']['properties']['payment'], $settings['payment'], 'settings payment');
+        $this->assertShape($schemas['AdminSettings']['properties']['delivery'], $settings['delivery'], 'settings delivery');
+        $this->assertShape($schemas['AdminSettings']['properties']['delivery']['properties']['pickupNote'], $settings['delivery']['pickupNote'], 'pickup notes');
+    }
+
+    public function testPurchaseResponsesMatchTheSchemas(): void
+    {
+        $b = $this->builder();
+        $product = $b->product('t-contract-buy', $b->category('t-contract'));
+        $variant = $b->variant($product, 'T-CONTRACT-BUY');
+        $b->pricedOffer($product, $variant, 2000, 'EUR', 25_000_000, 200);
+        $receipt = $this->checkout([$variant->getId()->toRfc4122() => 1]);
+        $token = $this->loginAdmin();
+        $id = $this->orderId($receipt['reference']);
+        $this->sendJson('POST', '/api/admin/orders/'.$id.'/confirm', ['customerAgreedVia' => ['channel' => 'whatsapp', 'note' => 'OK']], $token);
+        $schemas = $this->contract()['components']['schemas'];
+
+        $toPurchase = $this->getJson('/api/admin/to-purchase');
+        $this->assertShape($schemas['ToPurchase'], $toPurchase, 'ToPurchase');
+        $this->assertShape($schemas['ToPurchase']['properties']['groups']['items'], $toPurchase['groups'][0], 'to purchase group');
+        $this->assertShape($schemas['ToPurchaseLine'], $toPurchase['groups'][0]['lines'][0], 'ToPurchaseLine');
+        $this->assertShape($schemas['OfferSource'], $toPurchase['groups'][0]['lines'][0]['offer'], 'to purchase offer');
+
+        $purchase = $this->sendJson('POST', '/api/admin/purchases', [
+            'supplier' => 'bike24', 'reference' => 'B24-CONTRACT', 'currency' => 'EUR', 'fxRateCzk' => 25_000_000,
+            'lines' => [['itemId' => $toPurchase['groups'][0]['lines'][0]['itemId'], 'unitPriceMinor' => 2000]],
+        ], $token, ['HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))]);
+        self::assertResponseStatusCodeSame(201);
+        $this->assertShape($schemas['AdminPurchase'], $purchase, 'AdminPurchase');
+        $this->assertShape($schemas['AdminPurchase']['properties']['lines']['items'], $purchase['lines'][0], 'purchase line');
+        $page = $this->getJson('/api/admin/purchases');
+        $this->assertShape($schemas['AdminPurchasePage'], $page, 'AdminPurchasePage');
+        $this->assertShape($schemas['AdminPurchasePage']['properties']['items']['items'], $page['items'][0], 'purchase row');
+
+        $order = $this->getJson('/api/admin/orders/'.$id);
+        $this->assertShape($schemas['AdminOrderItem']['properties']['purchase'], $order['items'][0]['purchase'], 'line purchase');
+    }
+
+    public function testNewRequestBodiesMatchTheirDtos(): void
+    {
+        $schemas = $this->contract()['components']['schemas'];
+        foreach ([
+            'CreatePurchaseRequest' => \App\Admin\CreatePurchaseRequest::class, 'PurchaseLineRequest' => \App\Admin\PurchaseLineRequest::class,
+            'MoveLineRequest' => \App\Admin\MoveLineRequest::class, 'RescheduleShipmentRequest' => \App\Admin\RescheduleShipmentRequest::class,
+        ] as $schema => $class) {
+            $parameters = (new \ReflectionMethod($class, '__construct'))->getParameters();
+            self::assertEqualsCanonicalizing(array_keys($schemas[$schema]['properties']), array_map(static fn (\ReflectionParameter $p): string => $p->getName(), $parameters), $schema);
+            $required = array_filter($parameters, static fn (\ReflectionParameter $p): bool => !$p->isOptional());
+            self::assertEqualsCanonicalizing($schemas[$schema]['required'], array_map(static fn (\ReflectionParameter $p): string => $p->getName(), $required), $schema.' required');
+        }
     }
 
     public function testErrorShapeAndEanInputAreDescribed(): void
