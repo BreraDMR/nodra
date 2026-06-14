@@ -5,6 +5,7 @@ import {
   channelLabels,
   deliveryMethodLabels,
   leadTimeText,
+  statusLabel,
   type AdminOrder,
   type AdminOrderItem,
   type AdminShipment,
@@ -14,6 +15,7 @@ import {
 import {
   errorText,
   formatCzk,
+  formatDateTime,
   formatMinor,
   minorText,
   moneyHint,
@@ -174,12 +176,14 @@ export function ConfirmForm({
   );
 }
 
-// Cancel order or line, failed, return, refused: all take one reason
+// Cancel order or line, failed, return, refused, and the corrections undo received
+// and void: all take one reason
 export function ReasonForm({
   title,
   path,
   hint,
   confirmText,
+  correction = false,
   busy,
   onSubmit,
   onCancel,
@@ -189,12 +193,13 @@ export function ReasonForm({
   hint?: string;
   // asked before sending, for the steps that can't be undone
   confirmText?: string;
+  correction?: boolean;
 }) {
   const [reason, setReason] = useState("");
   const [problem, setProblem] = useState("");
   return (
     <form
-      className="order-form"
+      className={correction ? "order-form correction-form" : "order-form"}
       onSubmit={async (e) => {
         e.preventDefault();
         setProblem("");
@@ -209,7 +214,7 @@ export function ReasonForm({
       <h4>{title}</h4>
       {hint && <p className="variant-note">{hint}</p>}
       <label className="admin-field">
-        Reason
+        {correction ? "Reason · goes to the journal" : "Reason"}
         <textarea
           rows={2}
           maxLength={500}
@@ -557,16 +562,62 @@ export function ReplacementForm({
   );
 }
 
+const localInput = (value: string | null) =>
+  value ? toLocalInput(parseApiDate(value)) : "";
+
+// datetime-local is local time, the API wants ISO timestamps
+function windowBody(from: string, to: string) {
+  const start = new Date(from);
+  const end = new Date(to);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()))
+    throw Error("Enter both ends of the window");
+  if (end <= start) throw Error("The window must end after it starts");
+  return { from: start.toISOString(), to: end.toISOString() };
+}
+
+function WindowFields({
+  from,
+  to,
+  setFrom,
+  setTo,
+}: {
+  from: string;
+  to: string;
+  setFrom: (value: string) => void;
+  setTo: (value: string) => void;
+}) {
+  return (
+    <>
+      <label className="admin-field">
+        From
+        <input
+          type="datetime-local"
+          required
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+      </label>
+      <label className="admin-field">
+        To
+        <input
+          type="datetime-local"
+          required
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+        />
+      </label>
+    </>
+  );
+}
+
 export function ScheduleForm({
   shipment,
   busy,
   onSubmit,
   onCancel,
 }: FormProps & { shipment: AdminShipment }) {
-  const local = (value: string | null) =>
-    value ? toLocalInput(parseApiDate(value)) : "";
-  const [from, setFrom] = useState(local(shipment.scheduledFrom));
-  const [to, setTo] = useState(local(shipment.scheduledTo));
+  const [from, setFrom] = useState(localInput(shipment.scheduledFrom));
+  const [to, setTo] = useState(localInput(shipment.scheduledTo));
   const [problem, setProblem] = useState("");
   return (
     <form
@@ -574,22 +625,14 @@ export function ScheduleForm({
       onSubmit={async (e) => {
         e.preventDefault();
         setProblem("");
-        // datetime-local is local time, the API wants ISO timestamps
-        const start = new Date(from);
-        const end = new Date(to);
-        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-          setProblem("Enter both ends of the window");
+        let body;
+        try {
+          body = windowBody(from, to);
+        } catch (err) {
+          setProblem(errorText(err, "Check the window"));
           return;
         }
-        if (end <= start) {
-          setProblem("The window must end after it starts");
-          return;
-        }
-        await onSubmit(
-          `/shipments/${shipment.id}/schedule`,
-          { from: start.toISOString(), to: end.toISOString() },
-          "Schedule",
-        );
+        await onSubmit(`/shipments/${shipment.id}/schedule`, body, "Schedule");
       }}
     >
       <h4>
@@ -602,28 +645,183 @@ export function ScheduleForm({
           " Re-planning a refused shipment takes its goods from own stock again."}
       </p>
       <div className="admin-form-grid">
-        <label className="admin-field">
-          From
-          <input
-            type="datetime-local"
-            required
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label className="admin-field">
-          To
-          <input
-            type="datetime-local"
-            required
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </label>
+        <WindowFields from={from} to={to} setFrom={setFrom} setTo={setTo} />
       </div>
       <FormFooter
         busy={busy}
         submit="Schedule"
+        onCancel={onCancel}
+        problem={problem}
+      />
+    </form>
+  );
+}
+
+function ReasonField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="admin-field wide">
+      Reason · goes to the journal
+      <textarea
+        rows={2}
+        maxLength={500}
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
+// Correction: a scheduled window moves, the journal keeps the old and the new one
+export function RescheduleForm({
+  shipment,
+  busy,
+  onSubmit,
+  onCancel,
+}: FormProps & { shipment: AdminShipment }) {
+  const [from, setFrom] = useState(localInput(shipment.scheduledFrom));
+  const [to, setTo] = useState(localInput(shipment.scheduledTo));
+  const [reason, setReason] = useState("");
+  const [problem, setProblem] = useState("");
+  return (
+    <form
+      className="order-form correction-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setProblem("");
+        let body;
+        try {
+          body = windowBody(from, to);
+          if (!reason.trim()) throw Error("Enter a reason");
+        } catch (err) {
+          setProblem(errorText(err, "Check the window"));
+          return;
+        }
+        if (
+          !confirm(
+            `Move the window of shipment #${shipment.number} to ${formatDateTime(body.from)} – ${formatDateTime(body.to)}? The customer should already know.`,
+          )
+        )
+          return;
+        await onSubmit(
+          `/shipments/${shipment.id}/reschedule`,
+          { ...body, reason: reason.trim() },
+          "Reschedule",
+        );
+      }}
+    >
+      <h4>
+        Reschedule shipment #{shipment.number} ·{" "}
+        {deliveryMethodLabels[shipment.method] || shipment.method}
+      </h4>
+      <p className="variant-note">
+        Correction of an agreed window. The journal keeps the old one next to
+        the new one.
+      </p>
+      <div className="admin-form-grid">
+        <WindowFields from={from} to={to} setFrom={setFrom} setTo={setTo} />
+        <ReasonField value={reason} onChange={setReason} />
+      </div>
+      <FormFooter
+        busy={busy}
+        submit="Reschedule"
+        onCancel={onCancel}
+        problem={problem}
+      />
+    </form>
+  );
+}
+
+// Correction: the line goes to another open part of the order, or to a new one
+export function MoveForm({
+  order,
+  item,
+  busy,
+  onSubmit,
+  onCancel,
+}: FormProps & { order: AdminOrder; item: AdminOrderItem }) {
+  const from = order.shipments.find((s) => s.id === item.shipmentId);
+  // only parts that aren't handed over, refused or cancelled can take a line
+  const targets = order.shipments.filter(
+    (s) =>
+      s.id !== item.shipmentId &&
+      (s.status === "planned" || s.status === "scheduled"),
+  );
+  // "" = not picked yet, "new" = a new part
+  const [target, setTarget] = useState("");
+  const [reason, setReason] = useState("");
+  const [problem, setProblem] = useState("");
+  const targetText = (id: string) => {
+    if (id === "new") return "a new part (no fee)";
+    const s = order.shipments.find((x) => x.id === id);
+    return s ? `shipment #${s.number}` : "the chosen shipment";
+  };
+  return (
+    <form
+      className="order-form correction-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setProblem("");
+        if (!target) {
+          setProblem("Pick where the line goes");
+          return;
+        }
+        if (!reason.trim()) {
+          setProblem("Enter a reason");
+          return;
+        }
+        if (
+          !confirm(
+            `Move ${item.quantity} × ${item.sku} from shipment #${from?.number ?? "?"} to ${targetText(target)}?`,
+          )
+        )
+          return;
+        await onSubmit(
+          `/items/${item.id}/move`,
+          {
+            shipmentId: target === "new" ? null : target,
+            reason: reason.trim(),
+          },
+          "Move line",
+        );
+      }}
+    >
+      <h4>Move line · {item.sku}</h4>
+      <p className="variant-note">
+        Now in shipment #{from?.number ?? "?"}. A new part keeps the same
+        delivery method and costs the customer nothing; a part left without
+        lines is cancelled with its fee. Fees never go up.
+      </p>
+      <div className="admin-form-grid">
+        <label className="admin-field wide">
+          Move to
+          <select
+            value={target}
+            required
+            onChange={(e) => setTarget(e.target.value)}
+          >
+            <option value="">— pick a part —</option>
+            {targets.map((s) => (
+              <option key={s.id} value={s.id}>
+                #{s.number} · {deliveryMethodLabels[s.method] || s.method} ·{" "}
+                {statusLabel(s.status)} · {s.itemIds.length}{" "}
+                {s.itemIds.length === 1 ? "line" : "lines"}
+              </option>
+            ))}
+            <option value="new">New part (free)</option>
+          </select>
+        </label>
+        <ReasonField value={reason} onChange={setReason} />
+      </div>
+      <FormFooter
+        busy={busy}
+        submit="Move line"
         onCancel={onCancel}
         problem={problem}
       />
