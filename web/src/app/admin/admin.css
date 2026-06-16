@@ -1343,3 +1343,250 @@ button.mini-order:hover {
     gap: 4px;
   }
 }
+/* D05: work queues, corrections, economics and purchases */
+.queue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.queue-grid button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: center;
+  text-align: left;
+  background: #f9fbf7;
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+}
+.queue-grid button:hover {
+  border-color: #729273;
+}
+.queue-grid strong {
+  grid-row: span 2;
+  font: 700 27px var(--display);
+  letter-spacing: -0.05em;
+  min-width: 32px;
+  color: #a4ada3;
+}
+.queue-grid span {
+  font-size: 12px;
+  font-weight: 800;
+}
+.queue-grid small {
+  font-size: 11px;
+  color: #7e8b7f;
+  line-height: 1.35;
+}
+.queue-grid button.open strong {
+  color: #376195;
+}
+.queue-grid button.alert {
+  background: #fff8e6;
+  border-color: #efd9a4;
+}
+.queue-grid button.alert strong {
+  color: #a3621a;
+}
+.queue-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.queue-tag,
+.delayed-badge {
+  display: inline-block;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  background: #edf2f8;
+  color: #376195;
+  white-space: nowrap;
+}
+.queue-tag.urgent {
+  background: #fff2d1;
+  color: #93641c;
+}
+.delayed-badge {
+  background: #9d3e3e;
+  color: white;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+.queue-tags .delayed-badge,
+.order-line-chips .delayed-badge {
+  margin-left: 0;
+}
+.orders-filters .orders-search {
+  min-width: min(100%, 320px);
+}
+.orders-search input {
+  background: white;
+  border: 1px solid #ccd8cc;
+  padding: 12px;
+  min-width: 0;
+}
+.order-action-bar.correction-bar {
+  align-items: center;
+  margin-top: 6px;
+}
+.correction-bar > span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a7a5a;
+  margin-right: 4px;
+}
+.correction-bar button {
+  border-style: dashed;
+  border-color: #d8c69c;
+  color: #7a5b1c;
+}
+.correction-bar button:hover,
+.correction-bar button.active {
+  border-color: #b8943f;
+  background: #fff8e6;
+}
+.order-form.correction-form {
+  border-color: #efd9a4;
+  background: #fffcf4;
+}
+.order-economics > span {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #8a7a5a;
+  margin-bottom: 6px;
+}
+.order-economics .order-totals {
+  margin: 0 0 6px;
+}
+.order-economics .variant-note {
+  margin: 0 0 12px;
+}
+.order-totals .complete {
+  background: #eef7e9;
+  border-color: #c6e1ba;
+}
+.order-totals strong.order-economics-state {
+  font: 800 12px var(--sans);
+  letter-spacing: 0;
+}
+.order-snapshot a {
+  color: #24552a;
+  font-weight: 750;
+}
+.order-snapshot .status {
+  padding: 3px 6px;
+}
+.cost-differs {
+  color: #a3621a;
+}
+.cost-lower {
+  color: #448245;
+}
+.ledger-table tr.voided td {
+  color: #9aa39a;
+}
+.ledger-table tr.voided .ledger-amount,
+.ledger-table tr.voided td:nth-child(2) {
+  text-decoration: line-through;
+}
+.ledger-table small.ledger-link {
+  color: #7a5b1c;
+  font-weight: 800;
+}
+.ledger-link .admin-link {
+  padding: 0;
+  font-size: 11px;
+  color: #7a5b1c;
+  text-decoration: underline;
+}
+.ledger-table .danger-link {
+  white-space: nowrap;
+}
+.ledger-table .danger-link.active {
+  text-decoration: underline;
+}
+.purchase-section {
+  margin-top: 20px;
+}
+.purchase-section .panel-head {
+  margin-bottom: 10px;
+}
+.purchase-intro {
+  margin: 0 0 16px;
+}
+.purchase-group {
+  margin-top: 22px;
+}
+.purchase-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.purchase-group-head h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.purchase-group-head h3 small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #7e8b7f;
+  letter-spacing: 0;
+  margin-top: 3px;
+}
+.purchase-group-head .admin-primary,
+.purchase-group-head .admin-secondary {
+  padding: 10px 14px;
+}
+.purchase-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+.purchase-group input[type="checkbox"]:disabled {
+  opacity: 0.35;
+}
+.purchase-form .admin-table {
+  min-width: 640px;
+}
+.purchase-price {
+  width: 110px;
+  background: white;
+  border: 1px solid #ccd8cc;
+  padding: 8px;
+}
+.purchase-preview-note {
+  margin: 0;
+  font-size: 12px;
+  color: #536253;
+  line-height: 1.5;
+}
+.preview-tag {
+  display: inline-block;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #edf2f8;
+  color: #376195;
+}
+@media (max-width: 900px) {
+  .queue-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .queue-grid {
+    grid-template-columns: 1fr;
+  }
+}
