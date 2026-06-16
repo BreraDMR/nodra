@@ -1,11 +1,14 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Chip, OrderPanel } from "./OrderPanel";
+import { Chip, OrderPanel, QueueTags } from "./OrderPanel";
 import {
   formatPrice,
+  orderQueues,
   orderStatuses,
   paymentStatuses,
+  queueLabels,
   statusLabel,
+  type OrderQueue,
   type OrderRow,
 } from "./orders";
 import { errorText, formatDateTime, type Paged, type Send } from "./shared";
@@ -13,16 +16,23 @@ import { errorText, formatDateTime, type Paged, type Send } from "./shared";
 export function OrdersPanel({
   send,
   initialOrderId = null,
+  initialQueue = "",
   onChanged,
 }: {
   send: Send;
   // opened straight away, e.g. from the dashboard's recent orders
   initialOrderId?: string | null;
+  // a dashboard tile opens the list filtered by its queue
+  initialQueue?: OrderQueue | "";
   onChanged: () => void;
 }) {
   // "" = any status
   const [status, setStatus] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
+  const [queue, setQueue] = useState<OrderQueue | "">(initialQueue);
+  // what is typed, and what the list was asked for a moment later
+  const [searchDraft, setSearchDraft] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<Paged<OrderRow> | null>(null);
   const [error, setError] = useState("");
@@ -31,17 +41,25 @@ export function OrdersPanel({
   const [revision, setRevision] = useState(0);
 
   const fetchPage = useCallback(
-    (page: number, status: string, paymentStatus: string) => {
+    (
+      page: number,
+      status: string,
+      paymentStatus: string,
+      queue: string,
+      search: string,
+    ) => {
       const query = new URLSearchParams({ page: String(page) });
       if (status) query.set("status", status);
       if (paymentStatus) query.set("paymentStatus", paymentStatus);
+      if (queue) query.set("queue", queue);
+      if (search) query.set("q", search);
       return send<Paged<OrderRow>>(`/api/admin/orders?${query}`);
     },
     [send],
   );
   useEffect(() => {
     let live = true;
-    fetchPage(page, status, paymentStatus)
+    fetchPage(page, status, paymentStatus, queue, search)
       .then((result) => {
         if (!live) return;
         setData(result);
@@ -51,9 +69,20 @@ export function OrdersPanel({
     return () => {
       live = false;
     };
-  }, [fetchPage, page, status, paymentStatus, revision]);
+  }, [fetchPage, page, status, paymentStatus, queue, search, revision]);
 
-  const filtered = Boolean(status || paymentStatus);
+  // ask the API only once typing stops for a moment
+  useEffect(() => {
+    const next = searchDraft.trim();
+    if (next === search) return;
+    const timer = setTimeout(() => {
+      setSearch(next);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchDraft, search]);
+
+  const filtered = Boolean(status || paymentStatus || queue || search);
   return (
     <>
       <div className="admin-heading compact">
@@ -66,6 +95,33 @@ export function OrdersPanel({
         </div>
       </div>
       <div className="orders-filters">
+        <label className="admin-field orders-search">
+          Search
+          <input
+            type="search"
+            value={searchDraft}
+            maxLength={100}
+            placeholder="Reference, name, email, phone or supplier ref"
+            onChange={(e) => setSearchDraft(e.target.value)}
+          />
+        </label>
+        <label className="admin-field">
+          Work queue
+          <select
+            value={queue}
+            onChange={(e) => {
+              setQueue(e.target.value as OrderQueue | "");
+              setPage(1);
+            }}
+          >
+            <option value="">All queues</option>
+            {orderQueues.map((q) => (
+              <option key={q} value={q}>
+                {queueLabels[q]}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="admin-field">
           Order status
           <select
@@ -107,6 +163,9 @@ export function OrdersPanel({
             onClick={() => {
               setStatus("");
               setPaymentStatus("");
+              setQueue("");
+              setSearchDraft("");
+              setSearch("");
               setPage(1);
             }}
           >
@@ -129,6 +188,7 @@ export function OrdersPanel({
               <th>PHONE</th>
               <th>STATUS</th>
               <th>PAYMENT</th>
+              <th>QUEUES</th>
               <th>TOTAL</th>
               <th>CREATED</th>
               <th></th>
@@ -139,6 +199,7 @@ export function OrdersPanel({
               <tr key={o.id}>
                 <td>
                   <strong>{o.reference}</strong>
+                  {o.delayed && <span className="delayed-badge">Delayed</span>}
                 </td>
                 <td>
                   <strong>{o.customerName}</strong>
@@ -150,6 +211,11 @@ export function OrdersPanel({
                 </td>
                 <td>
                   <Chip value={o.paymentStatus} />
+                </td>
+                <td>
+                  {/* delayed shows next to the reference already */}
+                  <QueueTags queues={o.queues} delayed={false} />
+                  {!o.queues.some((q) => q !== "delayed") && "—"}
                 </td>
                 <td>{formatPrice(o.total)}</td>
                 <td>{formatDateTime(o.createdAt)}</td>
