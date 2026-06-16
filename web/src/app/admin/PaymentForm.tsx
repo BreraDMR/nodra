@@ -33,10 +33,23 @@ function suggested(order: AdminOrder, kind: PaymentKind): string {
   return amount > 0 ? minorText(amount) : "";
 }
 
+// Without the settings every method is offered and the API refuses what it doesn't take;
+// carrier cash on delivery is a way to get paid, never to pay back
+function methodsFor(
+  kind: PaymentKind,
+  accepted: Record<PaymentKind, PaymentMethod[]> | null,
+): PaymentMethod[] {
+  if (accepted) return accepted[kind];
+  return paymentMethods.filter(
+    (m) => kind === "payment" || m !== "carrier_cod",
+  );
+}
+
 export function PaymentForm({
   order,
   kinds,
   initialKind,
+  accepted,
   busy,
   record,
   onCancel,
@@ -44,21 +57,23 @@ export function PaymentForm({
   order: AdminOrder;
   kinds: PaymentKind[];
   initialKind: PaymentKind;
+  // from GET /api/admin/settings; null while it isn't loaded
+  accepted: Record<PaymentKind, PaymentMethod[]> | null;
   busy: boolean;
   // the order panel picks the Idempotency-Key, so it outlives this form
   record: (body: PaymentBody) => Promise<void>;
   onCancel: () => void;
 }) {
   const [kind, setKind] = useState<PaymentKind>(initialKind);
-  const [method, setMethod] = useState<PaymentMethod>("cash");
+  const [picked, setPicked] = useState<PaymentMethod | "">("");
   const [amount, setAmount] = useState(() => suggested(order, initialKind));
   const [shipmentId, setShipmentId] = useState("");
   const [note, setNote] = useState("");
   const [problem, setProblem] = useState("");
-  // carrier cash on delivery is a way to get paid, never to pay back
-  const methods = paymentMethods.filter(
-    (m) => kind === "payment" || m !== "carrier_cod",
-  );
+  const methods = methodsFor(kind, accepted);
+  // the settings can arrive after the form opened, so the method follows the list
+  const method: PaymentMethod | "" =
+    picked && methods.includes(picked) ? picked : (methods[0] ?? "");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -72,6 +87,12 @@ export function PaymentForm({
     }
     if (!amountMinor) {
       setProblem("Enter an amount above 0");
+      return;
+    }
+    if (!method) {
+      setProblem(
+        `No method is accepted for a ${kind} right now. Check the API settings.`,
+      );
       return;
     }
     const body: PaymentBody = {
@@ -99,8 +120,10 @@ export function PaymentForm({
         {formatPrice(order.paid)}
         {order.refundDue.amount > 0 &&
           ` · to refund ${formatPrice(order.refundDue)}`}
-        . Card and carrier cash on delivery work only once they are enabled on
-        the server.
+        .
+        {accepted
+          ? " Only the methods the shop accepts are listed."
+          : " Card and carrier cash on delivery work only once they are enabled on the server."}
       </p>
       <div className="admin-form-grid">
         <label className="admin-field">
@@ -111,8 +134,6 @@ export function PaymentForm({
               const next = e.target.value as PaymentKind;
               setKind(next);
               setAmount(suggested(order, next));
-              if (next === "refund" && method === "carrier_cod")
-                setMethod("cash");
             }}
           >
             {kinds.map((k) => (
@@ -126,8 +147,9 @@ export function PaymentForm({
           Method
           <select
             value={method}
-            onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+            onChange={(e) => setPicked(e.target.value as PaymentMethod)}
           >
+            {!methods.length && <option value="">— none accepted —</option>}
             {methods.map((m) => (
               <option key={m} value={m}>
                 {paymentMethodLabels[m]}
