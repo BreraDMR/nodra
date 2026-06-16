@@ -5,9 +5,19 @@ import Image from "next/image";
 import { AttributeFields } from "./AttributeFields";
 import { CategoriesPanel } from "./CategoriesPanel";
 import { Chip } from "./OrderPanel";
-import { formatPrice, type OrderRow } from "./orders";
+import {
+  formatPrice,
+  orderQueues,
+  queueHints,
+  queueLabels,
+  urgentQueues,
+  type OrderQueue,
+  type OrderRow,
+  type QueueCounts,
+} from "./orders";
 import { OrdersPanel } from "./OrdersPanel";
 import { PricingRulesPanel } from "./PricingRulesPanel";
+import { PurchasesPanel } from "./PurchasesPanel";
 import { RepricePanel, type RepriceFilter } from "./RepricePanel";
 import { SupplierOffersPanel } from "./SupplierOffersPanel";
 import { ProductPricingPanel } from "./VariantPricingPanel";
@@ -78,11 +88,25 @@ type Dashboard = {
   revenueCzkMinor: number;
   revenueEurMinor: number;
   products: number;
-  lowStock: { sku: string; stock: number; product: string }[];
+  // variants NODRA holds itself, lowest first, up to 20 of ownStockVariants
+  ownStock: {
+    id: string;
+    sku: string;
+    stock: number;
+    product: string | null;
+  }[];
+  ownStockVariants: number;
+  queues: QueueCounts;
   recentOrders: OrderRow[];
 };
 type Tab =
-  "overview" | "products" | "categories" | "pricing" | "reprice" | "orders";
+  | "overview"
+  | "products"
+  | "categories"
+  | "pricing"
+  | "reprice"
+  | "orders"
+  | "purchases";
 const fresh = {
   slug: "",
   category: "bags",
@@ -198,6 +222,9 @@ export default function AdminPage() {
   });
   // a recent order clicked on the overview opens as soon as the orders screen mounts
   const [orderToOpen, setOrderToOpen] = useState<string | null>(null);
+  // a queue tile opens the orders list filtered by it; the key remounts the list
+  const [ordersQueue, setOrdersQueue] = useState<OrderQueue | "">("");
+  const [ordersKey, setOrdersKey] = useState(0);
   const [editing, setEditing] = useState<string | null>(null);
   const [variantEditing, setVariantEditing] = useState<{
     productId: string;
@@ -295,8 +322,10 @@ export default function AdminPage() {
   function pricesChanged() {
     void reload(productPage, productSearch);
   }
-  function openOrders(orderId: string | null) {
+  function openOrders(orderId: string | null, queue: OrderQueue | "" = "") {
     setOrderToOpen(orderId);
+    setOrdersQueue(queue);
+    setOrdersKey((key) => key + 1);
     setTab("orders");
   }
   // Product PUT writes the form price into the base variant, so after an apply in
@@ -644,6 +673,14 @@ export default function AdminPage() {
               ▤ <span>Orders</span>
               <small>{dashboard?.orders ?? 0}</small>
             </button>
+            <button
+              aria-label="Purchases"
+              className={tab === "purchases" ? "active" : ""}
+              onClick={() => setTab("purchases")}
+            >
+              ▥ <span>Purchases</span>
+              <small>{dashboard?.queues.to_purchase ?? 0}</small>
+            </button>
           </nav>
         </div>
         <div className="admin-sidebar-bottom">
@@ -734,11 +771,46 @@ export default function AdminPage() {
                   <small>In the collection</small>
                 </div>
                 <div>
-                  <span>04 / LOW STOCK</span>
-                  <strong>{dashboard?.lowStock.length || 0}</strong>
-                  <small>Variants at 5 or below</small>
+                  <span>04 / OWN STOCK</span>
+                  <strong>{dashboard?.ownStockVariants || 0}</strong>
+                  <small>Variants NODRA holds itself</small>
                 </div>
               </div>
+              <section className="admin-panel pricing-watch">
+                <div className="panel-head">
+                  <div>
+                    <p className="eyebrow">WORK QUEUES</p>
+                    <h2>What needs doing</h2>
+                  </div>
+                  <button onClick={() => openOrders(null)}>All orders ↗</button>
+                </div>
+                <div className="queue-grid">
+                  {orderQueues.map((queue) => {
+                    const count = dashboard?.queues[queue] ?? 0;
+                    return (
+                      <button
+                        key={queue}
+                        className={
+                          count && urgentQueues.has(queue)
+                            ? "alert"
+                            : count
+                              ? "open"
+                              : ""
+                        }
+                        title={`Open orders in “${queueLabels[queue]}”`}
+                        onClick={() => openOrders(null, queue)}
+                      >
+                        <strong>{dashboard ? count : "—"}</strong>
+                        <span>{queueLabels[queue]}</span>
+                        <small>{queueHints[queue]}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="variant-note">
+                  An order can sit in several queues at once.
+                </p>
+              </section>
               <section className="admin-panel pricing-watch">
                 <div className="panel-head">
                   <div>
@@ -806,7 +878,12 @@ export default function AdminPage() {
                         title={`Open ${o.reference}`}
                         onClick={() => openOrders(o.id)}
                       >
-                        <span className="order-ref">{o.reference}</span>
+                        <span className="order-ref">
+                          {o.reference}
+                          {o.delayed && (
+                            <span className="delayed-badge">Delayed</span>
+                          )}
+                        </span>
                         <span>{o.customerName}</span>
                         <span className="mini-order-status">
                           <Chip value={o.status} />
@@ -825,23 +902,33 @@ export default function AdminPage() {
                   <div className="panel-head">
                     <div>
                       <p className="eyebrow">INVENTORY WATCH</p>
-                      <h2>Low stock</h2>
+                      <h2>Own stock</h2>
                     </div>
                     <button onClick={() => setTab("products")}>Manage ↗</button>
                   </div>
-                  {dashboard?.lowStock.length ? (
-                    dashboard.lowStock.map((x) => (
-                      <div className="low-stock" key={x.sku}>
-                        <div>
-                          <strong>{x.product}</strong>
-                          <small>{x.sku}</small>
+                  {dashboard?.ownStock.length ? (
+                    <>
+                      {dashboard.ownStock.map((x) => (
+                        <div className="low-stock" key={x.id}>
+                          <div>
+                            <strong>{x.product || x.sku}</strong>
+                            <small>{x.sku}</small>
+                          </div>
+                          <b>{x.stock} on hand</b>
                         </div>
-                        <b>{x.stock} left</b>
-                      </div>
-                    ))
+                      ))}
+                      {dashboard.ownStockVariants >
+                        dashboard.ownStock.length && (
+                        <p className="variant-note">
+                          Lowest {dashboard.ownStock.length} of{" "}
+                          {dashboard.ownStockVariants} variants with own stock.
+                        </p>
+                      )}
+                    </>
                   ) : (
                     <p className="admin-empty">
-                      All variants have healthy stock.
+                      NODRA holds no stock of its own right now. Everything is
+                      bought after the customer confirms.
                     </p>
                   )}
                 </section>
@@ -1026,10 +1113,15 @@ export default function AdminPage() {
           )}
           {tab === "orders" && (
             <OrdersPanel
+              key={ordersKey}
               send={send}
               initialOrderId={orderToOpen}
+              initialQueue={ordersQueue}
               onChanged={pricesChanged}
             />
+          )}
+          {tab === "purchases" && (
+            <PurchasesPanel send={send} onChanged={pricesChanged} />
           )}
         </div>
       </div>
