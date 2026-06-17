@@ -18,7 +18,7 @@ import {
   type OrderReceipt,
 } from "@/lib/shop";
 
-// The receipt doesn't carry the contact channel; checkout leaves it in this tab
+// Fallback for a receipt without contactChannel: checkout leaves it in this tab
 function storedChannel(reference: string): ContactChannel | null {
   try {
     const saved = JSON.parse(
@@ -59,7 +59,10 @@ export default function OrderPage() {
         return r.json() as Promise<OrderReceipt>;
       })
       .then((receipt) =>
-        setLoaded({ receipt, channel: storedChannel(receipt.reference) }),
+        setLoaded({
+          receipt,
+          channel: receipt.contactChannel ?? storedChannel(receipt.reference),
+        }),
       )
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);
