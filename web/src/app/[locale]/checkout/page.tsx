@@ -238,11 +238,22 @@ export default function Checkout() {
   function methodLabel(m: DeliveryMethod): string {
     const info = shown?.methods.find((x) => x.method === m);
     if (!info) return o.methods[m];
+    // "Prague · 149 Kč · free from 500 Kč" while the basket is below the threshold
+    const freeFrom =
+      info.freeFromMinor !== null && (!info.fee || info.fee.amount > 0)
+        ? o.freeFrom.replace(
+            "{amount}",
+            money({ amount: info.freeFromMinor, currency: "CZK" }, locale),
+          )
+        : "";
+    // before a postal code is in, the threshold is still worth knowing
     const detail = info.available
-      ? info.fee
-        ? fee(info.fee)
-        : ""
-      : o.reasonsShort[info.reason ?? "not_offered"];
+      ? [info.fee ? fee(info.fee) : "", freeFrom].filter(Boolean).join(" · ")
+      : info.reason === "postal_code_required"
+        ? [o.reasonsShort.postal_code_required, freeFrom]
+            .filter(Boolean)
+            .join(" · ")
+        : o.reasonsShort[info.reason ?? "not_offered"];
     return detail ? `${o.methods[m]} · ${detail}` : o.methods[m];
   }
 
@@ -367,7 +378,8 @@ export default function Checkout() {
       if (response.ok && data) {
         const receipt = data as OrderReceipt;
         try {
-          // the receipt has no contact channel, the order page reads it from here
+          // the receipt carries the channel now; this copy is only the order
+          // page's fallback for a receipt that comes without one
           sessionStorage.setItem(
             "nodra-last-order",
             JSON.stringify({ reference: receipt.reference, contactChannel }),
