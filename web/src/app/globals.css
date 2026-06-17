@@ -491,6 +491,12 @@ p {
   border-top: 1px solid #dce2d4;
   padding: 14px 0;
 }
+.points-panel li small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: #6f7c70;
+}
 .account-history-pages {
   display: flex;
   align-items: center;
