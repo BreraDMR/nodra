@@ -39,6 +39,7 @@ export const orderCopy = {
       carrier_cz: "Doprava přepravcem po Česku",
     } satisfies Record<DeliveryMethod, string>,
     free: "zdarma",
+    freeFrom: "zdarma od {amount}",
     pickupNote: "Místo a čas předání na Andělu domluvíme zprávou.",
     pragueNote:
       "Doručíme osobně na adresu v Praze (PSČ 100 00–199 99). Poplatek platí za každou zásilku.",
@@ -165,6 +166,7 @@ export const orderCopy = {
       carrier_cz: "Versand innerhalb Tschechiens",
     } satisfies Record<DeliveryMethod, string>,
     free: "kostenlos",
+    freeFrom: "kostenlos ab {amount}",
     pickupNote:
       "Ort und Zeit der Übergabe am Anděl vereinbaren wir per Nachricht.",
     pragueNote:
@@ -297,6 +299,7 @@ export const orderCopy = {
       carrier_cz: "Carrier delivery within Czechia",
     } satisfies Record<DeliveryMethod, string>,
     free: "free",
+    freeFrom: "free from {amount}",
     pickupNote: "We agree the place and time at Anděl by message.",
     pragueNote:
       "We deliver in person to an address in Prague (postal codes 100 00–199 99). The fee is per shipment.",
@@ -416,14 +419,10 @@ export function expectedText(
   return o.expected.replace("{days}", dayCount(locale, min, max));
 }
 
-// The API sends the pickup note from its settings, in English for now.
-// Until it's localized, the default note is said in the page language;
-// anything the owner writes there instead is shown as it is.
-const defaultPickupNote = "Anděl, place and time agreed by message";
+// The API sends the pickup note in the asked language (the order's language on the
+// receipt); the page's own copy is only there for when none comes.
 export function pickupNoteText(note: string | null, locale: Locale): string {
-  return !note || note === defaultPickupNote
-    ? orderCopy[locale].pickupNote
-    : note;
+  return note || orderCopy[locale].pickupNote;
 }
 
 // Agreed handover window: "12. 10. 2026 14:00–16:00", both dates when it spans days
