@@ -78,7 +78,7 @@ export type CartItem = {
   quantity: number;
 };
 
-// Checkout and orders (contract 0.4.0). Every amount is haléře, orders are always CZK.
+// Checkout and orders (contract 0.5.0). Every amount is haléře, orders are always CZK.
 export type DeliveryMethod = "pickup_andel" | "prague_personal" | "carrier_cz";
 export type ContactChannel = "whatsapp" | "telegram" | "phone";
 export type Fulfilment = "together" | "split";
@@ -103,7 +103,10 @@ export type QuoteMethod = {
   reason: MethodReason | null;
   // per shipment, null when the method doesn't work for this postal code
   fee: Money | null;
+  // in the request locale
   note: string | null;
+  // goods subtotal from which the method is free; null when the fee doesn't depend on it
+  freeFromMinor: number | null;
 };
 export type QuoteShipment = {
   number: number;
@@ -161,6 +164,8 @@ export type OrderReceipt = {
   paymentStatus: PaymentStatus;
   createdAt: string;
   fulfilment: Fulfilment;
+  // null on orders placed before D04
+  contactChannel: ContactChannel | null;
   items: ReceiptItem[];
   shipments: ReceiptShipment[];
   pickupNote: string | null;
@@ -180,6 +185,7 @@ export type LastDelivery = {
   postalCode: string | null;
   district: string | null;
 };
+export type PointsReason = "earn" | "refund" | "correction";
 export type AccountSummary = {
   name: string;
   email: string;
@@ -187,11 +193,11 @@ export type AccountSummary = {
   historyPage: number;
   historyPages: number;
   historyTotal: number;
-  // refund entries have negative points
+  // refund entries have negative points, a correction can go either way
   history: {
     reference: string;
     points: number;
-    reason: "earn" | "refund";
+    reason: PointsReason;
     createdAt: string;
   }[];
   lastDelivery: LastDelivery | null;
@@ -224,6 +230,11 @@ export const copy = {
     signOut: "Odhlásit se",
     noPoints: "Body se zobrazí po dokončení objednávky.",
     pointsHistory: "Historie bodů",
+    pointsReasons: {
+      earn: "za objednávku",
+      refund: "vrácení peněz",
+      correction: "oprava platby",
+    } satisfies Record<PointsReason, string>,
     previous: "Předchozí",
     next: "Další",
     googleError:
@@ -335,6 +346,11 @@ export const copy = {
     signOut: "Abmelden",
     noPoints: "Punkte erscheinen nach Abschluss einer Bestellung.",
     pointsHistory: "Punkteverlauf",
+    pointsReasons: {
+      earn: "für die Bestellung",
+      refund: "Erstattung",
+      correction: "Zahlungskorrektur",
+    } satisfies Record<PointsReason, string>,
     previous: "Zurück",
     next: "Weiter",
     googleError:
@@ -447,6 +463,11 @@ export const copy = {
     signOut: "Sign out",
     noPoints: "Points appear after an order is completed.",
     pointsHistory: "Points history",
+    pointsReasons: {
+      earn: "for the order",
+      refund: "refund",
+      correction: "payment correction",
+    } satisfies Record<PointsReason, string>,
     previous: "Previous",
     next: "Next",
     googleError:
