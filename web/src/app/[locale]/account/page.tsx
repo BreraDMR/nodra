@@ -82,7 +82,12 @@ export default function AccountPage() {
                   {/* an order can have an earn and later refund entries */}
                   {account.history.map((item, i) => (
                     <li key={`${item.reference}-${item.reason}-${i}`}>
-                      <span>{item.reference}</span>
+                      <span>
+                        {item.reference}
+                        <small>
+                          {t.pointsReasons[item.reason] ?? item.reason}
+                        </small>
+                      </span>
                       <b>
                         {item.points > 0 ? "+" : ""}
                         {item.points}
