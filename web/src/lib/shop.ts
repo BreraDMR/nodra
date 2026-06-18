@@ -626,7 +626,11 @@ export function money(value: Money, locale: Locale): string {
 export async function api<T>(path: string): Promise<T> {
   const res = await fetch(
     `${process.env.API_INTERNAL_URL || "http://127.0.0.1:8000"}${path}`,
-    { next: { revalidate: 15 } },
+    {
+      next: { revalidate: 15 },
+      // changes the cache key whenever the API contract version changes
+      headers: { "x-nodra-contract": process.env.NODRA_API_CONTRACT ?? "" },
+    },
   );
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json() as Promise<T>;
