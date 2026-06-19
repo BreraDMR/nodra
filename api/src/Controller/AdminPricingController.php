@@ -12,6 +12,7 @@ use App\Admin\RepriceApplyRequest;
 use App\Admin\RepricePreviewQuery;
 use App\Pricing\PriceHistory;
 use App\Pricing\PricingService;
+use App\Pricing\PricingSettings;
 use App\Pricing\StalePriceException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -93,6 +94,12 @@ final class AdminPricingController extends AbstractController
     public function repriceApply(#[MapRequestPayload] RepriceApplyRequest $payload, Request $request): JsonResponse
     {
         return $this->write($request, fn (): array => $this->pricing->apply($payload->expected()), 200);
+    }
+
+    #[Route('/pricing/settings', methods: ['GET'])]
+    public function settings(PricingSettings $settings): JsonResponse
+    {
+        return $this->json(['minMarginBp' => $settings->minMarginBp, 'aboveMarketBp' => $settings->aboveMarketBp]);
     }
 
     #[Route('/pricing/alerts', methods: ['GET'])]
