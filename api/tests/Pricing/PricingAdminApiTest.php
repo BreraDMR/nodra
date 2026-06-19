@@ -43,6 +43,14 @@ final class PricingAdminApiTest extends ApiTestCase
         self::assertSame(['t-chains', 't-drivetrain'], array_values(array_filter(array_column($rules, 'categorySlug'))));
     }
 
+    public function testPricingThresholdsAreExposed(): void
+    {
+        $settings = $this->getJson('/api/admin/pricing/settings');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['minMarginBp' => 1000, 'aboveMarketBp' => 1500], $settings);
+    }
+
     public function testRulesAreWrittenAndBandsMayNotOverlap(): void
     {
         $chains = $this->chains->getId()->toRfc4122();
