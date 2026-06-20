@@ -178,6 +178,10 @@ export type PricingAlerts = {
   aboveMarket: number;
   checkNeeded: number;
 };
+export type PricingThresholds = {
+  minMarginBp: number;
+  aboveMarketBp: number;
+};
 
 export const suppliers = [
   "allegro_cz",
@@ -230,6 +234,20 @@ export async function json(url: string, init?: RequestInit) {
       data && typeof data === "object" && !Array.isArray(data) ? data : {},
     );
   return data;
+}
+
+// The thresholds are app config, so one fetch per page load is enough — panels
+// only use them to quote the numbers they already show as words
+let thresholdsCache: Promise<PricingThresholds> | null = null;
+export function pricingThresholds(): Promise<PricingThresholds> {
+  thresholdsCache ??= json(
+    "/api/admin/pricing/settings",
+  ) as Promise<PricingThresholds>;
+  return thresholdsCache;
+}
+
+export function percent(bp: number): string {
+  return `${bp / 100} %`;
 }
 
 // The API sends {} for no values (older responses had []), so take only real string pairs
