@@ -138,7 +138,8 @@ final class PricingService
 
     /**
      * Counts for the dashboard tile, over active variants of published products. A variant NODRA holds itself is
-     * sold from own stock, so its offers needing a check isn't an alert.
+     * sold from own stock, so its offers needing a check isn't an alert. aboveMarket only counts variants with a
+     * suggestion — the reprice screen it opens shows no rows without one, so the tile would lead to a shorter list.
      */
     public function alerts(): array
     {
@@ -149,7 +150,7 @@ final class PricingService
 
         return [
             'marginTooLow' => $count(static fn (VariantPricing $p): bool => in_array(VariantPricing::MARGIN_TOO_LOW, $p->flags(), true)),
-            'aboveMarket' => $count(static fn (VariantPricing $p): bool => $p->aboveMarket),
+            'aboveMarket' => $count(static fn (VariantPricing $p): bool => $p->suggestion !== null && ($p->aboveMarket || $p->suggestion->aboveMarket)),
             'checkNeeded' => $count(static fn (VariantPricing $p): bool => $p->sourcing->status === Sourcing::CHECK_NEEDED && !isset($held[$p->variant->id])),
         ];
     }
