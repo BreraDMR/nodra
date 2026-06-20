@@ -34,10 +34,13 @@ import {
   moneyHint,
   moneyPattern,
   parseMinor,
+  percent,
+  pricingThresholds,
   type AdminCategory,
   type AttributeValues,
   type PriceApplied,
   type PricingAlerts,
+  type PricingThresholds,
   type Save,
   type Send,
   type SupplierOffer,
@@ -237,6 +240,7 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [alerts, setAlerts] = useState<PricingAlerts | null>(null);
+  const [thresholds, setThresholds] = useState<PricingThresholds | null>(null);
   const [repriceFilter, setRepriceFilter] = useState<RepriceFilter>("all");
   // remounts the reprice screen when an alert opens it with another filter
   const [repriceKey, setRepriceKey] = useState(0);
@@ -276,6 +280,12 @@ export default function AdminPage() {
       .catch(() => {})
       .finally(() => setReady(true));
   }, [reload, loadCategories]);
+  // the thresholds are static app config; if they don't load the tiles just keep the words
+  useEffect(() => {
+    pricingThresholds()
+      .then(setThresholds)
+      .catch(() => {});
+  }, []);
   async function login(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -829,8 +839,9 @@ export default function AdminPage() {
                     <strong>{alerts?.marginTooLow ?? "—"}</strong>
                     <span>Margin too low</span>
                     <small>
-                      Suggestion held up by the minimum margin. Review in
-                      Reprice ↗
+                      Suggestion held up by the{" "}
+                      {thresholds ? `${percent(thresholds.minMarginBp)} ` : ""}
+                      minimum margin. Review in Reprice ↗
                     </small>
                   </button>
                   <button
@@ -840,8 +851,11 @@ export default function AdminPage() {
                     <strong>{alerts?.aboveMarket ?? "—"}</strong>
                     <span>Above market</span>
                     <small>
-                      Current price over the market threshold. Review in Reprice
-                      ↗
+                      Current price over the{" "}
+                      {thresholds
+                        ? `${percent(thresholds.aboveMarketBp)} `
+                        : ""}
+                      market threshold. Review in Reprice ↗
                     </small>
                   </button>
                   <button
