@@ -565,8 +565,12 @@ export function OrderPanel({
               <Chip value={order.paymentStatus} />
               <QueueTags queues={order.queues} delayed={order.delayed} />
               <span>
-                {order.fulfilment === "split" ? "In parts" : "All together"} ·{" "}
-                {order.locale.toUpperCase()} · placed{" "}
+                {/* the actual part count, not the fulfilment flag: a "together" order
+                    grows a second part when a line is moved into its own shipment */}
+                {order.shipments.length > 1
+                  ? `In ${order.shipments.length} parts`
+                  : "All together"}{" "}
+                · {order.locale.toUpperCase()} · placed{" "}
                 {formatDateTime(order.createdAt)}
                 {order.confirmedAt &&
                   ` · confirmed ${formatDateTime(order.confirmedAt)}`}
