@@ -291,6 +291,19 @@ final class PricingAdminApiTest extends ApiTestCase
         self::assertSame(['marginTooLow' => 1, 'aboveMarket' => 1, 'checkNeeded' => 1], $this->getJson('/api/admin/pricing/alerts'));
     }
 
+    public function testAboveMarketAlertCountsOnlyVariantsTheRepriceScreenCanShow(): void
+    {
+        $b = $this->builder();
+        // 1000 Kč against a market price of 800 Kč is over the 15 % threshold, but without
+        // an offer there is no landed cost, no suggestion — the reprice screen has no row
+        // for it, so the tile must not count it
+        $b->variant($this->product, 'T-AL-NO-OFFER')
+            ->setReferencePrices(null, null, null, null, 80000, 'Heureka', new \DateTimeImmutable('2026-09-27'));
+        $this->flush();
+
+        self::assertSame(0, $this->getJson('/api/admin/pricing/alerts')['aboveMarket']);
+    }
+
     public function testCheckNeededLeavesOutVariantsSoldFromOwnStock(): void
     {
         $b = $this->builder();
