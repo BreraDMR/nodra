@@ -15,7 +15,10 @@ import {
   formatMinor,
   formatRate,
   parseApiDate,
+  percent,
+  pricingThresholds,
   type PriceApplied,
+  type PricingThresholds,
   type Send,
   type VariantPricing,
 } from "./shared";
@@ -121,8 +124,19 @@ export function VariantPricingPanel({
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [thresholds, setThresholds] = useState<PricingThresholds | null>(null);
   // bumping it reloads the history after a price change
   const [historyKey, setHistoryKey] = useState(0);
+  // static app config; without it the flag lines just keep their wording
+  useEffect(() => {
+    let live = true;
+    pricingThresholds()
+      .then((t) => live && setThresholds(t))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const fetchPricing = useCallback(
     () => send<VariantPricing>(`/api/admin/variants/${variantId}/pricing`),
@@ -261,8 +275,12 @@ export function VariantPricingPanel({
             <li key={flag} className={`flag ${flag}`}>
               <b>{flagLabels[flag] || flag}</b>
               {flag === "margin_too_low"
-                ? " · the suggestion was lifted to the minimum-margin floor and is never applied automatically"
-                : " · the current price is over the threshold above the market price (information only)"}
+                ? thresholds
+                  ? ` · the suggestion was lifted to the ${percent(thresholds.minMarginBp)} minimum-margin floor and is never applied automatically`
+                  : " · the suggestion was lifted to the minimum-margin floor and is never applied automatically"
+                : thresholds
+                  ? ` · the current price is over ${percent(thresholds.aboveMarketBp)} above the market price (information only)`
+                  : " · the current price is over the threshold above the market price (information only)"}
             </li>
           ))}
         </ul>
