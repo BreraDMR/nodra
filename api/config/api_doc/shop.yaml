@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.5.0
+  version: 0.5.1
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -1108,6 +1108,16 @@ paths:
         '200':
           description: Alert counts for the dashboard tile.
           content: { application/json: { schema: { $ref: '#/components/schemas/PricingAlerts' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/pricing/settings:
+    get:
+      tags: [Administration]
+      summary: Read the pricing thresholds
+      description: The app.pricing values the admin panels quote as numbers — the minimum margin a suggestion must keep and how far above the market price a flag fires. Basis points, 1000 = 10 %.
+      responses:
+        '200':
+          description: Pricing thresholds.
+          content: { application/json: { schema: { $ref: '#/components/schemas/PricingThresholds' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
 components:
   parameters:
@@ -2336,3 +2346,9 @@ components:
         marginTooLow: { type: integer }
         aboveMarket: { type: integer }
         checkNeeded: { type: integer }
+    PricingThresholds:
+      type: object
+      required: [minMarginBp, aboveMarketBp]
+      properties:
+        minMarginBp: { type: integer, description: 'Minimum margin a suggestion must keep, basis points (1000 = 10 %).' }
+        aboveMarketBp: { type: integer, description: 'A price this much above the market price is flagged above_market, basis points (1500 = 15 %).' }
