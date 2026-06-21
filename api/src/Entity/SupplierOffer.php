@@ -13,11 +13,12 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Table(name: 'supplier_offer')]
 #[ORM\Index(columns: ['product_id', 'checked_at'], name: 'idx_supplier_offer_product')]
 #[ORM\Index(columns: ['variant_id'], name: 'idx_supplier_offer_variant')]
+#[ORM\Index(columns: ['supplier', 'supplier_sku'], name: 'idx_supplier_offer_supplier_sku')]
 #[ORM\UniqueConstraint(name: 'uniq_supplier_offer_product_url', columns: ['product_id', 'url'], options: ['where' => '(variant_id IS NULL)'])]
 #[ORM\UniqueConstraint(name: 'uniq_supplier_offer_variant_url', columns: ['variant_id', 'url'], options: ['where' => '(variant_id IS NOT NULL)'])]
 class SupplierOffer
 {
-    public const SUPPLIERS = ['allegro_cz', 'allegro_pl', 'bikeinn', 'bike24', 'bike_discount', 'other'];
+    public const SUPPLIERS = ['allegro_cz', 'allegro_pl', 'bikeinn', 'bike24', 'bike_discount', 'bike_components', 'other'];
     public const STATUSES = ['snapshot', 'matched', 'rejected'];
     /** 1.0 in integer millionths, the rate of a CZK offer */
     public const CZK_RATE = 1_000_000;
@@ -67,6 +68,10 @@ class SupplierOffer
     #[ORM\Column(length: 24)]
     private string $verificationStatus = 'snapshot';
 
+    /** The supplier's own article number, the re-import key of a feed row (Awin product_id). */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $supplierSku = null;
+
     /** Delivery to NODRA per unit, in the offer currency. */
     #[ORM\Column(options: ['default' => 0])]
     private int $inboundShippingMinor = 0;
@@ -97,6 +102,7 @@ class SupplierOffer
     public function getVariant(): ?ProductVariant { return $this->variant; }
     public function getUrl(): string { return $this->url; }
     public function getVerificationStatus(): string { return $this->verificationStatus; }
+    public function getSupplierSku(): ?string { return $this->supplierSku; }
     public function getSupplier(): string { return $this->supplier; }
     public function getSeller(): ?string { return $this->seller; }
     public function getCurrency(): string { return $this->currency; }
@@ -156,5 +162,11 @@ class SupplierOffer
         $this->inboundShippingMinor = $inboundShippingMinor;
         $this->fxRateCzk = $fxRateCzk;
         $this->fxRateDate = $fxRateDate;
+    }
+
+    /** Written by the feed import; the admin form doesn't carry it. */
+    public function setSupplierSku(?string $supplierSku): void
+    {
+        $this->supplierSku = $supplierSku === null || trim($supplierSku) === '' ? null : mb_substr(trim($supplierSku), 0, 120);
     }
 }
