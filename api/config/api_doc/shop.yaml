@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.5.1
+  version: 0.6.0
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -12,7 +12,8 @@ info:
     interface language; EUR is a display reference in the catalogue only (older EUR demo orders keep their currency).
     Percentages are basis points (100 = 1 %), exchange rates integer millionths (25.315 CZK per EUR = 25315000). Cost,
     supplier, seller, offer id or URL, supplier order reference, purchases, exchange rate, markup, margin, order
-    economics, RRP, market price and journal actors are admin-only and never appear in public responses.
+    economics, RRP, market price and journal actors are admin-only and never appear in public responses. Feed imports
+    are admin-only too: source files, supplier SKUs, import runs and field origins stay out of every public response.
     Dates without a time (promisedDate, fxRateDate) are Prague calendar dates, YYYY-MM-DD.
 servers:
   - url: http://localhost:8000
@@ -1119,6 +1120,112 @@ paths:
           description: Pricing thresholds.
           content: { application/json: { schema: { $ref: '#/components/schemas/PricingThresholds' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/imports/preview:
+    post:
+      tags: [Administration]
+      summary: Preview a feed import from an uploaded file
+      description: >-
+        Parses the uploaded Awin CSV (plain UTF-8 with or without a BOM, or gzip), matches every row against the
+        catalogue and returns the report; nothing but the run row itself is written. New rows of the same feed stay
+        bounded: at most 20 000 data rows are read, each report list holds at most 200 rows with the complete counts
+        on top. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: 'The feed file, .csv or .csv.gz.' }
+      responses:
+        '200':
+          description: The import report. The run it belongs to is journaled with status `previewed`.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportReport' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/imports/apply:
+    post:
+      tags: [Administration]
+      summary: Apply a previewed import
+      description: >-
+        Writes the previewed report in one transaction; rows are independent, so one bad row never blocks the rest.
+        Refuses with 409 (code `file_changed`) when the uploaded file's sha256 differs from the one the run previewed,
+        and with 409 (code `already_applied`) when the run was already applied. New products are drafts with their
+        variants; nothing is ever deleted — an offer missing from a newer feed just ages. Every written field records
+        the run as its origin, and values the admin set or cleared are never overwritten. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [runId, file]
+              properties:
+                runId: { type: string, format: uuid, description: 'The run the preview created.' }
+                file: { type: string, format: binary, description: 'The same file the preview read.' }
+      responses:
+        '200':
+          description: Applied; the written counts and the report the run ended with.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportApplyResult' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ImportConflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/imports/runs:
+    get:
+      tags: [Administration]
+      summary: List import runs, newest first
+      description: The journal of seed and feed imports with their counts; the import-error log D05.5 points to.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        '200':
+          description: A page of import runs.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportRunPage' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/imports/runs/{id}:
+    get:
+      tags: [Administration]
+      summary: One import run with its report and per-row errors
+      description: The stored report of the preview or apply, plus every per-row error, not only the first 200.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The run.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportRunDetail' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/imports/settings:
+    get:
+      tags: [Administration]
+      summary: Read the per-supplier import defaults
+      description: The supplier-level default inbound shipping used by the import's cost report, set once per supplier. Suppliers without a row read as zero.
+      responses:
+        '200':
+          description: Import settings per supplier.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportSettingsList' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/admin/imports/settings/{supplier}:
+    put:
+      tags: [Administration]
+      summary: Set the import defaults of one supplier
+      description: Stores the default inbound shipping of the supplier's feed. An unknown supplier is a 422. Requires X-CSRF-Token.
+      parameters:
+        - { name: supplier, in: path, required: true, schema: { type: string, enum: [allegro_cz, allegro_pl, bikeinn, bike24, bike_discount, bike_components, other] } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ImportSettingWrite' } } }
+      responses:
+        '200':
+          description: Saved.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportSetting' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '422': { $ref: '#/components/responses/Validation' }
 components:
   parameters:
     Locale:
@@ -1168,6 +1275,11 @@ components:
                 required: [staleVariantIds]
                 properties:
                   staleVariantIds: { type: array, items: { type: string, format: uuid } }
+    ImportConflict:
+      description: >-
+        The apply doesn't match the preview: the uploaded file's sha256 differs from the run's (code `file_changed`)
+        or the run was already applied (code `already_applied`). Nothing was written.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Problem' } } }
   schemas:
     Problem:
       type: object
@@ -2352,3 +2464,176 @@ components:
       properties:
         minMarginBp: { type: integer, description: 'Minimum margin a suggestion must keep, basis points (1000 = 10 %).' }
         aboveMarketBp: { type: integer, description: 'A price this much above the market price is flagged above_market, basis points (1500 = 15 %).' }
+    ImportCounts:
+      type: object
+      description: Complete numbers per report section; the lists themselves are truncated to 200 rows.
+      required: [totalRows, newProducts, updates, conflicts, unknowns, errors, rowsWithCost, suggestionsMarginTooLow]
+      properties:
+        totalRows: { type: integer, description: 'Data rows read from the file, cap included.' }
+        newProducts: { type: integer, description: Rows that would create a new draft product with a variant. }
+        updates: { type: integer, description: 'Rows that would change at least one field of an existing variant or offer.' }
+        conflicts: { type: integer }
+        unknowns: { type: integer }
+        errors: { type: integer }
+        rowsWithCost: { type: integer, description: Touched variants the cost section lists. }
+        suggestionsMarginTooLow: { type: integer, description: 'Cost rows whose suggested price would be flagged margin_too_low; flagged, never auto-applied.' }
+    ImportNewProduct:
+      type: object
+      required: [row, productName, brand, category, priceMinor, currency]
+      properties:
+        row: { type: integer, description: 1-based data row number in the file. }
+        productName: { type: string }
+        brand: { type: string, nullable: true }
+        ean: { type: string, nullable: true }
+        mpn: { type: string, nullable: true }
+        category: { type: string, description: Slug of the guessed category. }
+        priceMinor: { type: integer }
+        currency: { type: string }
+    ImportUpdate:
+      type: object
+      required: [row, variantId, sku, productName, changes]
+      properties:
+        row: { type: integer }
+        variantId: { type: string, format: uuid }
+        sku: { type: string }
+        productName: { type: string }
+        changes:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [field, old, new]
+            properties:
+              field: { type: string, enum: [offer, price, stock, leadTime, rrp, url, title] }
+              old: { type: [string, integer, 'null'] }
+              new: { type: [string, integer, 'null'] }
+    ImportConflict:
+      type: object
+      required: [row, message]
+      properties:
+        row: { type: integer }
+        message: { type: string }
+        productName: { type: string, nullable: true }
+        ean: { type: string, nullable: true }
+    ImportUnknown:
+      type: object
+      required: [row, kind, message]
+      properties:
+        row: { type: integer }
+        kind: { type: string, enum: [unknown_category, new_brand, unknown_attribute, delivery_time, no_identity, invalid_ean] }
+        message: { type: string }
+    ImportRowError:
+      type: object
+      required: [row, message]
+      properties:
+        row: { type: integer, description: '1-based data row number, 0 for a file-level problem.' }
+        message: { type: string }
+    ImportCostRow:
+      type: object
+      required: [productName, categorySlug, feedPriceMinor, currency, fxRateCzk, inboundShippingMinor, landedCostCzk, suggestedPriceCzk, marginTooLow]
+      properties:
+        variantId: { type: string, format: uuid, nullable: true, description: Null for a variant the import would create. }
+        productName: { type: string }
+        categorySlug: { type: string }
+        feedPriceMinor: { type: integer }
+        currency: { type: string }
+        fxRateCzk: { type: integer, nullable: true, description: 'Millionths; null when the currency has no rate, then there is no cost and no suggestion.' }
+        inboundShippingMinor: { type: integer, description: The supplier's import default. }
+        landedCostCzk: { type: integer, nullable: true }
+        suggestedPriceCzk: { type: integer, nullable: true, description: What the current pricing rules would suggest from the landed cost; null without a rule. }
+        suggestedPriceEur: { type: integer, nullable: true }
+        marginTooLow: { type: boolean }
+    ImportCost:
+      type: object
+      required: [rows, marginTooLow]
+      properties:
+        rows:
+          type: array
+          maxItems: 200
+          items: { $ref: '#/components/schemas/ImportCostRow' }
+        marginTooLow: { type: integer, description: 'Complete count of flagged rows, truncation included.' }
+    ImportReport:
+      type: object
+      required: [runId, source, fileName, sha256, totalRows, counts, newProducts, updates, conflicts, unknowns, errors, cost]
+      properties:
+        runId: { type: string, format: uuid }
+        source: { type: string, enum: [awin_csv] }
+        fileName: { type: string, nullable: true }
+        sha256: { type: string, nullable: true }
+        totalRows: { type: integer }
+        counts: { $ref: '#/components/schemas/ImportCounts' }
+        newProducts: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/ImportNewProduct' } }
+        updates: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/ImportUpdate' } }
+        conflicts: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/ImportConflict' } }
+        unknowns: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/ImportUnknown' } }
+        errors: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/ImportRowError' } }
+        cost: { $ref: '#/components/schemas/ImportCost' }
+    ImportApplyResult:
+      type: object
+      required: [runId, written, report]
+      properties:
+        runId: { type: string, format: uuid }
+        written:
+          type: object
+          required: [products, variants, offers, offerUpdates, rrpWrites]
+          properties:
+            products: { type: integer, description: Draft products created. }
+            variants: { type: integer, description: Variants created. }
+            offers: { type: integer, description: Offers created. }
+            offerUpdates: { type: integer, description: Offers updated. }
+            rrpWrites: { type: integer, description: Variant RRP values written from the feed. }
+        report: { $ref: '#/components/schemas/ImportReport' }
+    ImportRunSummary:
+      type: object
+      required: [id, source, fileName, status, totalRows, counts, startedAt, finishedAt, adminEmail, errorCount]
+      properties:
+        id: { type: string, format: uuid }
+        source: { type: string, enum: [awin_csv, seed] }
+        fileName: { type: string, nullable: true }
+        status: { type: string, enum: [previewed, applied] }
+        totalRows: { type: integer }
+        counts: { $ref: '#/components/schemas/ImportCounts' }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        adminEmail: { type: string, nullable: true, description: Null for a console (seed) run. }
+        errorCount: { type: integer }
+    ImportRunPage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ImportRunSummary' } }
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+    ImportRunDetail:
+      type: object
+      required: [id, source, fileName, status, totalRows, counts, startedAt, finishedAt, adminEmail, errorCount, errors, report]
+      properties:
+        id: { type: string, format: uuid }
+        source: { type: string, enum: [awin_csv, seed] }
+        fileName: { type: string, nullable: true }
+        status: { type: string, enum: [previewed, applied] }
+        totalRows: { type: integer }
+        counts: { $ref: '#/components/schemas/ImportCounts' }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        adminEmail: { type: string, nullable: true }
+        errorCount: { type: integer }
+        errors: { type: array, items: { $ref: '#/components/schemas/ImportRowError' }, description: 'Every per-row error, truncation included.' }
+        report: { $ref: '#/components/schemas/ImportReport' }
+    ImportSetting:
+      type: object
+      required: [supplier, inboundShippingMinor]
+      properties:
+        supplier: { type: string }
+        inboundShippingMinor: { type: integer, minimum: 0, description: In the supplier's feed currency. }
+    ImportSettingsList:
+      type: object
+      required: [settings]
+      properties:
+        settings: { type: array, items: { $ref: '#/components/schemas/ImportSetting' } }
+    ImportSettingWrite:
+      type: object
+      required: [inboundShippingMinor]
+      properties:
+        inboundShippingMinor: { type: integer, minimum: 0 }
