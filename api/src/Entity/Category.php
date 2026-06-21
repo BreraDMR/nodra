@@ -40,6 +40,10 @@ class Category
     #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '[]'])]
     private array $attributes = [];
 
+    /** When the attribute definitions were first written, by the seed or the admin. Null means the seed may still fill an empty category; the admin clearing them never resets it. */
+    #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $seededAt = null;
+
     public function __construct(string $slug, array $names, ?Category $parent = null, int $position = 0)
     {
         $this->id = Uuid::v7();
@@ -65,5 +69,16 @@ class Category
         $this->position = $position;
         $this->active = $active;
         $this->attributes = $attributes;
+    }
+
+    /** Whoever writes definitions — seed or admin — takes them over; the seed stops refilling after this. */
+    public function markSeeded(\DateTimeImmutable $at): void
+    {
+        $this->seededAt = $at;
+    }
+
+    public function getSeededAt(): ?\DateTimeImmutable
+    {
+        return $this->seededAt;
     }
 }
