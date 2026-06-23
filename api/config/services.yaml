@@ -29,6 +29,9 @@ parameters:
     app.payment.handover_methods: [cash, bank_transfer]                   # card only once there is a terminal
     app.legal.privacy_version: 'draft-2026-09'    # stored with every privacy consent, default until the D00.7 texts exist
 
+    # D03.2 import: the supplier behind the uploaded Awin feed; more feeds join in D03.4
+    app.import.awin_supplier: 'bike_components'
+
 services:
     # default configuration for services in *this* file
     _defaults:
