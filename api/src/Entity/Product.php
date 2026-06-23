@@ -56,6 +56,10 @@ class Product
     #[ORM\Column(type: Types::JSON, options: ['jsonb' => true])]
     private array $images = [];
 
+    /** Feed image URLs, kept as source references for D07; the web never displays them. */
+    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '[]'])]
+    private array $sourceImages = [];
+
     #[ORM\Column(length: 40, nullable: true)]
     private ?string $badge = null;
 
@@ -87,6 +91,13 @@ class Product
     public function getCopy(): array { return $this->copy; }
     public function getImage(): string { return $this->image; }
     public function getImages(): array { return $this->images; }
+    /** @return list<string> */
+    public function getSourceImages(): array { return $this->sourceImages; }
+    /** @param list<string> $urls */
+    public function setSourceImages(array $urls): void
+    {
+        $this->sourceImages = array_values(array_unique(array_filter(array_map('trim', $urls))));
+    }
     public function getBadge(): ?string { return $this->badge; }
     public function getFeaturedRank(): int { return $this->featuredRank; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
