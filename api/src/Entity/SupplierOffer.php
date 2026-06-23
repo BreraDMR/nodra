@@ -101,6 +101,7 @@ class SupplierOffer
     public function getProduct(): Product { return $this->product; }
     public function getVariant(): ?ProductVariant { return $this->variant; }
     public function getUrl(): string { return $this->url; }
+    public function getTitle(): string { return $this->title; }
     public function getVerificationStatus(): string { return $this->verificationStatus; }
     public function getSupplierSku(): ?string { return $this->supplierSku; }
     public function getSupplier(): string { return $this->supplier; }
