@@ -32,6 +32,10 @@ class ImportRun
     #[ORM\Column(length: 32)]
     private string $source;
 
+    /** The supplier the feed belongs to; null for a seed run. */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $supplier = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $fileName = null;
 
@@ -67,7 +71,7 @@ class ImportRun
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $adminEmail = null;
 
-    public function __construct(string $source, \DateTimeImmutable $startedAt)
+    public function __construct(string $source, \DateTimeImmutable $startedAt, ?string $supplier = null)
     {
         if (!in_array($source, self::SOURCES, true)) {
             throw new \InvalidArgumentException('Unknown import source');
@@ -75,11 +79,13 @@ class ImportRun
         $this->id = Uuid::v7();
         $this->source = $source;
         $this->startedAt = $startedAt;
+        $this->supplier = $supplier;
         $this->counts = new \stdClass();
     }
 
     public function getId(): Uuid { return $this->id; }
     public function getSource(): string { return $this->source; }
+    public function getSupplier(): ?string { return $this->supplier; }
     public function getFileName(): ?string { return $this->fileName; }
     public function getFileSha256(): ?string { return $this->fileSha256; }
     public function getStatus(): string { return $this->status; }
@@ -112,7 +118,7 @@ class ImportRun
         $this->finishedAt = $finishedAt;
     }
 
-    public function appliedBy(string $adminEmail): void
+    public function performedBy(string $adminEmail): void
     {
         $this->adminEmail = $adminEmail;
     }
