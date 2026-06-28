@@ -12,6 +12,7 @@ use App\Admin\SupplierOfferAdminService;
 use App\Admin\SupplierOfferWriteRequest;
 use App\Catalog\AttributeSchema;
 use App\Catalog\CatalogSeed;
+use App\Catalog\CatalogSeeder;
 use App\Catalog\CatalogService;
 use App\Entity\Category;
 use App\Entity\Product;
@@ -101,10 +102,8 @@ final class CatalogImportTest extends KernelTestCase
 
         $output = $this->import();
 
+        // the seeded marker keeps the emptied cables category out of the seed entirely: no refill, no clash
         self::assertStringContainsString('Categories: 0 added, 0 filled.', $output);
-        self::assertStringContainsString('"cable_type"', $output);
-        self::assertStringContainsString('"cables"', $output);
-        // chains was never refilled, so its seed "links" had nothing to clash with
         self::assertStringNotContainsString('"links"', $output);
         self::assertSame([], $this->categoryKeys('cables'));
         self::assertSame(['speeds'], $this->categoryKeys('chains'));
@@ -124,8 +123,8 @@ final class CatalogImportTest extends KernelTestCase
 
         $output = $this->import();
 
+        // bags carries the seeded marker, so the seed never tries to refill the moved key
         self::assertStringContainsString('Categories: 0 added, 0 filled.', $output);
-        self::assertStringContainsString('"volume_l"', $output);
         self::assertSame([], $this->categoryKeys('bags'));
         self::assertSame(['mount', 'volume_l'], $this->categoryKeys('t-frame-bags'));
     }
@@ -142,6 +141,67 @@ final class CatalogImportTest extends KernelTestCase
         $position = array_column($facets['attributes'], null, 'key')['position'];
         self::assertSame(count($lights), array_sum(array_column($position['values'], 'count')));
         self::assertSame(count(array_filter(CatalogSeed::items(), static fn (array $i): bool => $i['category'] === 'lights')), array_sum(array_column($facets['brands'], 'count')));
+    }
+
+    public function testAnEmptiedCategoryStaysEmpty(): void
+    {
+        self::bootKernel();
+        $db = static::getContainer()->get(Connection::class);
+        $this->import();
+        self::assertNotSame([], $this->categoryKeys('bags'));
+
+        // the admin empties the bags category in the form and saves
+        $bags = static::getContainer()->get(EntityManagerInterface::class)->getRepository(Category::class)->findOneBy(['slug' => 'bags']);
+        $names = $bags->getNames();
+        static::getContainer()->get(CategoryAdminService::class)->update($bags->getId()->toRfc4122(), new CategoryWriteRequest(
+            'bags', $names['cs'], $names['de'], $names['en'], $bags->getParent()?->getId()->toRfc4122(), $bags->getPosition(), true, [],
+        ));
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+
+        self::assertStringContainsString('Categories: 0 added, 0 filled.', $this->import());
+        self::assertSame([], $this->categoryKeys('bags'), 'the emptied category is never refilled by the seed');
+    }
+
+    public function testSeedAttributesThatFailTheDefinitionsBecomeARowError(): void
+    {
+        self::bootKernel();
+        $db = static::getContainer()->get(Connection::class);
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $seeder = static::getContainer()->get(CatalogSeeder::class);
+        // categories first, then the admin tightens volume_l into a choice the seed values don't fit
+        $seeder->seedCategories();
+        $bags = $em->getRepository(Category::class)->findOneBy(['slug' => 'bags']);
+        $names = $bags->getNames();
+        $definitions = array_column(AttributeSchema::forAdmin($bags->getAttributes()), null, 'key');
+        $volume = $definitions['volume_l'];
+        self::assertSame('number', $volume['type']);
+        $volume['type'] = 'choice';
+        $volume['options'] = [
+            ['value' => 'small', 'labelCs' => 'Malý', 'labelDe' => 'Klein', 'labelEn' => 'Small'],
+            ['value' => 'large', 'labelCs' => 'Velký', 'labelDe' => 'Groß', 'labelEn' => 'Large'],
+        ];
+        static::getContainer()->get(CategoryAdminService::class)->update($bags->getId()->toRfc4122(), new CategoryWriteRequest(
+            'bags', $names['cs'], $names['de'], $names['en'], $bags->getParent()?->getId()->toRfc4122(), $bags->getPosition(), true, [$volume],
+        ));
+        $em->clear();
+
+        $result = $seeder->seedProducts();
+
+        self::assertGreaterThan(0, count($result['errors']));
+        self::assertStringContainsString('volume_l', $result['errors'][0]['message']);
+        self::assertStringContainsString('Seed product', $result['errors'][0]['message']);
+        // the rest of the seed still imported; only the failing cards are missing
+        $total = (int) $db->fetchOne('SELECT COUNT(*) FROM product');
+        self::assertSame(count(CatalogSeed::items()) - count($result['errors']), $total);
+        self::assertFalse($db->fetchOne("SELECT 1 FROM product WHERE slug = 'sks-explorer-edge-1l'"), 'the card that fails the changed definitions is skipped');
+
+        // and the run landed in the journal with its row errors
+        $output = $this->import();
+        self::assertStringContainsString('Row error:', $output);
+        $run = $db->fetchAssociative("SELECT counts::text AS counts, errors::text AS errors FROM import_run WHERE source = 'seed' ORDER BY started_at DESC LIMIT 1");
+        self::assertIsArray($run);
+        self::assertSame(count($result['errors']), json_decode($run['counts'], true)['errors']);
+        self::assertCount(json_decode($run['counts'], true)['errors'], json_decode($run['errors'], true));
     }
 
     private function import(): string
