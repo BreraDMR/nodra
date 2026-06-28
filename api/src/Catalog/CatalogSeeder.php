@@ -24,6 +24,7 @@ final class CatalogSeeder
     public function seedCategories(): array
     {
         $bySlug = $this->categoriesBySlug();
+        $now = new \DateTimeImmutable();
         $added = 0;
         $filled = 0;
         $warnings = [];
@@ -33,19 +34,22 @@ final class CatalogSeeder
                 $parent = $bySlug[$seed['parent']] ?? throw new \RuntimeException(sprintf('Parent category "%s" is missing; was its slug changed in the admin?', $seed['parent']));
             }
             $existing = $bySlug[$seed['slug']] ?? null;
-            // seed definitions only matter for a new category or one without any of its own
-            if ($existing !== null && $existing->getAttributes() !== []) {
+            // seed definitions only matter for a new category or one the seed never touched;
+            // a category the admin emptied stays empty (the seeded marker is never reset)
+            if ($existing !== null && ($existing->getAttributes() !== [] || $existing->getSeededAt() !== null)) {
                 continue;
             }
             $definitions = $this->seedDefinitions($seed, $existing === null ? $parent : $existing->getParent(), $existing, $bySlug, $warnings);
             if ($existing === null) {
                 $category = new Category($seed['slug'], $seed['names'], $parent, $seed['position'] ?? 0);
                 $category->update($seed['slug'], $seed['names'], $parent, $seed['position'] ?? 0, true, $definitions);
+                $category->markSeeded($now);
                 $this->em->persist($category);
                 $bySlug[$seed['slug']] = $category;
                 ++$added;
             } elseif ($existing->getAttributes() === [] && $definitions !== []) {
                 $existing->update($existing->getSlug(), $existing->getNames(), $existing->getParent(), $existing->getPosition(), $existing->isActive(), $definitions);
+                $existing->markSeeded($now);
                 ++$filled;
             }
         }
@@ -54,7 +58,7 @@ final class CatalogSeeder
         return ['added' => $added, 'filled' => $filled, 'warnings' => $warnings];
     }
 
-    /** @return array{added: int, filled: int, offers: int} */
+    /** @return array{added: int, filled: int, offers: int, errors: list<array{row: int, message: string}>} */
     public function seedProducts(): array
     {
         $bySlug = $this->categoriesBySlug();
@@ -63,6 +67,7 @@ final class CatalogSeeder
         $added = 0;
         $filled = 0;
         $newOffers = 0;
+        $errors = [];
         foreach (CatalogSeed::items() as $rank => $item) {
             $category = $bySlug[$item['category']] ?? throw new \RuntimeException(sprintf('Product "%s" uses unknown category "%s"', $item['slug'], $item['category']));
             $brand = isset($item['brand']) ? trim($item['brand']) : null;
@@ -95,7 +100,13 @@ final class CatalogSeeder
                 continue;
             }
 
-            $attributes = AttributeSchema::normalizeValues($item['attributes'] ?? [], $this->effectiveAttributes($category));
+            try {
+                $attributes = AttributeSchema::normalizeValues($item['attributes'] ?? [], $this->effectiveAttributes($category));
+            } catch (\InvalidArgumentException $error) {
+                // one card that no longer fits the (changed) definitions is a row error, not an abort
+                $errors[] = ['row' => $rank + 1, 'message' => sprintf('Seed product "%s": %s', $item['slug'], $error->getMessage())];
+                continue;
+            }
             $copy = [];
             foreach (['cs', 'de', 'en'] as $locale) {
                 $copy[$locale] = [
@@ -135,7 +146,7 @@ final class CatalogSeeder
         }
         $this->em->flush();
 
-        return ['added' => $added, 'filled' => $filled, 'offers' => $newOffers];
+        return ['added' => $added, 'filled' => $filled, 'offers' => $newOffers, 'errors' => $errors];
     }
 
     /** @return array<string, Category> */
