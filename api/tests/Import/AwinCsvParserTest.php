@@ -145,12 +145,14 @@ final class AwinCsvParserTest extends TestCase
 
     public function testTheRowCapTruncatesTheFileWithAnError(): void
     {
-        $rows = [];
-        foreach (range(1, 20001) as $seed) {
-            $rows[] = AwinFeed::row(['product_id' => 'BC-CAP-'.$seed, 'ean' => ''], $seed % 100);
+        // minimal columns and values, so 20001 rows stay small in memory
+        $columns = ['product_id', 'product_name', 'price', 'currency', 'deep_link'];
+        $lines = [implode(',', $columns)];
+        foreach (range(1, 20001) as $i) {
+            $lines[] = '"P'.$i.'","N'.$i.'","1.00","EUR","https://t.example/'.$i.'"';
         }
 
-        $file = $this->parser->parse(AwinFeed::csv($rows));
+        $file = $this->parser->parse(implode("\n", $lines)."\n");
 
         self::assertCount(20000, $file->rows);
         self::assertCount(1, $file->errors);
