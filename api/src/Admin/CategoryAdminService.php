@@ -42,6 +42,7 @@ final class CategoryAdminService
         $definitions = $this->definitions($input, $parent, null);
         $category = new Category($input->slug, $this->names($input), $parent, $input->position);
         $category->update($input->slug, $this->names($input), $parent, $input->position, $input->active, $definitions);
+        $category->markSeeded(new \DateTimeImmutable());
         $this->em->persist($category);
         $this->em->flush();
 
@@ -66,6 +67,8 @@ final class CategoryAdminService
             }
         }
         $category->update($input->slug, $this->names($input), $parent, $input->position, $input->active, $definitions);
+        // the admin took over the definitions, an emptied category included; the seed must not refill it
+        $category->markSeeded(new \DateTimeImmutable());
         $this->em->flush();
 
         return ['id' => $id];
