@@ -99,7 +99,8 @@ class ImportRun
     public function getFinishedAt(): ?\DateTimeImmutable { return $this->finishedAt; }
     public function getAdminEmail(): ?string { return $this->adminEmail; }
 
-    public function start(string $fileName, string $sha256, int $totalRows): void
+    /** File name and hash belong to a feed run; a seed run has neither. */
+    public function start(?string $fileName, ?string $sha256, int $totalRows): void
     {
         $this->fileName = $fileName;
         $this->fileSha256 = $sha256;
