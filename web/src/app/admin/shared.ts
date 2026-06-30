@@ -472,3 +472,93 @@ export function newKey(prefix: string): string {
 export function errorText(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
 }
+
+// D03.2 feed import: the report the preview returns and the run journal behind it
+export type ImportCounts = {
+  totalRows: number;
+  newProducts: number;
+  updates: number;
+  conflicts: number;
+  unknowns: number;
+  errors: number;
+  rowsWithCost: number;
+  suggestionsMarginTooLow: number;
+};
+export type ImportNewProduct = {
+  row: number;
+  productName: string;
+  brand: string | null;
+  ean: string | null;
+  mpn: string | null;
+  category: string;
+  priceMinor: number;
+  currency: string;
+};
+export type ImportChange = {
+  field: string;
+  old: string | number | null;
+  new: string | number | null;
+};
+export type ImportUpdateRow = {
+  row: number;
+  variantId: string;
+  sku: string;
+  productName: string;
+  changes: ImportChange[];
+};
+export type ImportConflictRow = {
+  row: number;
+  message: string;
+  productName: string | null;
+  ean: string | null;
+};
+export type ImportUnknownRow = { row: number; kind: string; message: string };
+export type ImportRowError = { row: number; message: string };
+export type ImportCostRow = {
+  variantId: string | null;
+  productName: string;
+  categorySlug: string;
+  feedPriceMinor: number;
+  currency: string;
+  fxRateCzk: number | null;
+  inboundShippingMinor: number;
+  landedCostCzk: number | null;
+  suggestedPriceCzk: number | null;
+  suggestedPriceEur: number | null;
+  marginTooLow: boolean;
+};
+export type ImportReport = {
+  runId: string;
+  source: string;
+  supplier?: string | null;
+  fileName: string | null;
+  sha256: string | null;
+  totalRows: number;
+  counts: ImportCounts;
+  newProducts: ImportNewProduct[];
+  updates: ImportUpdateRow[];
+  conflicts: ImportConflictRow[];
+  unknowns: ImportUnknownRow[];
+  errors: ImportRowError[];
+  cost: { rows: ImportCostRow[]; marginTooLow: number };
+};
+export type ImportRunSummary = {
+  id: string;
+  source: string;
+  supplier: string | null;
+  fileName: string | null;
+  status: string;
+  totalRows: number;
+  counts: ImportCounts;
+  startedAt: string;
+  finishedAt: string | null;
+  adminEmail: string | null;
+  errorCount: number;
+};
+export type ImportRunPage = {
+  items: ImportRunSummary[];
+  page: number;
+  pages: number;
+  total: number;
+};
+export type ImportSetting = { supplier: string; inboundShippingMinor: number };
