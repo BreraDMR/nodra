@@ -142,6 +142,7 @@ final class ImportPlanner
             if (count($indexes) > 1) {
                 foreach ($indexes as $index) {
                     $collided[$index] = true;
+                    unset($costByRow[$newRows[$index]['row']->rowNumber]);
                     $conflicts[] = ['row' => $newRows[$index]['row']->rowNumber, 'message' => sprintf('EAN %s is claimed by %d rows of the file', $ean, count($indexes)), 'productName' => $newRows[$index]['row']->name, 'ean' => $ean];
                 }
             }
