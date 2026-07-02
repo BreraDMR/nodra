@@ -16,6 +16,7 @@ import {
   type QueueCounts,
 } from "./orders";
 import { OrdersPanel } from "./OrdersPanel";
+import ImportPanel from "./ImportPanel";
 import { PricingRulesPanel } from "./PricingRulesPanel";
 import { PurchasesPanel } from "./PurchasesPanel";
 import { RepricePanel, type RepriceFilter } from "./RepricePanel";
@@ -109,7 +110,8 @@ type Tab =
   | "pricing"
   | "reprice"
   | "orders"
-  | "purchases";
+  | "purchases"
+  | "import";
 const fresh = {
   slug: "",
   category: "bags",
@@ -691,6 +693,13 @@ export default function AdminPage() {
               ▥ <span>Purchases</span>
               <small>{dashboard?.queues.to_purchase ?? 0}</small>
             </button>
+            <button
+              aria-label="Import"
+              className={tab === "import" ? "active" : ""}
+              onClick={() => setTab("import")}
+            >
+              ▦ <span>Import</span>
+            </button>
           </nav>
         </div>
         <div className="admin-sidebar-bottom">
@@ -1136,6 +1145,9 @@ export default function AdminPage() {
           )}
           {tab === "purchases" && (
             <PurchasesPanel send={send} onChanged={pricesChanged} />
+          )}
+          {tab === "import" && (
+            <ImportPanel send={send} csrfToken={user.csrfToken} />
           )}
         </div>
       </div>
