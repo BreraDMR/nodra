@@ -202,6 +202,48 @@ final class ImportApiTest extends ApiTestCase
         self::assertSame(250, $report['counts']['rowsWithCost']);
     }
 
+    /** Every section truncates its list at 200 rows while the counts stay complete, whatever the section. */
+    public function testEverySectionTruncatesItsListButKeepsTheCompleteCount(): void
+    {
+        $this->catalog();
+        $b = $this->builder();
+        // 250 existing variants for the updates section
+        $product = $b->product('bulk-matched', $this->cassettes, 'Shimano');
+        $rows = [];
+        foreach (range(1, 250) as $i) {
+            $b->variant($product, 'BULK-'.$i, ean: AwinFeed::ean(500 + $i));
+            $rows[] = AwinFeed::row(['product_id' => 'BC-M'.$i, 'product_name' => 'Bulk item '.$i, 'ean' => AwinFeed::ean(500 + $i), 'mpn' => '', 'model_number' => '', 'price' => '10.00', 'rrp_price' => '', 'delivery_time' => ''], 1);
+        }
+        // 240 rows claiming 120 EANs in pairs → conflicts
+        foreach (range(1, 120) as $i) {
+            $rows[] = AwinFeed::row(['product_id' => 'BC-C'.$i.'a', 'product_name' => 'Clash '.$i.' a', 'ean' => AwinFeed::ean(900 + $i), 'mpn' => '', 'model_number' => ''], 1);
+            $rows[] = AwinFeed::row(['product_id' => 'BC-C'.$i.'b', 'product_name' => 'Clash '.$i.' b', 'ean' => AwinFeed::ean(900 + $i), 'mpn' => '', 'model_number' => ''], 1);
+        }
+        // 250 rows in a category the catalogue doesn't know → unknowns
+        foreach (range(1, 250) as $i) {
+            $rows[] = AwinFeed::row(['product_id' => 'BC-U'.$i, 'product_name' => 'Unknown cat '.$i, 'ean' => AwinFeed::ean(1200 + $i), 'mpn' => '', 'model_number' => '', 'merchant_product_category_path' => 'Nowhere > Void', 'merchant_category' => 'Void'], 1);
+        }
+        // 210 rows without a name → errors
+        foreach (range(1, 210) as $i) {
+            $rows[] = AwinFeed::row(['product_id' => 'BC-E'.$i, 'product_name' => '', 'ean' => ''], 1);
+        }
+        shuffle($rows);
+
+        $report = $this->preview(AwinFeed::csv($rows));
+
+        self::assertSame(950, $report['counts']['totalRows']);
+        self::assertSame(['newProducts' => 0, 'updates' => 250, 'conflicts' => 240, 'unknowns' => 250, 'errors' => 210, 'rowsWithCost' => 250], [
+            'newProducts' => $report['counts']['newProducts'], 'updates' => $report['counts']['updates'], 'conflicts' => $report['counts']['conflicts'],
+            'unknowns' => $report['counts']['unknowns'], 'errors' => $report['counts']['errors'], 'rowsWithCost' => $report['counts']['rowsWithCost'],
+        ]);
+        self::assertCount(0, $report['newProducts']);
+        self::assertCount(200, $report['updates']);
+        self::assertCount(200, $report['conflicts']);
+        self::assertCount(200, $report['unknowns']);
+        self::assertCount(200, $report['errors']);
+        self::assertCount(200, $report['cost']['rows']);
+    }
+
     public function testApplyWritesDraftsOffersOriginsAndTheJournal(): void
     {
         $this->catalog();
