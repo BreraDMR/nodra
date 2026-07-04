@@ -20,10 +20,12 @@ class ImportRun
 {
     public const SOURCE_AWIN = 'awin_csv';
     public const SOURCE_SEED = 'seed';
-    public const SOURCES = [self::SOURCE_AWIN, self::SOURCE_SEED];
+    public const SOURCE_MERGE = 'merge';
+    public const SOURCES = [self::SOURCE_AWIN, self::SOURCE_SEED, self::SOURCE_MERGE];
     public const STATUS_PREVIEWED = 'previewed';
     public const STATUS_APPLIED = 'applied';
-    public const STATUSES = [self::STATUS_PREVIEWED, self::STATUS_APPLIED];
+    public const STATUS_FAILED = 'failed';
+    public const STATUSES = [self::STATUS_PREVIEWED, self::STATUS_APPLIED, self::STATUS_FAILED];
 
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
