@@ -10,8 +10,9 @@ use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * One field an import run wrote: the origin the field-origin UI (D03.3) shows.
+ * One field an import run or an admin wrote: the origin the field-origin UI (D03.3) shows.
  * entity is 'product', 'variant' or 'offer'; field names follow the import contract.
+ * A feed or seed write carries the run; an admin write has no run, only the admin's email.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'import_field_origin')]
@@ -28,8 +29,8 @@ class ImportFieldOrigin
     private Uuid $id;
 
     #[ORM\ManyToOne(targetEntity: ImportRun::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private ImportRun $run;
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?ImportRun $run;
 
     #[ORM\Column(length: 32)]
     private string $entityType;
@@ -43,10 +44,17 @@ class ImportFieldOrigin
     #[ORM\Column(type: Types::DATETIMETZ_IMMUTABLE)]
     private \DateTimeImmutable $writtenAt;
 
-    public function __construct(ImportRun $run, string $entityType, Uuid $entityId, string $field, \DateTimeImmutable $writtenAt)
+    /** Set only when no run wrote the field, i.e. an admin edit did. */
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $adminEmail = null;
+
+    private function __construct(?ImportRun $run, string $entityType, Uuid $entityId, string $field, \DateTimeImmutable $writtenAt, ?string $adminEmail)
     {
         if (!in_array($entityType, [self::ENTITY_PRODUCT, self::ENTITY_VARIANT, self::ENTITY_OFFER], true)) {
             throw new \InvalidArgumentException('Unknown import origin entity');
+        }
+        if (($run === null) === ($adminEmail === null)) {
+            throw new \InvalidArgumentException('An origin row is either an import run or an admin, never both or neither');
         }
         $this->id = Uuid::v7();
         $this->run = $run;
@@ -54,12 +62,24 @@ class ImportFieldOrigin
         $this->entityId = $entityId;
         $this->field = $field;
         $this->writtenAt = $writtenAt;
+        $this->adminEmail = $adminEmail;
+    }
+
+    public static function fromRun(ImportRun $run, string $entityType, Uuid $entityId, string $field, \DateTimeImmutable $writtenAt): self
+    {
+        return new self($run, $entityType, $entityId, $field, $writtenAt, null);
+    }
+
+    public static function admin(string $entityType, Uuid $entityId, string $field, string $adminEmail, \DateTimeImmutable $writtenAt): self
+    {
+        return new self(null, $entityType, $entityId, $field, $writtenAt, $adminEmail);
     }
 
     public function getId(): Uuid { return $this->id; }
-    public function getRun(): ImportRun { return $this->run; }
+    public function getRun(): ?ImportRun { return $this->run; }
     public function getEntityType(): string { return $this->entityType; }
     public function getEntityId(): Uuid { return $this->entityId; }
     public function getField(): string { return $this->field; }
     public function getWrittenAt(): \DateTimeImmutable { return $this->writtenAt; }
+    public function getAdminEmail(): ?string { return $this->adminEmail; }
 }
