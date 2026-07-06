@@ -145,6 +145,18 @@ class ProductVariant
         $this->attributes = (object) $attributes;
     }
 
+    /** A manual product merge moves the variant to the surviving product as it is. */
+    public function moveTo(Product $product): void
+    {
+        $this->product = $product;
+    }
+
+    /** The merge leaves nothing active on the twin variant once its offers moved away. */
+    public function deactivate(): void
+    {
+        $this->active = false;
+    }
+
     /** Only the prices; callers write the price history, see PriceHistory. */
     public function changePrice(int $priceCzk, int $priceEur): void
     {
