@@ -7,6 +7,7 @@ namespace App\Import;
 use App\Catalog\AttributeSchema;
 use App\Catalog\CategoryIndex;
 use App\Catalog\Gtin;
+use App\Entity\ImportFeedBinding;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\SupplierOffer;
@@ -34,6 +35,9 @@ final class ImportPlanner
     /** @var array<string, list<array<string, mixed>>> effective definitions per category id */
     private array $definitions = [];
 
+    /** @var array<string, list<ProductVariant>> cached candidates per "categoryId|brand" for the characteristics key */
+    private array $characteristicsIndex = [];
+
     public function __construct(
         private Connection $db,
         private EntityManagerInterface $em,
@@ -44,9 +48,10 @@ final class ImportPlanner
     ) {}
 
     /**
-     * @param list<AwinRow> $rows
-     *
-     * @return array{report: array<string, mixed>, plan: ImportPlan}
+     * Matches every parsed feed row against the catalogue and builds the preview report plus the writes
+     * apply would do. Matching keys in order: the admin's binding, EAN, brand + MPN, the supplier SKU of
+     * an existing offer, and finally the row's characteristics (brand + colour/size in one category).
+     * Nothing here writes; apply executes the plan.
      */
     public function plan(AwinParsedFile $file, string $supplier, \DateTimeImmutable $now): array
     {
@@ -65,34 +70,74 @@ final class ImportPlanner
         $eanGroups = [];
 
         foreach ($file->rows as $row) {
+            $categoryRow = null;
             $ean = $this->eanOf($row);
             $eanInvalid = $row->ean !== null && $ean === null;
             $candidates = [];
-            if ($ean !== null) {
+            // 1. the admin's manual binding is the strongest word: the row is that variant
+            $bound = $match['boundBySku'][$row->productId] ?? null;
+            if ($bound !== null) {
+                $candidates = [$bound];
+            }
+            // 2. EAN
+            if ($candidates === [] && $ean !== null) {
                 $candidates = $match['byEan'][$ean] ?? [];
             }
+            // 3. brand + MPN
             if ($candidates === [] && $row->mpn !== null && $row->brandName !== null) {
                 $candidates = $match['byBrandMpn'][self::norm($row->brandName).'|'.self::norm($row->mpn)] ?? [];
             }
             $offer = $match['offerBySku'][$row->productId] ?? null;
+            // 4. the supplier SKU of an existing offer (re-imports of the same feed)
             if ($candidates === [] && $offer !== null && $offer->getVariant() !== null) {
                 $candidates = [$offer->getVariant()];
             }
 
             if (count($candidates) > 1) {
-                $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('The row matches %d existing variants by its identity keys', count($candidates)), 'productName' => $row->name, 'ean' => $ean];
+                $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('The row matches %d existing variants by its identity keys', count($candidates)), 'productName' => $row->name, 'ean' => $ean, 'sku' => $row->productId];
                 continue;
+            }
+
+            if ($candidates === []) {
+                // 5. characteristics: brand + colour/size inside one category; only a unique candidate matches
+                $categoryRow = $guesser->guess($row->categoryPath, $row->merchantCategory);
+                if ($categoryRow !== null) {
+                    $candidates = $this->byCharacteristics($row, $categoryRow);
+                    if (count($candidates) > 1) {
+                        $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('The row matches %d existing variants by its characteristics', count($candidates)), 'productName' => $row->name, 'ean' => $ean, 'sku' => $row->productId];
+                        continue;
+                    }
+                    if (count($candidates) === 1) {
+                        $variant = $candidates[0];
+                        if ($offer !== null && ($offer->getVariant() === null || !$offer->getVariant()->getId()->equals($variant->getId()))) {
+                            $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('Supplier SKU "%s" is already recorded on another offer', $row->productId), 'productName' => $row->name, 'ean' => $ean, 'sku' => $row->productId];
+                            continue;
+                        }
+                        $update = $this->planUpdate($row, $variant, $offer);
+                        if ($update !== null) {
+                            $updates[] = $update;
+                            $costByRow[$row->rowNumber] = $this->costRow($row, $supplier, $variant->getProduct(), $this->variantRrp($update), $variant->getMarketPriceMinor(), $variant->getId()->toRfc4122());
+                        }
+                        $this->unknownDeliveryTime($row, $unknowns);
+                        continue;
+                    }
+                }
+                // unmatched: the no-identity row is the one case that still cannot be identified on a re-import
+                if ($categoryRow !== null && $ean === null && $row->mpn === null) {
+                    $unknowns[] = ['row' => $row->rowNumber, 'kind' => 'no_identity', 'message' => 'The row has no valid EAN and no MPN; bind its supplier SKU to a variant or it stays a new draft'];
+                    continue;
+                }
             }
 
             if ($candidates !== []) {
                 $variant = $candidates[0];
                 if ($offer !== null && ($offer->getVariant() === null || !$offer->getVariant()->getId()->equals($variant->getId()))) {
-                    $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('Supplier SKU "%s" is already recorded on another offer', $row->productId), 'productName' => $row->name, 'ean' => $ean];
+                    $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('Supplier SKU "%s" is already recorded on another offer', $row->productId), 'productName' => $row->name, 'ean' => $ean, 'sku' => $row->productId];
                     continue;
                 }
                 $contradiction = $this->contradiction($row, $variant);
                 if ($contradiction !== null) {
-                    $conflicts[] = ['row' => $row->rowNumber, 'message' => $contradiction, 'productName' => $row->name, 'ean' => $ean];
+                    $conflicts[] = ['row' => $row->rowNumber, 'message' => $contradiction, 'productName' => $row->name, 'ean' => $ean, 'sku' => $row->productId];
                     continue;
                 }
                 $update = $this->planUpdate($row, $variant, $offer);
@@ -106,21 +151,17 @@ final class ImportPlanner
 
             if ($offer !== null) {
                 // the supplier SKU says this feed row is already recorded, but on an offer without an exact variant
-                $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('Supplier SKU "%s" is already recorded on an offer without an exact variant; match that offer first', $row->productId), 'productName' => $row->name, 'ean' => $ean];
+                $conflicts[] = ['row' => $row->rowNumber, 'message' => sprintf('Supplier SKU "%s" is already recorded on an offer without an exact variant; match that offer first', $row->productId), 'productName' => $row->name, 'ean' => $ean, 'sku' => $row->productId];
                 continue;
             }
 
-            $categoryRow = $guesser->guess($row->categoryPath, $row->merchantCategory);
+            $categoryRow ??= $guesser->guess($row->categoryPath, $row->merchantCategory);
             if ($categoryRow === null) {
                 $unknowns[] = ['row' => $row->rowNumber, 'kind' => 'unknown_category', 'message' => sprintf('Category "%s" is not in the catalogue; the row is parked', $row->categoryPath ?? $row->merchantCategory ?? '')];
                 continue;
             }
             if ($eanInvalid) {
                 $unknowns[] = ['row' => $row->rowNumber, 'kind' => 'invalid_ean', 'message' => sprintf('EAN "%s" does not pass the check digit; matching falls back to brand and MPN', $row->ean)];
-            }
-            if ($ean === null && $row->mpn === null) {
-                $unknowns[] = ['row' => $row->rowNumber, 'kind' => 'no_identity', 'message' => 'The row has no valid EAN and no MPN; it cannot be identified on a re-import'];
-                continue;
             }
             $brand = $row->brandName !== null && trim($row->brandName) !== '' ? trim($row->brandName) : null;
             if ($brand !== null && !isset($knownBrands[self::norm($brand)])) {
@@ -143,7 +184,7 @@ final class ImportPlanner
                 foreach ($indexes as $index) {
                     $collided[$index] = true;
                     unset($costByRow[$newRows[$index]['row']->rowNumber]);
-                    $conflicts[] = ['row' => $newRows[$index]['row']->rowNumber, 'message' => sprintf('EAN %s is claimed by %d rows of the file', $ean, count($indexes)), 'productName' => $newRows[$index]['row']->name, 'ean' => $ean];
+                    $conflicts[] = ['row' => $newRows[$index]['row']->rowNumber, 'message' => sprintf('EAN %s is claimed by %d rows of the file', $ean, count($indexes)), 'productName' => $newRows[$index]['row']->name, 'ean' => $ean, 'sku' => $newRows[$index]['row']->productId];
                 }
             }
         }
@@ -160,11 +201,12 @@ final class ImportPlanner
     }
 
     /**
-     * Bulk lookups for the whole file: variants by EAN, by brand + MPN, and the supplier's offers by SKU.
+     * Bulk lookups for the whole file: the admin's bindings, variants by EAN, by brand + MPN, and the
+     * supplier's offers by SKU.
      *
      * @param list<AwinRow> $rows
      *
-     * @return array{byEan: array<string, list<ProductVariant>>, byBrandMpn: array<string, list<ProductVariant>>, offerBySku: array<string, SupplierOffer>}
+     * @return array{byEan: array<string, list<ProductVariant>>, byBrandMpn: array<string, list<ProductVariant>>, offerBySku: array<string, SupplierOffer>, boundBySku: array<string, ProductVariant>}
      */
     private function loadMatches(array $rows, string $supplier): array
     {
@@ -199,7 +241,9 @@ final class ImportPlanner
             }
         }
         $offerBySku = [];
-        foreach (array_chunk(array_unique($skus), 1000) as $chunk) {
+        $boundBySku = [];
+        $skuChunks = array_chunk(array_unique($skus), 1000);
+        foreach ($skuChunks as $chunk) {
             $q = $this->em->getRepository(SupplierOffer::class)->createQueryBuilder('o')
                 ->where('o.supplier = :supplier AND o.supplierSku IN (:skus)')
                 ->setParameter('supplier', $supplier)->setParameter('skus', $chunk)
@@ -207,9 +251,77 @@ final class ImportPlanner
             foreach ($q as $offer) {
                 $offerBySku[$offer->getSupplierSku()] = $offer;
             }
+            // the admin's manual link wins over everything the feed says about the row
+            $q = $this->em->getRepository(ImportFeedBinding::class)->createQueryBuilder('b')
+                ->join('b.variant', 'v')
+                ->where('b.supplier = :supplier AND b.supplierSku IN (:skus)')
+                ->setParameter('supplier', $supplier)->setParameter('skus', $chunk)
+                ->getQuery()->getResult();
+            foreach ($q as $binding) {
+                $boundBySku[$binding->getSupplierSku()] = $binding->getVariant();
+            }
         }
 
-        return ['byEan' => $byEan, 'byBrandMpn' => $byBrandMpn, 'offerBySku' => $offerBySku];
+        return ['byEan' => $byEan, 'byBrandMpn' => $byBrandMpn, 'offerBySku' => $offerBySku, 'boundBySku' => $boundBySku];
+    }
+
+    /**
+     * The characteristics key: variants of one brand in one category whose effective colour/size equals
+     * the row's. Only fires when the row carries colour or size; the caller treats 0 candidates as
+     * "no match" and more than one as a conflict.
+     *
+     * @param array<string, mixed> $categoryRow CategoryIndex row
+     *
+     * @return list<ProductVariant>
+     */
+    private function byCharacteristics(AwinRow $row, array $categoryRow): array
+    {
+        $brand = $row->brandName !== null && trim($row->brandName) !== '' ? trim($row->brandName) : null;
+        if ($brand === null || ($row->colour === null && $row->size === null)) {
+            return [];
+        }
+        $categoryId = $categoryRow['id'];
+        $candidates = $this->characteristicsIndex[$categoryId.'|'.self::norm($brand)] ??= $this->loadCharacteristicsCandidates($categoryId, $brand);
+        $matched = [];
+        foreach ($candidates as $variant) {
+            foreach (['colour' => $row->colour, 'size' => $row->size] as $key => $value) {
+                if ($value === null) {
+                    continue;
+                }
+                $current = $this->effectiveAttribute($variant, $key);
+                if ($current === null || self::norm((string) $current) !== self::norm($value)) {
+                    continue 2;
+                }
+            }
+            $matched[] = $variant;
+        }
+
+        return $matched;
+    }
+
+    /** @return list<ProductVariant> variants of the category's products with the brand */
+    private function loadCharacteristicsCandidates(string $categoryId, string $brand): array
+    {
+        return $this->em->getRepository(ProductVariant::class)->createQueryBuilder('v')
+            ->join('v.product', 'p')
+            ->where('IDENTITY(p.category) = :category AND LOWER(TRIM(p.brand)) = :brand')
+            ->setParameter('category', $categoryId)
+            ->setParameter('brand', self::norm($brand))
+            ->getQuery()->getResult();
+    }
+
+    /** The value a key carries for this variant: its override, else the product's, else the colour/size column. */
+    private function effectiveAttribute(ProductVariant $variant, string $key): ?string
+    {
+        $current = $variant->getAttributes()[$key] ?? $variant->getProduct()->getAttributes()[$key] ?? null;
+        if ($current === null && $key === 'colour') {
+            $current = $variant->getColor();
+        }
+        if ($current === null && $key === 'size') {
+            $current = $variant->getSize();
+        }
+
+        return $current === null ? null : (string) $current;
     }
 
     /** The digits of the row's EAN, or null when it is missing or fails the check digit. */
@@ -228,19 +340,12 @@ final class ImportPlanner
     /** The row's size or colour contradicts what the variant already says: a conflict, nothing is written. */
     private function contradiction(AwinRow $row, ProductVariant $variant): ?string
     {
-        $product = $variant->getProduct();
         foreach (['colour' => $row->colour, 'size' => $row->size] as $key => $value) {
             if ($value === null) {
                 continue;
             }
-            $current = $variant->getAttributes()[$key] ?? $product->getAttributes()[$key] ?? null;
-            if ($current === null && $key === 'colour') {
-                $current = $variant->getColor();
-            }
-            if ($current === null && $key === 'size') {
-                $current = $variant->getSize();
-            }
-            if ($current !== null && self::norm((string) $current) !== self::norm($value)) {
+            $current = $this->effectiveAttribute($variant, $key);
+            if ($current !== null && self::norm($current) !== self::norm($value)) {
                 return sprintf('The row says %s "%s" but the variant with the same EAN carries "%s"', $key, $value, $current);
             }
         }
@@ -409,6 +514,8 @@ final class ImportPlanner
             'variantId' => $update->variant->getId()->toRfc4122(),
             'sku' => $update->variant->getSku(),
             'productName' => $update->variant->getProduct()->getCopy()['en']['name'] ?? $update->variant->getProduct()->getSlug(),
+            // the feed currency rides along so the admin can render the money fields as money
+            'currency' => $update->row->currency,
             'changes' => $update->changes,
         ], $updates);
         ksort($costByRow);
