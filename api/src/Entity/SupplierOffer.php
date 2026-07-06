@@ -170,4 +170,14 @@ class SupplierOffer
     {
         $this->supplierSku = $supplierSku === null || trim($supplierSku) === '' ? null : mb_substr(trim($supplierSku), 0, 120);
     }
+
+    /** A manual product merge re-points the offer to the surviving product and variant. */
+    public function moveTo(Product $product, ?ProductVariant $variant): void
+    {
+        if ($variant !== null && !$variant->getProduct()->getId()->equals($product->getId())) {
+            throw new \InvalidArgumentException('The variant belongs to another product');
+        }
+        $this->product = $product;
+        $this->variant = $variant;
+    }
 }
