@@ -9,23 +9,29 @@ use App\Entity\SupplierOffer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Import defaults set once per supplier (spec: delivery_cost is a supplier-level value, not per row).
- * A supplier without a row reads as zero inbound shipping.
+ * Import defaults set once per supplier (spec: delivery_cost is a supplier-level value, not per row):
+ * the inbound shipping and the standing feed URL the scheduled refresh reads (D03.4).
+ * A supplier without a row reads as zero inbound shipping and no feed.
  */
 final class ImportSettings
 {
     public function __construct(private EntityManagerInterface $em) {}
 
-    /** @return list<array{supplier: string, inboundShippingMinor: int}> */
+    /** @return list<array{supplier: string, inboundShippingMinor: int, feedUrl: ?string}> */
     public function list(): array
     {
         $stored = [];
         foreach ($this->em->getRepository(ImportSupplierSetting::class)->findAll() as $setting) {
-            $stored[$setting->getSupplier()] = $setting->getInboundShippingMinor();
+            $stored[$setting->getSupplier()] = $setting;
         }
         $list = [];
         foreach (SupplierOffer::SUPPLIERS as $supplier) {
-            $list[] = ['supplier' => $supplier, 'inboundShippingMinor' => $stored[$supplier] ?? 0];
+            $setting = $stored[$supplier] ?? null;
+            $list[] = [
+                'supplier' => $supplier,
+                'inboundShippingMinor' => $setting?->getInboundShippingMinor() ?? 0,
+                'feedUrl' => $setting?->getFeedUrl(),
+            ];
         }
 
         return $list;
@@ -38,8 +44,15 @@ final class ImportSettings
         return $setting?->getInboundShippingMinor() ?? 0;
     }
 
-    /** @return array{supplier: string, inboundShippingMinor: int} */
-    public function save(string $supplier, int $inboundShippingMinor): array
+    public function feedUrl(string $supplier): ?string
+    {
+        $setting = $this->em->find(ImportSupplierSetting::class, $supplier);
+
+        return $setting?->getFeedUrl();
+    }
+
+    /** @return array{supplier: string, inboundShippingMinor: int, feedUrl: ?string} */
+    public function save(string $supplier, int $inboundShippingMinor, ?string $feedUrl = null): array
     {
         if (!in_array($supplier, SupplierOffer::SUPPLIERS, true)) {
             throw new \InvalidArgumentException(sprintf('Unknown supplier "%s"', $supplier));
@@ -49,9 +62,12 @@ final class ImportSettings
         }
         $setting = $this->em->find(ImportSupplierSetting::class, $supplier) ?? new ImportSupplierSetting($supplier, $inboundShippingMinor);
         $setting->setInboundShippingMinor($inboundShippingMinor);
+        if (func_num_args() >= 3) {
+            $setting->setFeedUrl($feedUrl);
+        }
         $this->em->persist($setting);
         $this->em->flush();
 
-        return ['supplier' => $supplier, 'inboundShippingMinor' => $setting->getInboundShippingMinor()];
+        return ['supplier' => $supplier, 'inboundShippingMinor' => $setting->getInboundShippingMinor(), 'feedUrl' => $setting->getFeedUrl()];
     }
 }
