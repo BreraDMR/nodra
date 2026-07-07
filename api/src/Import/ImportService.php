@@ -84,42 +84,181 @@ final class ImportService
         $now = $this->clock->now();
         $parsed = $this->parser->parse($bytes);
         $planned = $this->planner->plan($parsed, (string) $run->getSupplier(), $now);
-        $plan = $planned['plan'];
+        $entries = $this->serializePlan($planned['plan']);
 
         $written = ['products' => 0, 'variants' => 0, 'offers' => 0, 'offerUpdates' => 0, 'rrpWrites' => 0];
-        $this->em->wrapInTransaction(function () use ($plan, $run, $parsed, $planned, $now, &$written): void {
-            foreach ($plan->newProducts as $product) {
-                foreach ($product->variants as $plannedVariant) {
-                    $variant = $this->writeNewProductVariant($product, $plannedVariant, $run, $now);
-                    $this->writeOffer($variant->getProduct(), $plannedVariant->row, $variant, $plannedVariant->leadTimeMinDays, $plannedVariant->leadTimeMaxDays, $run, $now);
-                    if ($plannedVariant->row->rrpMinor !== null) {
-                        $this->writeVariantRrp($variant, $plannedVariant->row->rrpMinor, $plannedVariant->row->currency, $run, $now);
-                        $written['rrpWrites']++;
-                    }
-                    $written['offers']++;
-                    $written['variants']++;
-                }
-                $written['products']++;
-            }
-            foreach ($plan->updates as $update) {
-                if ($update->rrp !== null) {
-                    $this->writeRrp($update, $run, $now);
-                    $written['rrpWrites']++;
-                }
-                if ($update->existingOffer === null) {
-                    $this->writeOffer($update->variant->getProduct(), $update->row, $update->variant, $update->leadTimeMinDays, $update->leadTimeMaxDays, $run, $now);
-                    $written['offers']++;
-                } else {
-                    $this->updateOffer($update, $run, $now);
-                    $written['offerUpdates']++;
-                }
-            }
+        $this->em->wrapInTransaction(function () use ($entries, $run, $parsed, $planned, $now, &$written): void {
+            $written = $this->executeBatchPlan($entries, $run, $now);
             $report = $planned['report'] + ['runId' => $run->getId()->toRfc4122(), 'source' => ImportRun::SOURCE_AWIN, 'fileName' => $run->getFileName(), 'sha256' => $run->getFileSha256()];
             $run->finish(ImportRun::STATUS_APPLIED, $report['counts'], $report, $parsed->errors, $now);
             $this->em->flush();
         });
 
-        return ['runId' => $run->getId()->toRfc4122(), 'written' => $written, 'report' => $run->getReport() ?? []];
+        return [
+            'runId' => $run->getId()->toRfc4122(),
+            'written' => $written,
+            // new variants always start at 0: the feed's price is the supplier's, the shop's price is the admin's
+            'draftsWithoutPrice' => $written['variants'],
+            'report' => $run->getReport() ?? [],
+        ];
+    }
+
+    /**
+     * The plan as plain arrays, ordered by row number, one entry per written variant — the shape the
+     * D03.4 batches store so a failed batch can be replayed without the feed file.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function serializePlan(ImportPlan $plan): array
+    {
+        $entries = [];
+        foreach ($plan->newProducts as $product) {
+            $first = true;
+            foreach ($product->variants as $variant) {
+                $entries[] = [
+                    'kind' => 'new',
+                    // the product rides on its first variant entry; writeNewProductVariant finds it by slug
+                    'product' => $first ? [
+                        'slug' => $product->slug,
+                        'brand' => $product->brand,
+                        'name' => $product->name,
+                        'description' => $product->description,
+                        'categoryRow' => ['id' => $product->categoryRow['id'], 'slug' => $product->categoryRow['slug']],
+                        'sourceImages' => $product->sourceImages,
+                    ] : null,
+                    'variant' => [
+                        'row' => $this->rowToArray($variant->row),
+                        'ean' => $variant->ean,
+                        'mpn' => $variant->mpn,
+                        'label' => $variant->label,
+                        'attributes' => $variant->attributes,
+                        'leadTimeMinDays' => $variant->leadTimeMinDays,
+                        'leadTimeMaxDays' => $variant->leadTimeMaxDays,
+                    ],
+                    'rowNo' => $variant->row->rowNumber,
+                ];
+                $first = false;
+            }
+        }
+        foreach ($plan->updates as $update) {
+            $entries[] = [
+                'kind' => 'update',
+                'variantId' => $update->variant->getId()->toRfc4122(),
+                'offerId' => $update->existingOffer?->getId()->toRfc4122(),
+                'rrp' => $update->rrp,
+                'leadTimeMinDays' => $update->leadTimeMinDays,
+                'leadTimeMaxDays' => $update->leadTimeMaxDays,
+                'changes' => $update->changes,
+                'row' => $this->rowToArray($update->row),
+                'rowNo' => $update->row->rowNumber,
+            ];
+        }
+        usort($entries, static fn (array $a, array $b): int => $a['rowNo'] <=> $b['rowNo']);
+
+        return $entries;
+    }
+
+    /**
+     * Writes the entries of one batch: new drafts and offer updates, rows independent. The caller owns
+     * the transaction — apply wraps the whole run, a feed batch wraps one batch.
+     *
+     * @param list<array<string, mixed>> $entries
+     *
+     * @return array{products: int, variants: int, offers: int, offerUpdates: int, rrpWrites: int}
+     */
+    public function executeBatchPlan(array $entries, ImportRun $run, \DateTimeImmutable $now): array
+    {
+        $written = ['products' => 0, 'variants' => 0, 'offers' => 0, 'offerUpdates' => 0, 'rrpWrites' => 0];
+        foreach ($entries as $entry) {
+            if ($entry['kind'] === 'new') {
+                $product = new PlannedNewProduct(
+                    $entry['product']['slug'],
+                    $entry['product']['brand'],
+                    $entry['product']['name'],
+                    $entry['product']['description'],
+                    $entry['product']['categoryRow'],
+                    $entry['product']['sourceImages'],
+                    [],
+                );
+                $variant = $this->newVariantFromArray($entry['variant']);
+                $writtenVariant = $this->writeNewProductVariant($product, $variant, $run, $now);
+                $this->writeOffer($writtenVariant->getProduct(), $variant->row, $writtenVariant, $variant->leadTimeMinDays, $variant->leadTimeMaxDays, $run, $now);
+                if ($variant->row->rrpMinor !== null) {
+                    $this->writeVariantRrp($writtenVariant, $variant->row->rrpMinor, $variant->row->currency, $run, $now);
+                    $written['rrpWrites']++;
+                }
+                $written['offers']++;
+                $written['variants']++;
+                if ($entry['product'] !== null) {
+                    $written['products']++;
+                }
+                continue;
+            }
+            $variant = $this->em->find(ProductVariant::class, $entry['variantId'])
+                ?? throw new \RuntimeException(sprintf('Variant %s is gone; the batch cannot be replayed', $entry['variantId']));
+            $offer = $entry['offerId'] === null ? null : $this->em->find(SupplierOffer::class, $entry['offerId']);
+            $update = new PlannedUpdate(
+                $this->rowFromArray($entry['row']),
+                $variant,
+                $entry['changes'],
+                $entry['rrp'],
+                $entry['leadTimeMinDays'],
+                $entry['leadTimeMaxDays'],
+                $offer,
+            );
+            if ($update->rrp !== null) {
+                $this->writeRrp($update, $run, $now);
+                $written['rrpWrites']++;
+            }
+            if ($offer === null) {
+                $this->writeOffer($update->variant->getProduct(), $update->row, $update->variant, $update->leadTimeMinDays, $update->leadTimeMaxDays, $run, $now);
+                $written['offers']++;
+            } else {
+                $this->updateOffer($update, $run, $now);
+                $written['offerUpdates']++;
+            }
+        }
+
+        return $written;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function newVariantFromArray(array $data): PlannedNewVariant
+    {
+        return new PlannedNewVariant(
+            $this->rowFromArray($data['row']),
+            $data['ean'],
+            $data['mpn'],
+            $data['label'],
+            $data['attributes'],
+            $data['leadTimeMinDays'],
+            $data['leadTimeMaxDays'],
+        );
+    }
+
+    /** @param AwinRow $row */
+    private function rowToArray(AwinRow $row): array
+    {
+        return [
+            'rowNumber' => $row->rowNumber, 'productId' => $row->productId, 'name' => $row->name,
+            'description' => $row->description, 'brandName' => $row->brandName, 'ean' => $row->ean,
+            'mpn' => $row->mpn, 'colour' => $row->colour, 'size' => $row->size,
+            'priceMinor' => $row->priceMinor, 'currency' => $row->currency, 'rrpMinor' => $row->rrpMinor,
+            'inStock' => $row->inStock, 'stockStatus' => $row->stockStatus, 'quantity' => $row->quantity,
+            'deliveryTime' => $row->deliveryTime, 'images' => $row->images, 'merchantCategory' => $row->merchantCategory,
+            'categoryPath' => $row->categoryPath, 'deepLink' => $row->deepLink, 'lastUpdated' => $row->lastUpdated,
+        ];
+    }
+
+    /** @param array<string, mixed> $data */
+    private function rowFromArray(array $data): AwinRow
+    {
+        return new AwinRow(
+            $data['rowNumber'], $data['productId'], $data['name'], $data['description'], $data['brandName'],
+            $data['ean'], $data['mpn'], $data['colour'], $data['size'], $data['priceMinor'], $data['currency'],
+            $data['rrpMinor'], $data['inStock'], $data['stockStatus'], $data['quantity'], $data['deliveryTime'],
+            $data['images'], $data['merchantCategory'], $data['categoryPath'], $data['deepLink'], $data['lastUpdated'],
+        );
     }
 
     /** @return array<string, mixed>|null */
@@ -283,7 +422,7 @@ final class ImportService
     private function origin(ImportRun $run, string $entityType, Uuid $entityId, array $fields, \DateTimeImmutable $now): void
     {
         foreach ($fields as $field) {
-            $this->em->persist(new ImportFieldOrigin($run, $entityType, $entityId, $field, $now));
+            $this->em->persist(ImportFieldOrigin::fromRun($run, $entityType, $entityId, $field, $now));
         }
     }
 
