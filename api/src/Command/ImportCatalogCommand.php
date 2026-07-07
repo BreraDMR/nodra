@@ -28,7 +28,7 @@ final class ImportCatalogCommand extends Command
         foreach ($categories['warnings'] as $warning) {
             $output->writeln('<comment>Warning: '.$warning.'</comment>');
         }
-        $products = $this->seeder->seedProducts();
+        $products = $this->seeder->seedProducts($run);
         foreach ($products['errors'] as $error) {
             $output->writeln('<comment>Row error: '.$error['message'].'</comment>');
         }
