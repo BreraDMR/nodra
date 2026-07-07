@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Catalog;
 
 use App\Entity\Category;
+use App\Entity\ImportFieldOrigin;
+use App\Entity\ImportRun;
 use App\Entity\PriceChange;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
 use App\Entity\SupplierOffer;
+use App\Import\OriginRecorder;
 use App\Pricing\PriceHistory;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -18,7 +21,7 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class CatalogSeeder
 {
-    public function __construct(private EntityManagerInterface $em, private PriceHistory $history) {}
+    public function __construct(private EntityManagerInterface $em, private PriceHistory $history, private OriginRecorder $origins) {}
 
     /** @return array{added: int, filled: int, warnings: list<string>} */
     public function seedCategories(): array
@@ -58,9 +61,10 @@ final class CatalogSeeder
         return ['added' => $added, 'filled' => $filled, 'warnings' => $warnings];
     }
 
-    /** @return array{added: int, filled: int, offers: int, errors: list<array{row: int, message: string}>} */
-    public function seedProducts(): array
+    /** With a run the seed also journals the field origins of what it creates; the fixtures pass none. */
+    public function seedProducts(?ImportRun $run = null): array
     {
+        $now = new \DateTimeImmutable();
         $bySlug = $this->categoriesBySlug();
         $products = $this->em->getRepository(Product::class);
         $offers = $this->em->getRepository(SupplierOffer::class);
@@ -121,9 +125,15 @@ final class CatalogSeeder
             $product->update($item['slug'], $category, $copy, $image, [$image], $item['badge'] ?? null, $item['featuredRank'] ?? $rank + 1, 'published');
             $product->describe($brand, $attributes);
             $this->em->persist($product);
+            if ($run !== null) {
+                $this->origins->forRun($run, ImportFieldOrigin::ENTITY_PRODUCT, $product->getId(), ['category', 'name', 'short', 'description', 'brand', 'attributes'], $now);
+            }
             $offer = SupplierOfferSeed::fromItem($product, $item);
             if ($offer !== null) {
                 $this->em->persist($offer);
+                if ($run !== null) {
+                    $this->origins->forRun($run, ImportFieldOrigin::ENTITY_OFFER, $offer->getId(), ['url', 'title', 'price', 'stock', 'checked'], $now);
+                }
                 ++$newOffers;
             }
             foreach ($item['variants'] as $index => $option) {
@@ -141,6 +151,9 @@ final class CatalogSeeder
                 $this->em->persist($variant);
                 // the first price is history too; existing variants' prices are never touched by the import
                 $this->history->record($variant, null, null, PriceChange::IMPORT);
+                if ($run !== null) {
+                    $this->origins->forRun($run, ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), ['sku', 'label', 'price'], $now);
+                }
             }
             ++$added;
         }
