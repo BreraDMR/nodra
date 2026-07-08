@@ -8,6 +8,7 @@ use App\Catalog\AttributeSchema;
 use App\Catalog\CategoryIndex;
 use App\Catalog\Gtin;
 use App\Entity\Category;
+use App\Entity\ImportFieldOrigin;
 use App\Entity\PriceChange;
 use App\Entity\Product;
 use App\Entity\ProductVariant;
@@ -23,7 +24,7 @@ use Symfony\Component\Uid\Uuid;
 
 final class AdminService
 {
-    public function __construct(private EntityManagerInterface $em, private Connection $db, private PriceHistory $history, private ClockInterface $clock) {}
+    public function __construct(private EntityManagerInterface $em, private Connection $db, private PriceHistory $history, private ClockInterface $clock, private \App\Import\OriginRecorder $origins) {}
 
     public function dashboard(): array
     {
@@ -146,6 +147,8 @@ final class AdminService
         $this->em->persist($variant);
         $this->history->record($variant, null, null, PriceChange::MANUAL);
         $this->em->flush();
+        $this->origins->forAdmin(ImportFieldOrigin::ENTITY_PRODUCT, $product->getId(), ['category', 'name', 'short', 'description', 'brand', 'attributes']);
+        $this->origins->forAdmin(ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), ['sku', 'label', 'price']);
 
         return ['id' => $product->getId()->toRfc4122(), 'variantId' => $variant->getId()->toRfc4122()];
     }
@@ -159,6 +162,7 @@ final class AdminService
         $this->validateSlug($input->slug, $id);
         $category = $this->category($input->category, $input->status, $product->getCategory());
         $moved = $category !== $product->getCategory();
+        $before = $this->productOriginState($product);
         $copy = $this->copy($input, $product->getCopy());
         $images = array_values(array_unique([$input->image, ...$product->getImages()]));
         $product->update($input->slug, $category, $copy, $input->image, $images, $input->badge, $input->featuredRank, $input->status);
@@ -168,14 +172,57 @@ final class AdminService
         }
         $baseId = $this->db->fetchOne('SELECT id FROM product_variant WHERE product_id = :id ORDER BY (active AND stock > 0) DESC, active DESC, sku ASC LIMIT 1', ['id' => $id]);
         $variant = $baseId === false ? null : $this->em->find(ProductVariant::class, Uuid::fromString($baseId));
+        $priceChanged = false;
         if ($variant !== null) {
             [$oldCzk, $oldEur] = [$variant->getPriceCzk(), $variant->getPriceEur()];
             $variant->changePrice($input->priceCzk, $input->priceEur);
             $this->history->record($variant, $oldCzk, $oldEur, PriceChange::MANUAL);
+            $priceChanged = $oldCzk !== $variant->getPriceCzk() || $oldEur !== $variant->getPriceEur();
         }
         $this->em->flush();
+        $this->origins->forAdmin(ImportFieldOrigin::ENTITY_PRODUCT, $product->getId(), $this->productOriginFields($before, $product));
+        if ($priceChanged && $variant !== null) {
+            $this->origins->forAdmin(ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), ['price']);
+        }
 
         return ['id' => $product->getId()->toRfc4122()];
+    }
+
+    /** The product fields the origin journal tracks, read before a write. */
+    private function productOriginState(Product $product): array
+    {
+        return [
+            'copy' => $product->getCopy(),
+            'brand' => $product->getBrand(),
+            'categoryId' => $product->getCategory()->getId()->toRfc4122(),
+            'attributes' => $product->getAttributes(),
+        ];
+    }
+
+    /** The origin fields the write actually changed: unchanged fields are not re-journaled. */
+    private function productOriginFields(array $before, Product $product): array
+    {
+        $fields = [];
+        if ($product->getCategory()->getId()->toRfc4122() !== $before['categoryId']) {
+            $fields[] = 'category';
+        }
+        $copy = $product->getCopy();
+        foreach (['name', 'short', 'description'] as $part) {
+            foreach (['cs', 'de', 'en'] as $locale) {
+                if (($copy[$locale][$part] ?? null) !== ($before['copy'][$locale][$part] ?? null)) {
+                    $fields[] = $part;
+                    break;
+                }
+            }
+        }
+        if ($product->getBrand() !== $before['brand']) {
+            $fields[] = 'brand';
+        }
+        if ($product->getAttributes() != $before['attributes']) {
+            $fields[] = 'attributes';
+        }
+
+        return $fields;
     }
 
     public function adjustStock(StockAdjustmentRequest $input): array
@@ -207,6 +254,23 @@ final class AdminService
         $this->em->persist($variant);
         $this->history->record($variant, null, null, PriceChange::MANUAL);
         $this->em->flush();
+        $fields = ['sku', 'label', 'price'];
+        if (trim((string) $input->ean) !== '') {
+            $fields[] = 'ean';
+        }
+        if (trim((string) $input->mpn) !== '') {
+            $fields[] = 'mpn';
+        }
+        if ($input->attributes !== []) {
+            $fields[] = 'attributes';
+        }
+        if ($input->rrpMinor !== null) {
+            $fields[] = 'rrp';
+        }
+        if ($input->marketPriceMinor !== null) {
+            $fields[] = 'market_price';
+        }
+        $this->origins->forAdmin(ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), $fields);
 
         return ['id' => $variant->getId()->toRfc4122(), 'sku' => $variant->getSku()];
     }
@@ -220,12 +284,41 @@ final class AdminService
         if ($variant->getSku() !== $input->sku) {
             throw new \InvalidArgumentException('SKU cannot be changed after creation');
         }
+        $before = [
+            'label' => $variant->getLabel(), 'priceCzk' => $variant->getPriceCzk(), 'priceEur' => $variant->getPriceEur(),
+            'ean' => $variant->getEan(), 'mpn' => $variant->getMpn(), 'attributes' => $variant->getAttributes(),
+            'rrpMinor' => $variant->getRrpMinor(), 'rrpCurrency' => $variant->getRrpCurrency(),
+            'marketPriceMinor' => $variant->getMarketPriceMinor(),
+        ];
         [$oldCzk, $oldEur] = [$variant->getPriceCzk(), $variant->getPriceEur()];
         $variant->update($this->variantLabels($input), $input->priceCzk, $input->priceEur, $input->active, $input->color, $input->size);
         $this->identify($variant, $input);
         $this->referencePrices($variant, $input);
         $this->history->record($variant, $oldCzk, $oldEur, PriceChange::MANUAL);
         $this->em->flush();
+        $fields = [];
+        if ($variant->getLabel() != $before['label']) {
+            $fields[] = 'label';
+        }
+        if ($variant->getPriceCzk() !== $before['priceCzk'] || $variant->getPriceEur() !== $before['priceEur']) {
+            $fields[] = 'price';
+        }
+        if ($variant->getEan() !== $before['ean']) {
+            $fields[] = 'ean';
+        }
+        if ($variant->getMpn() !== $before['mpn']) {
+            $fields[] = 'mpn';
+        }
+        if ($variant->getAttributes() != $before['attributes']) {
+            $fields[] = 'attributes';
+        }
+        if ($variant->getRrpMinor() !== $before['rrpMinor'] || $variant->getRrpCurrency() !== $before['rrpCurrency']) {
+            $fields[] = 'rrp';
+        }
+        if ($variant->getMarketPriceMinor() !== $before['marketPriceMinor']) {
+            $fields[] = 'market_price';
+        }
+        $this->origins->forAdmin(ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), $fields);
 
         return ['id' => $id, 'sku' => $variant->getSku()];
     }
