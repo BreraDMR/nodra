@@ -13,7 +13,7 @@ use Symfony\Component\Uid\Uuid;
 
 final class SupplierOfferAdminService
 {
-    public function __construct(private EntityManagerInterface $em) {}
+    public function __construct(private EntityManagerInterface $em, private \App\Import\OriginRecorder $origins) {}
 
     public function create(string $productId, SupplierOfferWriteRequest $input): ?array
     {
@@ -25,6 +25,7 @@ final class SupplierOfferAdminService
         $this->apply($offer, $input);
         $this->em->persist($offer);
         $this->flush();
+        $this->origins->forAdmin(\App\Entity\ImportFieldOrigin::ENTITY_OFFER, $offer->getId(), ['url', 'title', 'price', 'stock', 'lead_time', 'seller', 'inbound_shipping', 'fx_rate', 'checked']);
 
         return ['id' => $offer->getId()->toRfc4122()];
     }
@@ -35,8 +36,43 @@ final class SupplierOfferAdminService
         if ($offer === null) {
             return null;
         }
+        $before = [
+            'url' => $offer->getUrl(), 'title' => $offer->getTitle(), 'seller' => $offer->getSeller(),
+            'priceMinor' => $offer->getPriceMinor(), 'reportedQuantity' => $offer->getReportedQuantity(),
+            'checkedAt' => $offer->getCheckedAt(), 'leadMin' => $offer->getLeadTimeMinDays(), 'leadMax' => $offer->getLeadTimeMaxDays(),
+            'inboundShippingMinor' => $offer->getInboundShippingMinor(), 'fxRateCzk' => $offer->getFxRateCzk(),
+        ];
         $this->apply($offer, $input);
         $this->flush();
+        $fields = [];
+        if ($offer->getUrl() !== $before['url']) {
+            $fields[] = 'url';
+        }
+        if ($offer->getTitle() !== $before['title']) {
+            $fields[] = 'title';
+        }
+        if ($offer->getSeller() !== $before['seller']) {
+            $fields[] = 'seller';
+        }
+        if ($offer->getPriceMinor() !== $before['priceMinor']) {
+            $fields[] = 'price';
+        }
+        if ($offer->getReportedQuantity() !== $before['reportedQuantity']) {
+            $fields[] = 'stock';
+        }
+        if ($offer->getCheckedAt() != $before['checkedAt']) {
+            $fields[] = 'checked';
+        }
+        if ($offer->getLeadTimeMinDays() !== $before['leadMin'] || $offer->getLeadTimeMaxDays() !== $before['leadMax']) {
+            $fields[] = 'lead_time';
+        }
+        if ($offer->getInboundShippingMinor() !== $before['inboundShippingMinor']) {
+            $fields[] = 'inbound_shipping';
+        }
+        if ($offer->getFxRateCzk() !== $before['fxRateCzk']) {
+            $fields[] = 'fx_rate';
+        }
+        $this->origins->forAdmin(\App\Entity\ImportFieldOrigin::ENTITY_OFFER, $offer->getId(), $fields);
 
         return ['id' => $id];
     }
