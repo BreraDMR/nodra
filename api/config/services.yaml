@@ -31,6 +31,13 @@ parameters:
 
     # D03.2 import: the supplier behind the uploaded Awin feed; more feeds join in D03.4
     app.import.awin_supplier: 'bike_components'
+    # D03.4 feed refresh: defaults picked while the owner was away, see docs/design/d03-import.md
+    app.import.batch_rows: 500              # planned rows written per background batch
+    app.import.min_feed_interval: 60        # minutes between refreshes of one supplier's feed
+    app.import.batch_attempts: 3            # automatic attempts per batch, past them only a manual restart
+    app.import.stale_batch_minutes: 30      # a batch running longer than this is treated as interrupted
+    app.import.download_timeout: 30         # seconds before the feed download gives up
+    app.import.download_max_bytes: 50000000 # 50 MB cap on a downloaded feed
 
 services:
     # default configuration for services in *this* file
