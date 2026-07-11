@@ -187,7 +187,9 @@ final class AdminImportController extends AbstractController
             return $this->json(['message' => $error->getMessage()], 409);
         }
 
-        return $batch === null ? $this->json(['message' => 'Batch not found'], 404) : $this->json($this->refresh->batchSummaries((string) $batch->getRun()->getId()->toRfc4122()));
+        return $batch === null
+            ? $this->json(['message' => 'Batch not found'], 404)
+            : $this->json(['items' => $this->refresh->batchSummaries((string) $batch->getRun()->getId()->toRfc4122())]);
     }
 
     private function csrfProblem(Request $request): ?JsonResponse
