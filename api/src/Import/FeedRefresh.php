@@ -177,22 +177,36 @@ final class FeedRefresh
         $now = $this->clock->now();
         $batch->start($now);
         $this->em->flush();
+        $conn = $this->em->getConnection();
+        // a hand-rolled transaction, not wrapInTransaction: the ORM wrapper closes the manager on any
+        // throw, and the run must go on with the next batch after this one fails
+        $conn->beginTransaction();
         try {
-            $this->em->wrapInTransaction(function () use ($batch, $now): void {
-                $run = $this->em->find(ImportRun::class, $batch->getRun()->getId()) ?? throw new \RuntimeException('The batch run disappeared');
-                $this->imports->executeBatchPlan($batch->getPlan(), $run, $now);
-                $this->em->flush();
-            });
+            $run = $this->em->find(ImportRun::class, $batch->getRun()->getId()) ?? throw new \RuntimeException('The batch run disappeared');
+            $this->imports->executeBatchPlan($batch->getPlan(), $run, $now);
+            $this->em->flush();
+            $conn->commit();
             $batch->finish($batch->getPlan(), $this->clock->now());
             $this->em->flush();
         } catch (\Throwable $error) {
+            if ($conn->isTransactionActive()) {
+                $conn->rollBack();
+            }
             // a failed transaction leaves partial writes in the unit of work: drop them all, then journal
             $this->em->clear();
-            $fresh = $this->em->find(ImportBatch::class, $batch->getId());
+            $fresh = $this->em->isOpen() ? $this->em->find(ImportBatch::class, $batch->getId()) : null;
             if ($fresh !== null) {
                 $fresh->fail($error->getMessage(), $this->clock->now());
                 $this->em->flush();
+            } else {
+                // a flush that died hard closed the manager: the journal row still has to land
+                $conn->executeStatement(
+                    'UPDATE import_batch SET status = :status, error = :error, finished_at = :finished WHERE id = :id',
+                    ['status' => ImportBatch::STATUS_FAILED, 'error' => $error->getMessage(), 'finished' => $this->clock->now()->format(\DateTimeInterface::ATOM), 'id' => $batch->getId()->toRfc4122()],
+                );
             }
+            // the caller holds its own detached copy of the batch: mirror the journal row onto it
+            $batch->fail($error->getMessage(), $this->clock->now());
         }
     }
 
