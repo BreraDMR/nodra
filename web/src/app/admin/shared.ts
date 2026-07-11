@@ -483,6 +483,22 @@ export type ImportCounts = {
   errors: number;
   rowsWithCost: number;
   suggestionsMarginTooLow: number;
+  // feed refresh runs (D03.4) carry how their batches went
+  batchesDone?: number;
+  batchesFailed?: number;
+};
+// what apply wrote; the drafts it created start without a calculated price
+export type ApplyResult = {
+  runId: string;
+  written: {
+    products: number;
+    variants: number;
+    offers: number;
+    offerUpdates: number;
+    rrpWrites: number;
+  };
+  draftsWithoutPrice: number;
+  report: ImportReport;
 };
 export type ImportNewProduct = {
   row: number;
@@ -504,6 +520,8 @@ export type ImportUpdateRow = {
   variantId: string;
   sku: string;
   productName: string;
+  // the feed currency of the row, so money fields render as money
+  currency: string;
   changes: ImportChange[];
 };
 export type ImportConflictRow = {
@@ -511,6 +529,8 @@ export type ImportConflictRow = {
   message: string;
   productName: string | null;
   ean: string | null;
+  // the supplier SKU of the row, so the admin can bind it to a variant straight away
+  sku: string | null;
 };
 export type ImportUnknownRow = { row: number; kind: string; message: string };
 export type ImportRowError = { row: number; message: string };
@@ -561,4 +581,40 @@ export type ImportRunPage = {
   pages: number;
   total: number;
 };
-export type ImportSetting = { supplier: string; inboundShippingMinor: number };
+export type ImportSetting = {
+  supplier: string;
+  inboundShippingMinor: number;
+  // the standing feed the scheduled refresh reads: an http(s) URL or a local path
+  feedUrl: string | null;
+};
+// one chunk of a feed refresh run, the journal row a failed batch can be restarted from
+export type ImportBatchSummary = {
+  id: string;
+  batchNo: number;
+  rowFrom: number;
+  rowTo: number;
+  status: "pending" | "running" | "done" | "failed";
+  attempts: number;
+  maxAttempts: number;
+  error: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+// a feed row the admin tied to an existing variant by hand (D03.3)
+export type FeedBinding = {
+  id: string;
+  supplier: string;
+  supplierSku: string;
+  variantId: string;
+  createdBy: string;
+  createdAt: string;
+};
+// the latest origin of one written field: seed, feed + run, or an admin edit
+export type FieldOrigin = {
+  kind: "seed" | "feed" | "admin";
+  runId: string | null;
+  runSource: string | null;
+  supplier: string | null;
+  adminEmail: string | null;
+  writtenAt: string;
+};
