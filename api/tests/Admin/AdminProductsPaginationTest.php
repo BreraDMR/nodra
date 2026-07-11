@@ -6,6 +6,7 @@ namespace App\Tests\Admin;
 
 use App\Admin\AdminProductsQuery;
 use App\Admin\AdminService;
+use App\Import\OriginRecorder;
 use App\Pricing\PriceHistory;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,7 +51,7 @@ final class AdminProductsPaginationTest extends TestCase
         );
         $em = $this->createStub(EntityManagerInterface::class);
         $history = new PriceHistory($em, $db, $this->createStub(Security::class), new MockClock());
-        $service = new AdminService($em, $db, $history, new MockClock());
+        $service = new AdminService($em, $db, $history, new MockClock(), new OriginRecorder($em, new MockClock(), $this->createStub(Security::class)));
 
         $result = $service->products(new AdminProductsQuery(2));
 
