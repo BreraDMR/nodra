@@ -4,6 +4,8 @@ import {
   ApiError,
   formatMinor,
   formatRate,
+  type ApplyResult,
+  type ImportBatchSummary,
   type ImportChange,
   type ImportReport,
   type ImportRunPage,
@@ -17,12 +19,12 @@ type Props = {
 };
 
 // Multipart upload of the feed file; JSON panels go through send() instead
-async function uploadReport(
+async function uploadReport<T>(
   url: string,
   file: File,
   runId: string | null,
   csrfToken: string,
-): Promise<ImportReport> {
+): Promise<T> {
   const body = new FormData();
   body.append("file", file);
   if (runId) body.append("runId", runId);
@@ -40,12 +42,25 @@ async function uploadReport(
       [],
       data && typeof data === "object" ? data : {},
     );
-  return data as ImportReport;
+  return data as T;
 }
 
-function ChangeText({ change }: { change: ImportChange }) {
-  const text = (value: string | number | null) =>
-    value === null ? "—" : typeof value === "number" ? String(value) : value;
+// The feed's money fields ride as raw minor values: they render as money in the
+// row's currency, never as bare cents (5990 → 54,90 €).
+const MONEY_FIELDS = new Set(["price", "rrp"]);
+function ChangeText({
+  change,
+  currency,
+}: {
+  change: ImportChange;
+  currency: string;
+}) {
+  const text = (value: string | number | null) => {
+    if (value === null) return "—";
+    if (typeof value === "number" && MONEY_FIELDS.has(change.field))
+      return formatMinor(value, currency);
+    return typeof value === "number" ? String(value) : value;
+  };
   return (
     <>
       <code>{change.field}</code> {text(change.old)} → <b>{text(change.new)}</b>
@@ -64,6 +79,10 @@ export default function ImportPanel({ send, csrfToken }: Props) {
   const [journal, setJournal] = useState<ImportRunPage | null>(null);
   const [settings, setSettings] = useState<ImportSetting[]>([]);
   const [shipping, setShipping] = useState("");
+  const [feedUrl, setFeedUrl] = useState("");
+  // the run whose batch states are shown (D03.4 feed refresh journal)
+  const [openBatches, setOpenBatches] = useState<string | null>(null);
+  const [batches, setBatches] = useState<ImportBatchSummary[]>([]);
 
   const loadJournal = useCallback(() => {
     let live = true;
@@ -91,13 +110,56 @@ export default function ImportPanel({ send, csrfToken }: Props) {
 
   useEffect(() => loadJournal(), [loadJournal]);
 
+  const toggleBatches = useCallback(
+    async (runId: string) => {
+      if (openBatches === runId) {
+        setOpenBatches(null);
+        return;
+      }
+      setOpenBatches(runId);
+      try {
+        const r = await send<{ items: ImportBatchSummary[] }>(
+          `/api/admin/imports/batches?runId=${runId}`,
+        );
+        setBatches(r.items);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not load the batches");
+      }
+    },
+    [send, openBatches],
+  );
+
+  const retryBatch = useCallback(
+    async (batchId: string) => {
+      setBusy(true);
+      setError("");
+      try {
+        const r = await send<{ items: ImportBatchSummary[] }>(
+          `/api/admin/imports/batches/${batchId}/retry`,
+          "POST",
+        );
+        setBatches(r.items);
+        setMessage(
+          r.items[0]?.status === "done"
+            ? "The batch replayed and finished."
+            : "The batch ran again — see its state below.",
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "The retry failed");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [send],
+  );
+
   async function preview() {
     if (!file) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const r = await uploadReport(
+      const r = await uploadReport<ImportReport>(
         "/api/admin/imports/preview",
         file,
         null,
@@ -121,7 +183,7 @@ export default function ImportPanel({ send, csrfToken }: Props) {
     setError("");
     setMessage("");
     try {
-      await uploadReport(
+      const result: ApplyResult = await uploadReport(
         "/api/admin/imports/apply",
         file,
         report.runId,
@@ -130,7 +192,9 @@ export default function ImportPanel({ send, csrfToken }: Props) {
       setReport(null);
       setFile(null);
       setMessage(
-        "Import applied. New cards are drafts — publish them after review.",
+        result.draftsWithoutPrice > 0
+          ? `Import applied. ${result.draftsWithoutPrice} new draft${result.draftsWithoutPrice === 1 ? "" : "s"} without a calculated price — the feed price is the supplier's, set the shop price before publishing.`
+          : "Import applied. New cards are drafts — publish them after review.",
       );
       await loadJournal();
     } catch (e) {
@@ -140,7 +204,7 @@ export default function ImportPanel({ send, csrfToken }: Props) {
     }
   }
 
-  async function saveShipping(supplier: string) {
+  async function saveSetting(supplier: string, feedUrl: string | null) {
     setBusy(true);
     setError("");
     try {
@@ -150,6 +214,7 @@ export default function ImportPanel({ send, csrfToken }: Props) {
         throw Error("Enter a non-negative amount");
       await send(`/api/admin/imports/settings/${supplier}`, "PUT", {
         inboundShippingMinor: Math.round(minor * 100),
+        feedUrl,
       });
       setMessage(`Saved the import default for ${supplier}.`);
       await loadJournal();
@@ -317,7 +382,7 @@ export default function ImportPanel({ send, csrfToken }: Props) {
                   <b>
                     {u.changes.map((c, i) => (
                       <span className="import-change" key={i}>
-                        <ChangeText change={c} />
+                        <ChangeText change={c} currency={u.currency} />
                       </span>
                     ))}
                   </b>
@@ -339,6 +404,15 @@ export default function ImportPanel({ send, csrfToken }: Props) {
                 {report.conflicts.map((c) => (
                   <li key={c.row}>
                     <b>Row {c.row}</b> — {c.message}
+                    {c.sku && (
+                      <>
+                        {" "}
+                        <small>
+                          supplier SKU <code>{c.sku}</code> — bind it to a
+                          variant to settle the row
+                        </small>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -468,16 +542,36 @@ export default function ImportPanel({ send, csrfToken }: Props) {
               onChange={(e) => setShipping(e.target.value)}
             />
           </label>
+          <label className="admin-field wide">
+            Feed URL · http(s) or local path, read by the scheduled refresh
+            <input
+              value={feedUrl}
+              placeholder={
+                settings.find((s) => s.supplier === "bike_components")
+                  ?.feedUrl ?? "https://… or /path/to/feed.csv"
+              }
+              onChange={(e) => setFeedUrl(e.target.value)}
+            />
+          </label>
           <button
             disabled={busy}
-            onClick={() => saveShipping("bike_components")}
+            onClick={() =>
+              saveSetting(
+                "bike_components",
+                feedUrl.trim() === ""
+                  ? (settings.find((s) => s.supplier === "bike_components")
+                      ?.feedUrl ?? null)
+                  : feedUrl.trim(),
+              )
+            }
           >
             Save default ↗
           </button>
         </div>
         <p className="variant-note">
-          The default inbound shipping of the feed, set once per supplier —
-          never per row.
+          The default inbound shipping and the standing feed of the supplier,
+          saved together. An empty URL keeps the stored one; the refresh command
+          reads the stored feed every time the cron fires.
         </p>
       </section>
 
@@ -490,24 +584,78 @@ export default function ImportPanel({ send, csrfToken }: Props) {
         </div>
         {journal?.items.length ? (
           journal.items.map((run) => (
-            <div className="low-stock" key={run.id}>
-              <div>
-                <strong>{run.fileName ?? "catalog seed"}</strong>
-                <small>
-                  {run.source} · {run.status} ·{" "}
-                  {new Date(run.startedAt).toLocaleString("en-GB")} ·{" "}
-                  {run.adminEmail ?? "console"}
-                </small>
+            <div key={run.id}>
+              <div className="low-stock">
+                <div>
+                  <strong>{run.fileName ?? "catalog seed"}</strong>
+                  <small>
+                    {run.source} · {run.status} ·{" "}
+                    {new Date(run.startedAt).toLocaleString("en-GB")} ·{" "}
+                    {run.adminEmail ?? "console"}
+                  </small>
+                </div>
+                <b>
+                  {run.counts.newProducts} new · {run.counts.updates} updates
+                  {run.errorCount > 0 ? ` · ${run.errorCount} errors` : ""}
+                  {(run.counts.batchesDone ?? 0) +
+                    (run.counts.batchesFailed ?? 0) >
+                  0
+                    ? ` · batches ${run.counts.batchesDone ?? 0} done / ${run.counts.batchesFailed ?? 0} failed`
+                    : ""}
+                  {run.source === "awin_csv" && (
+                    <button
+                      className="admin-link"
+                      onClick={() => void toggleBatches(run.id)}
+                    >
+                      {openBatches === run.id ? "Hide batches" : "Batches"}
+                    </button>
+                  )}
+                </b>
               </div>
-              <b>
-                {run.counts.newProducts} new · {run.counts.updates} updates
-                {run.errorCount > 0 ? ` · ${run.errorCount} errors` : ""}
-              </b>
+              {openBatches === run.id && (
+                <div className="batch-journal">
+                  {batches.length ? (
+                    batches.map((b) => (
+                      <div className="low-stock batch-row" key={b.id}>
+                        <div>
+                          <strong>Batch {b.batchNo}</strong>
+                          <small>
+                            rows {b.rowFrom}–{b.rowTo} · attempt {b.attempts}/
+                            {b.maxAttempts}
+                            {b.error ? ` · ${b.error}` : ""}
+                          </small>
+                        </div>
+                        <b>
+                          <span className={`status ${b.status}`}>
+                            {b.status}
+                          </span>
+                          {b.status === "failed" && (
+                            <button
+                              className="admin-link"
+                              disabled={busy}
+                              onClick={() => void retryBatch(b.id)}
+                            >
+                              Retry ↗
+                            </button>
+                          )}
+                        </b>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="admin-empty">No batches for this run.</p>
+                  )}
+                </div>
+              )}
             </div>
           ))
         ) : (
           <p className="admin-empty">No import runs yet.</p>
         )}
+        <p className="variant-note">
+          The scheduled refresh runs <code>app:import:feed</code> in batches
+          with retries; a failed supplier never deletes anything. A batch past
+          its automatic attempts waits here for a manual restart.
+        </p>
       </section>
     </div>
   );
