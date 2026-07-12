@@ -1623,3 +1623,31 @@ button.mini-order:hover {
 .import-settings .admin-field {
   min-width: 240px;
 }
+.import-settings .admin-field.wide {
+  min-width: 420px;
+  flex: 1;
+}
+/* archived by a manual merge: out of the storefront, still visible here */
+.status.archived {
+  background: #eee9df;
+  color: #8a7f66;
+}
+/* field-origin kinds (D03.3): seed = green, feed = blue, admin = violet */
+.status.seed {
+  background: #e2f3db;
+  color: #448245;
+}
+.status.feed {
+  background: #dfeafa;
+  color: #376195;
+}
+.status.admin {
+  background: #e7e2fc;
+  color: #62549a;
+}
+.batch-journal {
+  margin: 4px 0 10px 18px;
+}
+.batch-row .admin-link {
+  margin-left: 10px;
+}
