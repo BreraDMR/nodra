@@ -37,6 +37,7 @@ import {
   parseMinor,
   percent,
   pricingThresholds,
+  suppliers,
   type AdminCategory,
   type AttributeValues,
   type PriceApplied,
@@ -46,6 +47,8 @@ import {
   type Send,
   type SupplierOffer,
 } from "./shared";
+import FieldOrigins from "./FieldOrigins";
+import VariantBindings from "./VariantBindings";
 type User = { email: string; name: string; csrfToken: string };
 type Variant = {
   id: string;
@@ -333,6 +336,60 @@ export default function AdminPage() {
   // prices, stock or orders moved: dashboard, products and alerts follow
   function pricesChanged() {
     void reload(productPage, productSearch);
+  }
+  // The manual merge of two products (D03.3): the source ends archived, nothing is deleted.
+  const [mergeSource, setMergeSource] = useState<Product | null>(null);
+  const [mergeSearchDraft, setMergeSearchDraft] = useState("");
+  const [mergeCandidates, setMergeCandidates] = useState<Product[]>([]);
+  async function searchMergeTargets(query: string) {
+    if (!mergeSource) return;
+    setBusy(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ page: "1" });
+      if (query) params.set("q", query);
+      const p = await send<{ items: Product[] }>(
+        `/api/admin/products?${params}`,
+      );
+      setMergeCandidates(
+        p.items.filter((candidate) => candidate.id !== mergeSource.id),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not search products");
+    } finally {
+      setBusy(false);
+    }
+  }
+  function openMerge(p: Product) {
+    setMergeSource(p);
+    setMergeSearchDraft(p.brand ?? "");
+    setMergeCandidates([]);
+    void searchMergeTargets(p.brand ?? "");
+  }
+  async function mergeInto(target: Product) {
+    if (!mergeSource || busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const r = await send<{
+        variantsMerged: number;
+        variantsMoved: number;
+        offersRepointed: number;
+        identityCopies: number;
+      }>(`/api/admin/products/${mergeSource.id}/merge`, "POST", {
+        targetId: target.id,
+      });
+      setMessage(
+        `Merged ${mergeSource.name} into ${target.name}: ${r.variantsMerged} variant(s) joined twins, ${r.variantsMoved} moved, ${r.offersRepointed} offer(s) re-pointed. The source card is archived — the merge is in the import journal.`,
+      );
+      setMergeSource(null);
+      pricesChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "The merge was refused");
+    } finally {
+      setBusy(false);
+    }
   }
   function openOrders(orderId: string | null, queue: OrderQueue | "" = "") {
     setOrderToOpen(orderId);
@@ -1000,6 +1057,63 @@ export default function AdminPage() {
                 />
                 <button type="submit">Search ↗</button>
               </form>
+              {mergeSource && (
+                <section className="admin-panel">
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">DUPLICATES</p>
+                      <h2>Merge “{mergeSource.name}” into another product</h2>
+                    </div>
+                    <button onClick={() => setMergeSource(null)}>×</button>
+                  </div>
+                  <form
+                    className="admin-product-search"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void searchMergeTargets(mergeSearchDraft.trim());
+                    }}
+                  >
+                    <input
+                      type="search"
+                      value={mergeSearchDraft}
+                      onChange={(e) => setMergeSearchDraft(e.target.value)}
+                      placeholder="Search the product to merge into"
+                      maxLength={80}
+                    />
+                    <button type="submit">Search ↗</button>
+                  </form>
+                  {mergeCandidates.length ? (
+                    <ul className="import-list">
+                      {mergeCandidates.map((target) => (
+                        <li key={target.id}>
+                          <b>{target.name}</b>{" "}
+                          <small>
+                            {target.brand ? `${target.brand} · ` : ""}
+                            {target.slug} · {target.variants.length} variant(s)
+                          </small>
+                          <button
+                            className="admin-link"
+                            disabled={busy}
+                            onClick={() => void mergeInto(target)}
+                          >
+                            Merge into ↗
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="admin-empty">
+                      No other product found for this search.
+                    </p>
+                  )}
+                  <p className="variant-note">
+                    Everything of the source moves to the target: twin variants
+                    are joined (offers follow, missing identity is copied), the
+                    rest moves as a whole. The source ends archived — nothing is
+                    deleted and every offer survives.
+                  </p>
+                </section>
+              )}
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead>
@@ -1034,12 +1148,21 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td>
-                          {productPrice(p) !== null
-                            ? new Intl.NumberFormat("de-DE", {
+                          {productPrice(p) !== null ? (
+                            productPrice(p) === 0 ? (
+                              // the import never invents prices: drafts start unpriced
+                              <span className="status draft">
+                                price not calculated
+                              </span>
+                            ) : (
+                              new Intl.NumberFormat("de-DE", {
                                 style: "currency",
                                 currency: "EUR",
                               }).format(productPrice(p)! / 100)
-                            : "—"}
+                            )
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td>
                           <div className="admin-variants">
@@ -1073,6 +1196,13 @@ export default function AdminPage() {
                             }}
                           >
                             Edit ↗
+                          </button>{" "}
+                          <button
+                            className="admin-link"
+                            title="Merge this duplicate into another product"
+                            onClick={() => openMerge(p)}
+                          >
+                            Merge
                           </button>
                         </td>
                       </tr>
@@ -1255,6 +1385,9 @@ export default function AdminPage() {
                 revision={pricingRevision}
                 onApplied={suggestionApplied}
               />
+            )}
+            {editing && editing !== "new" && (
+              <FieldOrigins send={send} type="product" id={editing} />
             )}
           </div>
         </div>
@@ -1533,6 +1666,16 @@ export default function AdminPage() {
                 Save variant ↗
               </button>
             </form>
+            {variantEditing.id && (
+              <VariantBindings
+                send={send}
+                variantId={variantEditing.id}
+                suppliers={suppliers}
+              />
+            )}
+            {variantEditing.id && (
+              <FieldOrigins send={send} type="variant" id={variantEditing.id} />
+            )}
           </div>
         </div>
       )}
