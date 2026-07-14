@@ -13,6 +13,7 @@ use App\Order\OrderLoader;
 use App\Order\OrderPresenter;
 use App\Order\OrderProblem;
 use App\Order\OrderRules;
+use App\Order\PaymentSettings;
 use App\Order\StockKeeper;
 use App\Pricing\SourcingCalculator;
 use App\Tests\Support\OrderDefaults;
@@ -34,7 +35,8 @@ final class CzechDeliveryTest extends TestCase
             $em, $db,
             new BasketLoader($db, PricingDefaults::availability($db), new SourcingCalculator(PricingDefaults::settings())),
             new QuoteBuilder(OrderDefaults::rules(), OrderDefaults::planner()), OrderDefaults::rules(),
-            new OrderJournal($em), new StockKeeper($em, $db), $loader, new OrderPresenter($em, $loader, new OrderRules(), OrderDefaults::settings(), $db, new MockClock()),
+            new OrderJournal($em), new StockKeeper($em, $db), $loader,
+            new OrderPresenter($em, $loader, new OrderRules(), OrderDefaults::settings(), new PaymentSettings(['cash', 'bank_transfer'], null), $db, new MockClock()),
             'draft-2026-09',
         );
         $request = new CheckoutRequest('en', [
