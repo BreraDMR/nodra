@@ -78,10 +78,12 @@ export type CartItem = {
   quantity: number;
 };
 
-// Checkout and orders (contract 0.5.0). Every amount is haléře, orders are always CZK.
+// Checkout and orders (contract 0.6.1). Every amount is haléře, orders are always CZK.
 export type DeliveryMethod = "pickup_andel" | "prague_personal" | "carrier_cz";
 export type ContactChannel = "whatsapp" | "telegram" | "phone";
 export type Fulfilment = "together" | "split";
+// the methods the shop can take on handover; the receipt lists the enabled ones
+export type HandoverPayment = "cash" | "bank_transfer" | "card" | "carrier_cod";
 export type MethodReason =
   | "postal_code_required"
   | "invalid_postal_code"
@@ -166,6 +168,8 @@ export type OrderReceipt = {
   fulfilment: Fulfilment;
   // null on orders placed before D04
   contactChannel: ContactChannel | null;
+  // the methods switched on in the shop settings right now
+  paymentMethods: HandoverPayment[];
   items: ReceiptItem[];
   shipments: ReceiptShipment[];
   pickupNote: string | null;
