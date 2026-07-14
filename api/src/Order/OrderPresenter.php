@@ -26,6 +26,7 @@ final class OrderPresenter
         private OrderLoader $loader,
         private OrderRules $rules,
         private DeliverySettings $delivery,
+        private PaymentSettings $payment,
         private Connection $db,
         private ClockInterface $clock,
     ) {}
@@ -44,6 +45,8 @@ final class OrderPresenter
             'fulfilment' => $order->getFulfilment(),
             // how NODRA will get in touch, as the customer chose it; null on orders placed before D04
             'contactChannel' => $order->getContactChannel(),
+            // the methods the shop takes on handover today, so the receipt only promises what is switched on
+            'paymentMethods' => $this->payment->enabled(Payment::PAYMENT),
             'items' => array_map(static fn (OrderItem $item): array => [
                 'name' => $item->getProductName(), 'variant' => $item->getVariantLabel(),
                 'sku' => $item->getSku(), 'quantity' => $item->getQuantity(),
