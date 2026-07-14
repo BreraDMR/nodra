@@ -22,14 +22,12 @@ final class SettingsView
 
     public function toArray(): array
     {
-        $accepted = fn (string $kind): array => array_values(array_filter(Payment::METHODS, fn (string $method): bool => $this->payment->accepts($kind, $method)));
-
         return [
             'currency' => 'CZK',
             'payment' => [
                 'handoverMethods' => $this->payment->handoverMethods,
-                'paymentMethods' => $accepted(Payment::PAYMENT),
-                'refundMethods' => $accepted(Payment::REFUND),
+                'paymentMethods' => $this->payment->enabled(Payment::PAYMENT),
+                'refundMethods' => $this->payment->enabled(Payment::REFUND),
             ],
             'delivery' => [
                 'methods' => $this->rules->offered(),
