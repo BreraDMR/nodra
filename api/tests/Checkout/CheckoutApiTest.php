@@ -40,6 +40,8 @@ final class CheckoutApiTest extends ApiTestCase
         self::assertSame($receipt, $lookup);
         // the receipt says how NODRA will get in touch, the storefront doesn't have to remember it
         self::assertSame('whatsapp', $lookup['contactChannel']);
+        // and which payment methods are switched on, so the storefront only promises those
+        self::assertSame(['cash', 'bank_transfer'], $receipt['paymentMethods']);
         $this->getJson('/api/orders/'.$receipt['reference'], ['token' => 'wrong']);
         self::assertResponseStatusCodeSame(404);
     }
