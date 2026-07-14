@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.6.0
+  version: 0.6.1
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -1743,7 +1743,7 @@ components:
       enum: [planned, scheduled, handed_over, refused, cancelled]
     OrderReceipt:
       type: object
-      required: [reference, status, paymentStatus, createdAt, fulfilment, contactChannel, items, shipments, pickupNote, subtotal, shipping, total, paid, amountDue, lookupToken]
+      required: [reference, status, paymentStatus, createdAt, fulfilment, contactChannel, paymentMethods, items, shipments, pickupNote, subtotal, shipping, total, paid, amountDue, lookupToken]
       properties:
         reference: { type: string }
         status: { $ref: '#/components/schemas/OrderStatus' }
@@ -1751,6 +1751,12 @@ components:
         createdAt: { type: string, format: date-time }
         fulfilment: { type: string, enum: [together, split] }
         contactChannel: { type: [string, 'null'], enum: [whatsapp, telegram, phone, null], description: 'How NODRA gets in touch, as chosen at checkout; null on orders placed before D04.' }
+        paymentMethods:
+          type: array
+          items: { type: string, enum: [cash, bank_transfer, card, carrier_cod] }
+          description: >-
+            The payment methods the shop accepts on handover right now, from the shop settings. The storefront
+            shows only these and never assumes a method on its own.
         items: { type: array, items: { $ref: '#/components/schemas/ReceiptItem' } }
         shipments:
           type: array
