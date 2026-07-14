@@ -5,6 +5,7 @@ import {
   intlLocale,
   type ContactChannel,
   type DeliveryMethod,
+  type HandoverPayment,
   type Locale,
   type MethodReason,
   type OrderStatus,
@@ -125,7 +126,15 @@ export const orderCopy = {
       completed: "Objednávka je předaná a zaplacená. Děkujeme!",
       cancelled: "Objednávka je zrušená. Pokud máte dotaz, napište nám.",
     } satisfies Record<OrderStatus, string>,
-    payOnReceipt: "Platíte při převzetí, hotově nebo převodem.",
+    payOnReceipt: "Platíte při převzetí: {methods}.",
+    // only shown when the receipt carries no payment methods at all
+    payOnReceiptAny: "Platíte při převzetí.",
+    payMethods: {
+      cash: "hotově",
+      bank_transfer: "převodem",
+      card: "kartou",
+      carrier_cod: "dobírkou",
+    } satisfies Record<HandoverPayment, string>,
     paymentStatuses: {
       unpaid: "Nezaplaceno",
       partially_paid: "Částečně zaplaceno",
@@ -258,7 +267,14 @@ export const orderCopy = {
       completed: "Die Bestellung ist übergeben und bezahlt. Danke!",
       cancelled: "Die Bestellung wurde storniert. Bei Fragen schreib uns.",
     } satisfies Record<OrderStatus, string>,
-    payOnReceipt: "Bezahlt wird bei der Übergabe, bar oder per Überweisung.",
+    payOnReceipt: "Bezahlt wird bei der Übergabe: {methods}.",
+    payOnReceiptAny: "Bezahlt wird bei der Übergabe.",
+    payMethods: {
+      cash: "bar",
+      bank_transfer: "per Überweisung",
+      card: "mit Karte",
+      carrier_cod: "per Nachnahme",
+    } satisfies Record<HandoverPayment, string>,
     paymentStatuses: {
       unpaid: "Nicht bezahlt",
       partially_paid: "Teilweise bezahlt",
@@ -389,7 +405,14 @@ export const orderCopy = {
       cancelled:
         "This order was cancelled. If you have a question, message us.",
     } satisfies Record<OrderStatus, string>,
-    payOnReceipt: "You pay on receipt, in cash or by bank transfer.",
+    payOnReceipt: "You pay on receipt: {methods}.",
+    payOnReceiptAny: "You pay on receipt.",
+    payMethods: {
+      cash: "in cash",
+      bank_transfer: "by bank transfer",
+      card: "by card",
+      carrier_cod: "cash on delivery",
+    } satisfies Record<HandoverPayment, string>,
     paymentStatuses: {
       unpaid: "Not paid yet",
       partially_paid: "Partly paid",
@@ -423,6 +446,27 @@ export function expectedText(
 // receipt); the page's own copy is only there for when none comes.
 export function pickupNoteText(note: string | null, locale: Locale): string {
   return note || orderCopy[locale].pickupNote;
+}
+
+// How the customer pays, from the receipt's list of enabled methods:
+// "You pay on receipt: in cash or by bank transfer."
+export function payOnReceiptText(
+  methods: HandoverPayment[] | undefined,
+  locale: Locale,
+): string {
+  const o = orderCopy[locale];
+  const labels = (methods ?? [])
+    .filter((m): m is HandoverPayment => m in o.payMethods)
+    .map((m) => o.payMethods[m]);
+  const joiner =
+    locale === "cs" ? " nebo " : locale === "de" ? " oder " : " or ";
+  const list =
+    labels.length > 1
+      ? labels.slice(0, -1).join(", ") + joiner + labels[labels.length - 1]
+      : labels.join("");
+  return labels.length
+    ? o.payOnReceipt.replace("{methods}", list)
+    : o.payOnReceiptAny;
 }
 
 // Agreed handover window: "12. 10. 2026 14:00–16:00", both dates when it spans days
