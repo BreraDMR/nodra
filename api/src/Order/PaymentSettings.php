@@ -31,4 +31,10 @@ final readonly class PaymentSettings
         // the carrier pays COD money out to NODRA, there's nothing to refund that way
         return $kind === Payment::PAYMENT && $method === 'carrier_cod' && $this->carrierCodFeeMinor !== null;
     }
+
+    /** @return list<string> the methods of this kind the shop accepts right now, in the fixed order */
+    public function enabled(string $kind): array
+    {
+        return array_values(array_filter(Payment::METHODS, fn (string $method): bool => $this->accepts($kind, $method)));
+    }
 }
