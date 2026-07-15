@@ -219,6 +219,12 @@ export const locales: Locale[] = ["cs", "de", "en"];
 export function isLocale(value: string): value is Locale {
   return locales.includes(value as Locale);
 }
+// A fresh idempotency key: 32 random hex chars. getRandomValues works on plain
+// http too, randomUUID doesn't (it needs a secure context, so it breaks on LAN).
+export function newIdempotencyKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
 export const copy = {
   cs: {
     shop: "Obchod",
@@ -287,7 +293,6 @@ export const copy = {
     summaryLabel: "SOUHRN OBJEDNÁVKY",
     confirmationLabel: "POTVRZENÍ OBJEDNÁVKY",
     notesLabel: "O PRODUKTU",
-    demoFooter: "Ukázkový obchod · Bez skutečných objednávek a plateb",
     shippingPending: "vypočítá se při objednávce",
     filters: "Filtry",
     brand: "Značka",
@@ -404,7 +409,6 @@ export const copy = {
     summaryLabel: "BESTELLÜBERSICHT",
     confirmationLabel: "BESTELLBESTÄTIGUNG",
     notesLabel: "PRODUKTDETAILS",
-    demoFooter: "Demo-Shop · Keine echten Bestellungen oder Zahlungen",
     shippingPending: "wird bei Bestellung berechnet",
     filters: "Filter",
     brand: "Marke",
@@ -521,7 +525,6 @@ export const copy = {
     summaryLabel: "ORDER SUMMARY",
     confirmationLabel: "ORDER CONFIRMATION",
     notesLabel: "PRODUCT NOTES",
-    demoFooter: "Fictional portfolio store · No real orders or payments",
     shippingPending: "calculated at checkout",
     filters: "Filters",
     brand: "Brand",
