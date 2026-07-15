@@ -7,6 +7,7 @@ import {
   dateText,
   expectedText,
   orderCopy,
+  payOnReceiptText,
   pickupNoteText,
   windowText,
 } from "@/lib/order";
@@ -108,7 +109,7 @@ export default function OrderPage() {
             {statusText}
             {(receipt.status === "requested" ||
               receipt.status === "confirmed") &&
-              ` ${o.payOnReceipt}`}
+              ` ${payOnReceiptText(receipt.paymentMethods, locale)}`}
           </p>
           <div className="receipt">
             <div>
