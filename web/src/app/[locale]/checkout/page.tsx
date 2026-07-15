@@ -9,6 +9,7 @@ import {
   copy,
   isLocale,
   money,
+  newIdempotencyKey,
   type AccountSummary,
   type CheckoutQuote,
   type ContactChannel,
@@ -363,7 +364,7 @@ export default function Checkout() {
     };
     const body = JSON.stringify(payload);
     if (attempt.current?.body !== body)
-      attempt.current = { key: crypto.randomUUID(), body };
+      attempt.current = { key: newIdempotencyKey(), body };
     const key = attempt.current.key;
     try {
       const response = await fetch("/api/checkout", {
