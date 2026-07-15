@@ -14,6 +14,7 @@ use App\Entity\SupplierOffer;
 use App\Import\OriginRecorder;
 use App\Pricing\PriceHistory;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Shared by the fixtures and app:catalog:import. Creates what's missing and only fills
@@ -21,7 +22,15 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class CatalogSeeder
 {
-    public function __construct(private EntityManagerInterface $em, private PriceHistory $history, private OriginRecorder $origins) {}
+    /** Lead time windows the demo offers rotate through, so a basket can mix them into parts. */
+    private const DEMO_LEAD_TIMES = [[2, 4], [3, 6], [5, 9]];
+
+    public function __construct(
+        private EntityManagerInterface $em,
+        private PriceHistory $history,
+        private OriginRecorder $origins,
+        #[Autowire(param: 'app.pricing.fresh_offer_days')] private int $freshOfferDays,
+    ) {}
 
     /** @return array{added: int, filled: int, warnings: list<string>} */
     public function seedCategories(): array
@@ -97,6 +106,7 @@ final class CatalogSeeder
                         ++$newOffers;
                     }
                 }
+                $newOffers += $this->seedDemoOffers($existing, $this->em->getRepository(ProductVariant::class)->findBy(['product' => $existing]), $rank, $item, $now);
                 if ($blank && (($existing->getBrand() === null && $brand !== null) || ($existing->getAttributes() === [] && $attributes !== []))) {
                     $existing->describe($existing->getBrand() ?? $brand, $existing->getAttributes() ?: $attributes);
                     ++$filled;
@@ -136,6 +146,7 @@ final class CatalogSeeder
                 }
                 ++$newOffers;
             }
+            $newVariants = [];
             foreach ($item['variants'] as $index => $option) {
                 // stock is what NODRA physically holds (D04): a new card starts with none, the supplier snapshot stays on the offer
                 $variant = new ProductVariant(
@@ -149,17 +160,55 @@ final class CatalogSeeder
                     $option['size'] ?? null,
                 );
                 $this->em->persist($variant);
+                $newVariants[] = $variant;
                 // the first price is history too; existing variants' prices are never touched by the import
                 $this->history->record($variant, null, null, PriceChange::IMPORT);
                 if ($run !== null) {
                     $this->origins->forRun($run, ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), ['sku', 'label', 'price'], $now);
                 }
             }
+            $newOffers += $this->seedDemoOffers($product, $newVariants, $rank, $item, $now);
             ++$added;
         }
         $this->em->flush();
 
         return ['added' => $added, 'filled' => $filled, 'offers' => $newOffers, 'errors' => $errors];
+    }
+
+    /**
+     * Demo matched offers (the D02 tail): every second variant gets one, so the stand shows real
+     * lead times and the "together / split" choice. Supplier "demo" marks them as demo data and
+     * no field origins are journalled for them; a stale one gets re-checked, otherwise the whole
+     * demo would drift back to "check needed" after fresh_offer_days.
+     *
+     * @param list<ProductVariant> $variants
+     */
+    private function seedDemoOffers(Product $product, array $variants, int $rank, array $item, \DateTimeImmutable $now): int
+    {
+        $source = is_array($item['source'] ?? null) ? $item['source'] : [];
+        $priceMinor = (int) ($source['priceCzk'] ?? $item['priceCzk']) * 100;
+        [$leadMin, $leadMax] = self::DEMO_LEAD_TIMES[$rank % count(self::DEMO_LEAD_TIMES)];
+        $freshSince = $now->getTimestamp() - $this->freshOfferDays * 86_400;
+        $repo = $this->em->getRepository(SupplierOffer::class);
+        $added = 0;
+        foreach ($variants as $index => $variant) {
+            if (($rank + $index) % 2 !== 0) {
+                continue;
+            }
+            $url = sprintf('https://demo.nodra.test/%s/%s', $product->getSlug(), $variant->getSku());
+            $offer = $repo->findOneBy(['variant' => $variant, 'url' => $url]);
+            if ($offer === null) {
+                $title = mb_substr($item['name']['en'].' — '.$variant->getLabel()['en'], 0, 200);
+                $offer = new SupplierOffer($product, 'demo', $url, $title, 'CZK', $priceMinor, 5, $now);
+                $offer->update('demo', $url, $title, null, 'CZK', $priceMinor, 5, $now, $leadMin, $leadMax, $variant, 'matched');
+                $this->em->persist($offer);
+                ++$added;
+            } elseif ($offer->getCheckedAt()->getTimestamp() < $freshSince) {
+                $offer->update($offer->getSupplier(), $offer->getUrl(), $offer->getTitle(), $offer->getSeller(), $offer->getCurrency(), $offer->getPriceMinor(), $offer->getReportedQuantity(), $now, $offer->getLeadTimeMinDays(), $offer->getLeadTimeMaxDays(), $offer->getVariant(), $offer->getVerificationStatus());
+            }
+        }
+
+        return $added;
     }
 
     /** @return array<string, Category> */
