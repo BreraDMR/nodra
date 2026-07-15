@@ -18,7 +18,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\UniqueConstraint(name: 'uniq_supplier_offer_variant_url', columns: ['variant_id', 'url'], options: ['where' => '(variant_id IS NOT NULL)'])]
 class SupplierOffer
 {
-    public const SUPPLIERS = ['allegro_cz', 'allegro_pl', 'bikeinn', 'bike24', 'bike_discount', 'bike_components', 'other'];
+    public const SUPPLIERS = ['allegro_cz', 'allegro_pl', 'bikeinn', 'bike24', 'bike_discount', 'bike_components', 'other', 'demo'];
     public const STATUSES = ['snapshot', 'matched', 'rejected'];
     /** 1.0 in integer millionths, the rate of a CZK offer */
     public const CZK_RATE = 1_000_000;
