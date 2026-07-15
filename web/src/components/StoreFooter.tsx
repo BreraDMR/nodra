@@ -46,7 +46,6 @@ export function StoreFooter({ locale }: { locale: Locale }) {
       <div className="footer-mark">NODRA</div>
       <div>
         <p>{t.footerTagline}</p>
-        <small>{t.demoFooter}</small>
       </div>
       {hasContacts && (
         <div className="footer-contacts">
