@@ -16,6 +16,7 @@ use App\Catalog\CatalogSeeder;
 use App\Catalog\CatalogService;
 use App\Entity\Category;
 use App\Entity\Product;
+use App\Pricing\AvailabilityService;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -202,6 +203,43 @@ final class CatalogImportTest extends KernelTestCase
         self::assertIsArray($run);
         self::assertSame(count($result['errors']), json_decode($run['counts'], true)['errors']);
         self::assertCount(json_decode($run['counts'], true)['errors'], json_decode($run['errors'], true));
+    }
+
+    public function testSeededDemoOffersGiveVariantsOrderableLeadTimes(): void
+    {
+        $db = static::getContainer()->get(Connection::class);
+        $this->import();
+
+        $rows = $db->fetchAllAssociative("SELECT o.*, v.product_id FROM supplier_offer o JOIN product_variant v ON v.id = o.variant_id WHERE o.supplier = 'demo'");
+        // every second seeded variant carries a demo offer, deterministic with the seed file
+        self::assertSame((int) ($db->fetchOne('SELECT COUNT(*) FROM product_variant') / 2), count($rows));
+        self::assertGreaterThan(0, count($rows));
+        foreach ($rows as $row) {
+            self::assertSame('matched', $row['verification_status'], $row['url']);
+            self::assertNotNull($row['lead_time_min_days'], $row['url']);
+            self::assertNotNull($row['lead_time_max_days'], $row['url']);
+            self::assertGreaterThanOrEqual(new \DateTimeImmutable('-7 days'), new \DateTimeImmutable($row['checked_at']), 'the check is fresh');
+            self::assertStringStartsWith('https://demo.nodra.test/', $row['url']);
+        }
+
+        // a demo-offer variant is orderable on the shop, with the offer's lead time plus one handling day
+        $availability = static::getContainer()->get(AvailabilityService::class)->forProducts([$rows[0]['product_id']]);
+        $public = $availability[$rows[0]['product_id']]['variants'][$rows[0]['variant_id']];
+        self::assertSame('orderable', $public['status']);
+        self::assertSame($rows[0]['lead_time_min_days'] + 1, $public['leadTimeMinDays']);
+        self::assertSame($rows[0]['lead_time_max_days'] + 1, $public['leadTimeMaxDays']);
+
+        // a repeated import adds no demo offers
+        self::assertStringContainsString('0 supplier offers added', $this->import());
+        self::assertSame(count($rows), (int) $db->fetchOne("SELECT COUNT(*) FROM supplier_offer WHERE supplier = 'demo'"));
+
+        // and a stale demo check is refreshed, so the stand never drifts back to "check needed"
+        $db->executeStatement("UPDATE supplier_offer SET checked_at = NOW() - INTERVAL '30 days' WHERE supplier = 'demo'");
+        // the raw update bypassed the identity map, the next import must re-read the rows
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+        $this->import();
+        self::assertSame(count($rows), (int) $db->fetchOne("SELECT COUNT(*) FROM supplier_offer WHERE supplier = 'demo'"));
+        self::assertSame(0, (int) $db->fetchOne("SELECT COUNT(*) FROM supplier_offer WHERE supplier = 'demo' AND checked_at < NOW() - INTERVAL '8 days'"));
     }
 
     private function import(): string
