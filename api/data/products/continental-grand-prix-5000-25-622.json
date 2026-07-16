@@ -1,0 +1,64 @@
+{
+  "slug": "continental-grand-prix-5000-25-622",
+  "category": "tyres",
+  "brand": "Continental",
+  "attributes": {
+    "wheel_size": "622",
+    "width_mm": "25",
+    "tubeless": "yes",
+    "bead": "folding"
+  },
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 149000,
+  "priceEur": 5900,
+  "stock": 0,
+  "name": {
+    "cs": "Continental Grand Prix 5000 25-622",
+    "de": "Continental Grand Prix 5000 25-622",
+    "en": "Continental Grand Prix 5000 25-622"
+  },
+  "short": {
+    "cs": "Silniční plášť pro asfalt a dlouhé jízdy.",
+    "de": "Rennradreifen für Asphalt und lange Touren.",
+    "en": "Road tyre for asphalt and long rides."
+  },
+  "details": {
+    "cs": [
+      "Model: Grand Prix 5000",
+      "Rozměr: 25-622 (700C)",
+      "Bezdušový provoz: ano",
+      "Korunka: BlackChili"
+    ],
+    "de": [
+      "Modell: Grand Prix 5000",
+      "Größe: 25-622 (700C)",
+      "Tubeless: ja",
+      "Lauffläche: BlackChili"
+    ],
+    "en": [
+      "Model: Grand Prix 5000",
+      "Size: 25-622 (700C)",
+      "Tubeless ready: yes",
+      "Compound: BlackChili"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/530b18d100",
+    "priceCzk": 1199,
+    "stock": 5,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 291,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 81
+}
