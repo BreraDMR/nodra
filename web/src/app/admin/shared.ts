@@ -190,6 +190,7 @@ export const suppliers = [
   "bike24",
   "bike_discount",
   "other",
+  "demo",
 ];
 export const offerStatuses = ["snapshot", "matched", "rejected"];
 
