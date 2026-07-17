@@ -1,0 +1,60 @@
+{
+  "slug": "schwalbe-tube-20-622-presta",
+  "category": "tubes",
+  "brand": "Schwalbe",
+  "attributes": {
+    "wheel_size": "622",
+    "width_range": "18-28",
+    "valve": "presta"
+  },
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 19000,
+  "priceEur": 800,
+  "stock": 0,
+  "name": {
+    "cs": "Schwalbe duše SV20 28\" presta",
+    "de": "Schwalbe Schlauch SV20 28\" Presta",
+    "en": "Schwalbe tube SV20 28\" presta"
+  },
+  "short": {
+    "cs": "Duše pro kola 28\" s ventilem presta.",
+    "de": "Schlauch für 28\" Räder mit Presta-Ventil.",
+    "en": "Inner tube for 28\" wheels with a presta valve."
+  },
+  "details": {
+    "cs": [
+      "Model: SV20",
+      "Rozměr: 28\" (622), šířka 18–28 mm",
+      "Ventil: presta, délka 40 mm"
+    ],
+    "de": [
+      "Modell: SV20",
+      "Größe: 28\" (622), Breite 18–28 mm",
+      "Ventil: Presta, Länge 40 mm"
+    ],
+    "en": [
+      "Model: SV20",
+      "Size: 28\" (622), width 18–28 mm",
+      "Valve: presta, 40 mm long"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/043a1b5349",
+    "priceCzk": 149,
+    "stock": 10,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 41,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 83
+}
