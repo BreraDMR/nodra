@@ -1,0 +1,64 @@
+{
+  "slug": "schwalbe-marathon-plus-35-622",
+  "category": "tyres",
+  "brand": "Schwalbe",
+  "attributes": {
+    "wheel_size": "622",
+    "width_mm": "35",
+    "tubeless": "no",
+    "bead": "wire"
+  },
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 169000,
+  "priceEur": 6700,
+  "stock": 0,
+  "name": {
+    "cs": "Schwalbe Marathon Plus 35-622",
+    "de": "Schwalbe Marathon Plus 35-622",
+    "en": "Schwalbe Marathon Plus 35-622"
+  },
+  "short": {
+    "cs": "Odolný městský plášť s ochranou proti defektu.",
+    "de": "Robuster Stadtreifen mit Pannenschutz.",
+    "en": "Durable city tyre with puncture protection."
+  },
+  "details": {
+    "cs": [
+      "Model: Marathon Plus",
+      "Rozměr: 35-622 (700C)",
+      "Ochrana: SmartGuard",
+      "Reflexní pásky: ano"
+    ],
+    "de": [
+      "Modell: Marathon Plus",
+      "Größe: 35-622 (700C)",
+      "Schutz: SmartGuard",
+      "Reflexstreifen: ja"
+    ],
+    "en": [
+      "Model: Marathon Plus",
+      "Size: 35-622 (700C)",
+      "Protection: SmartGuard",
+      "Reflective stripes: yes"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/c8fb09e48e",
+    "priceCzk": 1358,
+    "stock": 5,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 332,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 82
+}
