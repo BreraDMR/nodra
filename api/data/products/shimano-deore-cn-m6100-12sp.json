@@ -1,0 +1,62 @@
+{
+  "slug": "shimano-deore-cn-m6100-12sp",
+  "category": "chains",
+  "brand": "Shimano",
+  "attributes": {
+    "speeds": "12",
+    "links": "126"
+  },
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 79000,
+  "priceEur": 3100,
+  "stock": 0,
+  "name": {
+    "cs": "Shimano Deore CN-M6100 řetěz 12rychlostní",
+    "de": "Shimano Deore CN-M6100 Kette 12-fach",
+    "en": "Shimano Deore CN-M6100 12-speed chain"
+  },
+  "short": {
+    "cs": "Řetěz Deore pro horská kola s 12 převody.",
+    "de": "Deore-Kette für Mountainbikes mit 12 Gängen.",
+    "en": "Deore chain for mountain bikes with 12 gears."
+  },
+  "details": {
+    "cs": [
+      "Model: CN-M6100",
+      "Počet převodů: 12",
+      "Počet článků: 126",
+      "Spojka: QUICK-LINK"
+    ],
+    "de": [
+      "Modell: CN-M6100",
+      "Gänge: 12",
+      "Glieder: 126",
+      "Verbindung: QUICK-LINK"
+    ],
+    "en": [
+      "Model: CN-M6100",
+      "Speeds: 12",
+      "Links: 126",
+      "Connector: QUICK-LINK"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/181f1166c4",
+    "priceCzk": 629,
+    "stock": 6,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 161,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 84
+}
