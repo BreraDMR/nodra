@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { addCart } from "@/lib/cart";
+import { contactLinks, hasContacts } from "@/lib/contacts";
 import {
   availabilityOf,
   availabilityText,
@@ -51,6 +52,17 @@ export function BuyBox({
       ? t.out
       : availabilityText(availabilityOf(variant), locale);
   const specs = mergeSpecs(product.specs, variant?.specs ?? []);
+  // contact channels come from the config only; nothing is shown without them (D00.3)
+  const channels: { label: string; href: string }[] = [];
+  if (contactLinks.whatsapp)
+    channels.push({ label: "WhatsApp", href: contactLinks.whatsapp });
+  if (contactLinks.telegram)
+    channels.push({ label: "Telegram", href: contactLinks.telegram });
+  if (contactLinks.email)
+    channels.push({
+      label: contactLinks.email.label,
+      href: contactLinks.email.href,
+    });
   const rows = [
     ...specs.map((spec) => ({
       key: spec.key,
@@ -147,6 +159,21 @@ export function BuyBox({
       <div className="detail-notes">
         <p>↗ &nbsp; {t.demo}</p>
         <p>✦ &nbsp; {t.announcement}</p>
+        <p>✦ &nbsp; {t.returnsNote}</p>
+        {hasContacts && channels.length > 0 ? (
+          <p>
+            ↗ &nbsp; {t.consultAsk}{" "}
+            {channels.map((channel, index) => (
+              <span key={channel.href}>
+                {index > 0 && ", "}
+                <a href={channel.href}>{channel.label}</a>
+              </span>
+            ))}
+            .
+          </p>
+        ) : (
+          <p>↗ &nbsp; {t.consultAskPending}</p>
+        )}
       </div>
     </div>
   );
