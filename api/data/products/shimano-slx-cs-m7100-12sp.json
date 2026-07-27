@@ -1,0 +1,63 @@
+{
+  "slug": "shimano-slx-cs-m7100-12sp",
+  "category": "cassettes",
+  "brand": "Shimano",
+  "attributes": {
+    "speeds": "12",
+    "range": "10-51",
+    "freehub": "microspline"
+  },
+  "image": "maintenance.png",
+  "badge": null,
+  "priceCzk": 259000,
+  "priceEur": 10300,
+  "stock": 0,
+  "name": {
+    "cs": "Shimano SLX CS-M7100 kazeta 10-51 zubů",
+    "de": "Shimano SLX CS-M7100 Kassette 10-51 Zähne",
+    "en": "Shimano SLX CS-M7100 cassette 10-51 teeth"
+  },
+  "short": {
+    "cs": "Kazeta 12rychlostní s širokým rozsahem.",
+    "de": "12-fach Kassette mit großem Übersetzungsbereich.",
+    "en": "12-speed cassette with a wide range."
+  },
+  "details": {
+    "cs": [
+      "Model: CS-M7100",
+      "Počet rychlostí: 12",
+      "Rozsah: 10-51 zubů",
+      "Náboj: Micro Spline"
+    ],
+    "de": [
+      "Modell: CS-M7100",
+      "Gänge: 12",
+      "Abstufung: 10-51 Zähne",
+      "Freilauf: Micro Spline"
+    ],
+    "en": [
+      "Model: CS-M7100",
+      "Speeds: 12",
+      "Range: 10-51 teeth",
+      "Freehub: Micro Spline"
+    ]
+  },
+  "variants": [
+    {
+      "label": {
+        "cs": "Standardní model",
+        "de": "Standardmodell",
+        "en": "Standard model"
+      }
+    }
+  ],
+  "source": {
+    "url": "https://supplier.example/offer/29d7d91214",
+    "priceCzk": 2058,
+    "stock": 3,
+    "checkedAt": "2026-09-27",
+    "markupCzk": 532,
+    "title": "Supplier listing"
+  },
+  "featuredRank": 85
+}
