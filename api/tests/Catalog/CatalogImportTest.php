@@ -212,7 +212,8 @@ final class CatalogImportTest extends KernelTestCase
 
         $rows = $db->fetchAllAssociative("SELECT o.*, v.product_id FROM supplier_offer o JOIN product_variant v ON v.id = o.variant_id WHERE o.supplier = 'demo'");
         // every second seeded variant carries a demo offer, deterministic with the seed file
-        self::assertSame((int) ($db->fetchOne('SELECT COUNT(*) FROM product_variant') / 2), count($rows));
+        $variants = (int) $db->fetchOne('SELECT COUNT(*) FROM product_variant');
+        self::assertSame(intdiv($variants + 1, 2), count($rows));
         self::assertGreaterThan(0, count($rows));
         foreach ($rows as $row) {
             self::assertSame('matched', $row['verification_status'], $row['url']);
