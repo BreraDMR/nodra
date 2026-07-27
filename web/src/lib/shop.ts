@@ -304,6 +304,12 @@ export const copy = {
     inBox: "Obsah balení",
     mpn: "Kód výrobce",
     ean: "EAN",
+    returnsNote:
+      "Vrácení do 14 dnů nebo odmítnutí zásilky — vše domluvíme zprávou.",
+    consultAsk: "Nejste si jistí výběrem nebo kompatibilitou? Napište nám přes",
+    // shown while no contact channel is configured (D00.3), promises no channel
+    consultAskPending:
+      "Výběr a kompatibilitu prověříme při potvrzení objednávky.",
     breadcrumb: "Drobečková navigace",
     pagination: "Stránkování",
     subcategories: "Podkategorie",
@@ -420,6 +426,12 @@ export const copy = {
     inBox: "Lieferumfang",
     mpn: "Herstellernummer",
     ean: "EAN",
+    returnsNote:
+      "Rückgabe innerhalb von 14 Tagen oder die Sendung verweigern — alles klären wir per Nachricht.",
+    consultAsk: "Bei der Auswahl oder Passung unsicher? Schreib uns über",
+    // shown while no contact channel is configured (D00.3), promises no channel
+    consultAskPending:
+      "Auswahl und Passung prüfen wir bei der Bestellbestätigung.",
     breadcrumb: "Brotkrümelnavigation",
     pagination: "Seitennavigation",
     subcategories: "Unterkategorien",
@@ -536,6 +548,12 @@ export const copy = {
     inBox: "In the box",
     mpn: "MPN",
     ean: "EAN",
+    returnsNote:
+      "Return within 14 days or refuse the delivery — we'll sort it out by message.",
+    consultAsk: "Not sure about the choice or the fit? Message us on",
+    // shown while no contact channel is configured (D00.3), promises no channel
+    consultAskPending:
+      "We'll check the choice and the fit when confirming the order.",
     breadcrumb: "Breadcrumb",
     pagination: "Pagination",
     subcategories: "Subcategories",
