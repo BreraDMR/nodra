@@ -67,14 +67,43 @@ export async function StoreHeader({ locale }: { locale: Locale }) {
           {roots.length > 0 && (
             <nav className="header-categories" aria-label={t.categories}>
               <Link href={`/${locale}/shop`}>{t.all}</Link>
-              {roots.map((c) => (
-                <Link
-                  key={c.slug}
-                  href={`/${locale}/shop?category=${encodeURIComponent(c.slug)}`}
-                >
-                  {c.name}
-                </Link>
-              ))}
+              {roots.map((c) =>
+                c.children.some((ch) => ch.count > 0) ? (
+                  // a native disclosure: opens by click and keyboard, no hydration needed;
+                  // name keeps just one open where the browser supports it
+                  <details
+                    key={c.slug}
+                    className="header-menu"
+                    name="header-menu"
+                  >
+                    <summary>{c.name}</summary>
+                    <div className="header-menu-panel">
+                      <Link
+                        href={`/${locale}/shop?category=${encodeURIComponent(c.slug)}`}
+                      >
+                        {c.name} <small>{c.count}</small>
+                      </Link>
+                      {c.children
+                        .filter((ch) => ch.count > 0)
+                        .map((ch) => (
+                          <Link
+                            key={ch.slug}
+                            href={`/${locale}/shop?category=${encodeURIComponent(ch.slug)}`}
+                          >
+                            {ch.name} <small>{ch.count}</small>
+                          </Link>
+                        ))}
+                    </div>
+                  </details>
+                ) : (
+                  <Link
+                    key={c.slug}
+                    href={`/${locale}/shop?category=${encodeURIComponent(c.slug)}`}
+                  >
+                    {c.name}
+                  </Link>
+                ),
+              )}
             </nav>
           )}
         </div>
