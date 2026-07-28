@@ -105,6 +105,17 @@ type Dashboard = {
   ownStockVariants: number;
   queues: QueueCounts;
   recentOrders: OrderRow[];
+  // import runs of the last 30 days that failed or finished with row errors
+  importProblems: {
+    runs: number;
+    last: {
+      id: string;
+      source: string;
+      status: string;
+      errorCount: number;
+      finishedAt: string | null;
+    } | null;
+  };
 };
 type Tab =
   | "overview"
@@ -1011,6 +1022,33 @@ export default function AdminPage() {
                       bought after the customer confirms.
                     </p>
                   )}
+                </section>
+                <section className="admin-panel pricing-watch">
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">IMPORT WATCH</p>
+                      <h2>Import errors</h2>
+                    </div>
+                    <button onClick={() => setTab("import")}>Import ↗</button>
+                  </div>
+                  <div className="pricing-watch-grid">
+                    <button
+                      className={dashboard?.importProblems.runs ? "alert" : ""}
+                      onClick={() => setTab("import")}
+                    >
+                      <strong>{dashboard?.importProblems.runs ?? "—"}</strong>
+                      <span>Problem runs</span>
+                      <small>
+                        {dashboard?.importProblems.last
+                          ? `${dashboard.importProblems.last.source} · ${dashboard.importProblems.last.errorCount} row errors`
+                          : "failed or errored runs of the last 30 days"}
+                      </small>
+                    </button>
+                  </div>
+                  <p className="variant-note">
+                    The Import journal has each run's batch states and row
+                    errors.
+                  </p>
                 </section>
               </div>
             </>
