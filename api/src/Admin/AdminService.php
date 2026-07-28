@@ -45,6 +45,32 @@ final class AdminService
             'ownStockVariants' => (int) $this->db->fetchOne('SELECT COUNT(*) FROM product_variant WHERE stock > 0'),
             'queues' => $this->queues(),
             'recentOrders' => $this->orderRows(5, 0),
+            'importProblems' => $this->importProblems(),
+        ];
+    }
+
+    /**
+     * Import runs of the last 30 days the admin should look at: the whole run failed, or it finished
+     * with row errors. The Import screen journal (D03.4) shows the details; this only counts them.
+     */
+    private function importProblems(): array
+    {
+        $rows = $this->db->fetchAllAssociative(
+            "SELECT id, source, status, jsonb_array_length(errors) AS error_count, finished_at
+            FROM import_run
+            WHERE started_at > NOW() - INTERVAL '30 days' AND (status = 'failed' OR errors <> '[]'::jsonb)
+            ORDER BY started_at DESC, id DESC",
+        );
+        $last = $rows[0] ?? null;
+        $finished = $last['finished_at'] ?? null;
+
+        return [
+            'runs' => count($rows),
+            'last' => $last === null ? null : [
+                'id' => $last['id'], 'source' => $last['source'], 'status' => $last['status'],
+                'errorCount' => (int) $last['error_count'],
+                'finishedAt' => $finished === null ? null : (is_string($finished) ? new \DateTimeImmutable($finished) : $finished)->format(\DATE_ATOM),
+            ],
         ];
     }
 
