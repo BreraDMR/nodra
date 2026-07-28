@@ -1889,7 +1889,7 @@ components:
         refund: { type: integer }
     AdminDashboard:
       type: object
-      required: [orders, openOrders, revenueCzkMinor, revenueEurMinor, products, ownStock, ownStockVariants, queues, recentOrders]
+      required: [orders, openOrders, revenueCzkMinor, revenueEurMinor, products, ownStock, ownStockVariants, queues, recentOrders, importProblems]
       properties:
         orders: { type: integer }
         openOrders: { type: integer, description: requested or confirmed. }
@@ -1910,6 +1910,22 @@ components:
         ownStockVariants: { type: integer, description: 'All variants with own stock, the list above shows up to 20.' }
         queues: { $ref: '#/components/schemas/QueueCounts' }
         recentOrders: { type: array, items: { $ref: '#/components/schemas/AdminOrderRow' }, description: The 5 newest orders. }
+        importProblems:
+          type: object
+          required: [runs, last]
+          description: 'Import runs of the last 30 days that finished failed or with row errors; the Import journal shows the details.'
+          properties:
+            runs: { type: integer, description: How many such runs the window holds. }
+            last:
+              type: [object, 'null']
+              description: The newest problematic run, null on a clean journal.
+              required: [id, source, status, errorCount, finishedAt]
+              properties:
+                id: { type: string, format: uuid }
+                source: { type: string, description: Feed slug or seed. }
+                status: { type: string, description: 'failed, or completed with row errors.' }
+                errorCount: { type: integer }
+                finishedAt: { type: [string, 'null'], format: date-time }
     AdminSettings:
       type: object
       required: [currency, payment, delivery, privacyVersion]
