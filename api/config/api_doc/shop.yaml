@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.6.2
+  version: 0.7.0
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -954,6 +954,127 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/ActionRefused' }
         '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/claims:
+    get:
+      tags: [Administration]
+      summary: List after-sale claims
+      description: >-
+        The registry of returns and warranty cases, newest first, up to 30 per page. `q` matches the claim number, the
+        order reference, the customer name and email; `status` and `kind` filter. A claim never changes the order —
+        line states, stock and the ledger stay with the order actions.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: status, in: query, schema: { type: string, enum: [open, waiting, accepted, rejected, resolved] } }
+        - { name: kind, in: query, schema: { type: string, enum: [return, warranty] } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Claim page.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminClaimPage' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Validation' }
+    post:
+      tags: [Administration]
+      summary: Register a return or warranty claim
+      description: >-
+        The goods must have been handed over already (404 when the order has no handed-over shipment): `return` counts
+        its window from the line's shipment handover, `warranty` the same; an order-level claim takes the latest
+        handed-over shipment. `windowEnd` is the Prague date handover + 14 days for a return, + 24 months for a
+        warranty. Opening late is allowed, `onTime` tells it. A line keeps one open claim at a time (409 `claim_open`).
+        The claim is only a record — journal `claim_opened` on the order. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClaimOpenRequest' } } }
+      responses:
+        '201':
+          description: Claim registered.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminClaim' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/claims/{id}:
+    get:
+      tags: [Administration]
+      summary: Read a claim
+      parameters: [{ $ref: '#/components/parameters/ClaimId' }]
+      responses:
+        '200':
+          description: The claim.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminClaim' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/claims/{id}/wait:
+    post:
+      tags: [Administration]
+      summary: Wait for the customer
+      description: '`open` → `waiting`: the goods are to be sent back or an answer is owed. Requires X-CSRF-Token.'
+      parameters: [{ $ref: '#/components/parameters/ClaimId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClaimWaitRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/ClaimUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+  /api/admin/claims/{id}/accept:
+    post:
+      tags: [Administration]
+      summary: Acknowledge the claim
+      description: >-
+        `open`, `waiting` or `accepted` → `accepted`. Sets `dueAt` (acceptance + 14 days for a return, + 30 for a
+        warranty) and stores `refundAmountMinor` when given; calling accept again on an accepted claim corrects the
+        amount. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/ClaimId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClaimAcceptRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/ClaimUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/claims/{id}/reject:
+    post:
+      tags: [Administration]
+      summary: Refuse the claim
+      description: '`open`, `waiting` or `accepted` → `rejected` (terminal), the reason becomes the resolution note. Requires X-CSRF-Token.'
+      parameters: [{ $ref: '#/components/parameters/ClaimId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/ClaimUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/claims/{id}/resolve:
+    post:
+      tags: [Administration]
+      summary: Close the claim
+      description: >-
+        `accepted` → `resolved` (terminal) with the outcome: `refund` is refused with 409 `refund_not_recorded` until
+        refunds recorded in the order ledger after the claim was opened cover `refundAmountMinor` (voided refunds count
+        against; settle for less by accepting again with the lower amount first), `replacement` and `repair` need no
+        money. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/ClaimId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClaimResolveRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/ClaimUpdated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/admin/pricing-rules:
     get:
       tags: [Administration]
@@ -1237,6 +1358,7 @@ components:
     ShipmentId: { name: shipmentId, in: path, required: true, description: 'Shipment id; a shipment of another order is not found.', schema: { type: string, format: uuid } }
     PaymentId: { name: paymentId, in: path, required: true, description: 'Ledger entry id; an entry of another order is not found.', schema: { type: string, format: uuid } }
     PurchaseId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    ClaimId: { name: id, in: path, required: true, description: 'Claim id; a foreign id is not found.', schema: { type: string, format: uuid } }
   responses:
     Unauthorized:
       description: No admin session.
@@ -1264,6 +1386,9 @@ components:
     PurchaseUpdated:
       description: Done; the purchase as it is now.
       content: { application/json: { schema: { $ref: '#/components/schemas/AdminPurchase' } } }
+    ClaimUpdated:
+      description: Done; the claim as it is now.
+      content: { application/json: { schema: { $ref: '#/components/schemas/AdminClaim' } } }
     StalePrice:
       description: A suggested price changed since it was shown; nothing was applied. Load the preview or panel again.
       content:
@@ -1889,7 +2014,7 @@ components:
         refund: { type: integer }
     AdminDashboard:
       type: object
-      required: [orders, openOrders, revenueCzkMinor, revenueEurMinor, products, ownStock, ownStockVariants, queues, recentOrders, importProblems]
+      required: [orders, openOrders, revenueCzkMinor, revenueEurMinor, products, ownStock, ownStockVariants, queues, recentOrders, importProblems, claims]
       properties:
         orders: { type: integer }
         openOrders: { type: integer, description: requested or confirmed. }
@@ -1926,6 +2051,13 @@ components:
                 status: { type: string, description: 'failed, or completed with row errors.' }
                 errorCount: { type: integer }
                 finishedAt: { type: [string, 'null'], format: date-time }
+        claims:
+          type: object
+          description: After-sale claims the admin still has to act on; the Claims screen shows the details.
+          required: [open, overdue]
+          properties:
+            open: { type: integer, description: 'Claims that are open, waiting or accepted.' }
+            overdue: { type: integer, description: Accepted claims past their dueAt. }
     AdminSettings:
       type: object
       required: [currency, payment, delivery, privacyVersion]
@@ -1957,7 +2089,7 @@ components:
         privacyVersion: { type: string, description: Stored with every privacy consent. }
     AdminOrder:
       type: object
-      required: [id, reference, status, paymentStatus, locale, currency, fulfilment, createdAt, confirmedAt, queues, delayed, customer, consents, items, shipments, payments, events, subtotal, shipping, total, paid, amountDue, refundDue, economics, lookupToken, actions]
+      required: [id, reference, status, paymentStatus, locale, currency, fulfilment, createdAt, confirmedAt, queues, delayed, customer, consents, items, shipments, payments, events, subtotal, shipping, total, paid, amountDue, refundDue, economics, lookupToken, actions, claims]
       properties:
         id: { type: string, format: uuid }
         reference: { type: string }
@@ -2020,6 +2152,10 @@ components:
           type: array
           description: Order actions allowed right now.
           items: { type: string, enum: [confirm, cancel, record_payment, record_refund] }
+        claims:
+          type: array
+          description: After-sale claims registered on this order, newest first; read-only here, the Claims screen manages them.
+          items: { $ref: '#/components/schemas/AdminClaim' }
     OrderEconomics:
       type: object
       description: 'CZK orders only, all haléře. Active lines count; cost is the actual unit cost of a line where it was bought in a purchase, else its checkout snapshot, times quantity.'
@@ -2236,6 +2372,64 @@ components:
               goodsMinor: { type: integer }
               inboundShippingMinor: { type: integer }
               costCzkMinor: { type: integer }
+    AdminClaim:
+      type: object
+      required: [id, number, orderId, orderReference, customerName, itemId, productName, variantLabel, sku, kind, status, note, refundAmountMinor, resolution, resolutionNote, openedAt, openedBy, handoverDate, windowEnd, onTime, dueAt, overdue, resolvedAt]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string, description: 'RC- plus 8 hex, like the order reference.' }
+        orderId: { type: string, format: uuid }
+        orderReference: { type: string }
+        customerName: { type: string }
+        itemId: { type: [string, 'null'], format: uuid, description: Null on an order-level claim. }
+        productName: { type: [string, 'null'] }
+        variantLabel: { type: [string, 'null'] }
+        sku: { type: [string, 'null'] }
+        kind: { type: string, enum: [return, warranty] }
+        status: { type: string, enum: [open, waiting, accepted, rejected, resolved] }
+        note: { type: [string, 'null'], description: What the customer reported. }
+        refundAmountMinor: { type: [integer, 'null'], minimum: 0, description: 'The agreed refund, haléře; set at acceptance.' }
+        resolution: { type: [string, 'null'], enum: [refund, replacement, repair, null] }
+        resolutionNote: { type: [string, 'null'], description: 'Why it was rejected, how it was settled.' }
+        openedAt: { type: string, format: date-time }
+        openedBy: { type: string, description: Admin email. }
+        handoverDate: { type: string, format: date, description: Prague date the goods were handed over; the windows count from it. }
+        windowEnd: { type: string, format: date, description: 'Return: handover + 14 days. Warranty: handover + 24 months.' }
+        onTime: { type: boolean, description: Opened on or before windowEnd. }
+        dueAt: { type: [string, 'null'], format: date, description: 'Acceptance + 14 days for a return, + 30 for a warranty; null until accepted.' }
+        overdue: { type: boolean, description: dueAt has passed and the claim is still accepted. }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+    AdminClaimPage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+        items: { type: array, items: { $ref: '#/components/schemas/AdminClaim' } }
+    ClaimOpenRequest:
+      type: object
+      required: [orderId, kind]
+      properties:
+        orderId: { type: string, format: uuid }
+        itemId: { type: [string, 'null'], format: uuid, description: A line of this order; left out for an order-level claim. }
+        kind: { type: string, enum: [return, warranty] }
+        note: { type: [string, 'null'], maxLength: 500, description: What the customer reported. }
+    ClaimWaitRequest:
+      type: object
+      properties:
+        note: { type: [string, 'null'], maxLength: 500, description: What is being waited for; journal only. }
+    ClaimAcceptRequest:
+      type: object
+      properties:
+        refundAmountMinor: { type: [integer, 'null'], minimum: 0, description: 'The agreed refund, haléře; again on an accepted claim corrects it.' }
+        note: { type: [string, 'null'], maxLength: 500, description: Journal only. }
+    ClaimResolveRequest:
+      type: object
+      required: [resolution]
+      properties:
+        resolution: { type: string, enum: [refund, replacement, repair] }
+        note: { type: [string, 'null'], maxLength: 500 }
     ToPurchase:
       type: object
       required: [groups, lineCount]
