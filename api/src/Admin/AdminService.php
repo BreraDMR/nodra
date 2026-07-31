@@ -46,6 +46,18 @@ final class AdminService
             'queues' => $this->queues(),
             'recentOrders' => $this->orderRows(5, 0),
             'importProblems' => $this->importProblems(),
+            'claims' => $this->claims(),
+        ];
+    }
+
+    /** After-sale claims the admin still has to act on; the Claims screen shows the details (D08.4). */
+    private function claims(): array
+    {
+        $today = $this->clock->now()->setTimezone(new \DateTimeZone(OrderQueues::TIMEZONE))->format('Y-m-d');
+
+        return [
+            'open' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM return_claim WHERE status IN ('open', 'waiting', 'accepted')"),
+            'overdue' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM return_claim WHERE status = 'accepted' AND due_at < :today", ['today' => $today]),
         ];
     }
 
