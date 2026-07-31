@@ -105,6 +105,13 @@ final class ShopContractTest extends ApiTestCase
             'get /api/admin/purchases/{id}' => ['200', '401', '404'],
             'post /api/admin/purchases/{id}/receive' => ['200', '401', '403', '404', '409'],
             'post /api/admin/purchases/{id}/cancel' => ['200', '401', '403', '404', '409', '422'],
+            'get /api/admin/claims' => ['200', '401', '422'],
+            'post /api/admin/claims' => ['201', '401', '403', '404', '409', '422'],
+            'get /api/admin/claims/{id}' => ['200', '401', '404'],
+            'post /api/admin/claims/{id}/wait' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/claims/{id}/accept' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/claims/{id}/reject' => ['200', '401', '403', '404', '409', '422'],
+            'post /api/admin/claims/{id}/resolve' => ['200', '401', '403', '404', '409', '422'],
             'post /api/admin/login' => ['200', '401'],
             'post /api/checkout/quote' => ['200', '422'],
             'post /api/checkout' => ['201', '409', '422'],
@@ -265,6 +272,8 @@ final class ShopContractTest extends ApiTestCase
         foreach ([
             'CreatePurchaseRequest' => \App\Admin\CreatePurchaseRequest::class, 'PurchaseLineRequest' => \App\Admin\PurchaseLineRequest::class,
             'MoveLineRequest' => \App\Admin\MoveLineRequest::class, 'RescheduleShipmentRequest' => \App\Admin\RescheduleShipmentRequest::class,
+            'ClaimOpenRequest' => \App\Admin\ClaimOpenRequest::class, 'ClaimWaitRequest' => \App\Admin\ClaimWaitRequest::class,
+            'ClaimAcceptRequest' => \App\Admin\ClaimAcceptRequest::class, 'ClaimResolveRequest' => \App\Admin\ClaimResolveRequest::class,
         ] as $schema => $class) {
             $parameters = (new \ReflectionMethod($class, '__construct'))->getParameters();
             self::assertEqualsCanonicalizing(array_keys($schemas[$schema]['properties']), array_map(static fn (\ReflectionParameter $p): string => $p->getName(), $parameters), $schema);
