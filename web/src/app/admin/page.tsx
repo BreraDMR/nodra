@@ -1046,7 +1046,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <p className="variant-note">
-                    The Import journal has each run's batch states and row
+                    The Import journal has each run&apos;s batch states and row
                     errors.
                   </p>
                 </section>
