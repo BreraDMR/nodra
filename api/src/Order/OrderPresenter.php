@@ -9,6 +9,7 @@ use App\Delivery\DeliverySettings;
 use App\Entity\OrderEvent;
 use App\Entity\OrderItem;
 use App\Entity\Payment;
+use App\Entity\ReturnClaim;
 use App\Entity\Shipment;
 use App\Purchase\PurchaseStatus;
 use Doctrine\DBAL\Connection;
@@ -174,6 +175,10 @@ final class OrderPresenter
             ], $s->items()), $order->getShippingMinor()),
             'lookupToken' => $order->getLookupToken(),
             'actions' => $this->rules->orderActions($s),
+            'claims' => array_map(
+                static fn (ReturnClaim $claim): array => ClaimPresenter::present($claim, $today),
+                $this->em->getRepository(ReturnClaim::class)->findBy(['order' => $order], ['openedAt' => 'DESC', 'id' => 'DESC']),
+            ),
         ];
     }
 
