@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { AttributeFields } from "./AttributeFields";
 import { CategoriesPanel } from "./CategoriesPanel";
+import { ClaimsPanel } from "./ClaimsPanel";
 import { Chip } from "./OrderPanel";
 import {
   formatPrice,
@@ -116,6 +117,7 @@ type Dashboard = {
       finishedAt: string | null;
     } | null;
   };
+  claims: { open: number; overdue: number };
 };
 type Tab =
   | "overview"
@@ -125,6 +127,7 @@ type Tab =
   | "reprice"
   | "orders"
   | "purchases"
+  | "claims"
   | "import";
 const fresh = {
   slug: "",
@@ -762,6 +765,14 @@ export default function AdminPage() {
               <small>{dashboard?.queues.to_purchase ?? 0}</small>
             </button>
             <button
+              aria-label="Claims"
+              className={tab === "claims" ? "active" : ""}
+              onClick={() => setTab("claims")}
+            >
+              ▧ <span>Claims</span>
+              <small>{dashboard?.claims.open ?? 0}</small>
+            </button>
+            <button
               aria-label="Import"
               className={tab === "import" ? "active" : ""}
               onClick={() => setTab("import")}
@@ -1022,6 +1033,33 @@ export default function AdminPage() {
                       bought after the customer confirms.
                     </p>
                   )}
+                </section>
+                <section className="admin-panel pricing-watch">
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">AFTER-SALES WATCH</p>
+                      <h2>Claims</h2>
+                    </div>
+                    <button onClick={() => setTab("claims")}>Claims ↗</button>
+                  </div>
+                  <div className="pricing-watch-grid">
+                    <button
+                      className={dashboard?.claims.overdue ? "alert" : ""}
+                      onClick={() => setTab("claims")}
+                    >
+                      <strong>{dashboard?.claims.open ?? "—"}</strong>
+                      <span>Open cases</span>
+                      <small>
+                        returns and warranty cases the registry still holds;
+                        {dashboard?.claims.overdue ?? 0} past the settlement
+                        deadline
+                      </small>
+                    </button>
+                  </div>
+                  <p className="variant-note">
+                    The Claims screen has each case&apos;s window, money and
+                    outcome.
+                  </p>
                 </section>
                 <section className="admin-panel pricing-watch">
                   <div className="panel-head">
@@ -1313,6 +1351,9 @@ export default function AdminPage() {
           )}
           {tab === "purchases" && (
             <PurchasesPanel send={send} onChanged={pricesChanged} />
+          )}
+          {tab === "claims" && (
+            <ClaimsPanel send={send} onChanged={pricesChanged} />
           )}
           {tab === "import" && (
             <ImportPanel send={send} csrfToken={user.csrfToken} />
