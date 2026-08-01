@@ -1020,6 +1020,7 @@ paths:
         '403': { description: Invalid CSRF token. }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
   /api/admin/claims/{id}/accept:
     post:
       tags: [Administration]
@@ -2417,10 +2418,12 @@ components:
         note: { type: [string, 'null'], maxLength: 500, description: What the customer reported. }
     ClaimWaitRequest:
       type: object
+      required: []
       properties:
         note: { type: [string, 'null'], maxLength: 500, description: What is being waited for; journal only. }
     ClaimAcceptRequest:
       type: object
+      required: []
       properties:
         refundAmountMinor: { type: [integer, 'null'], minimum: 0, description: 'The agreed refund, haléře; again on an accepted claim corrects it.' }
         note: { type: [string, 'null'], maxLength: 500, description: Journal only. }
