@@ -396,6 +396,12 @@ const eventLabels: Record<string, string> = {
   shipment_rescheduled: "Shipment rescheduled",
   entry_voided: "Ledger entry voided",
   purchase_cancelled: "Purchase cancelled",
+  // after-sale claims (D08.4)
+  claim_opened: "Claim opened",
+  claim_waiting: "Waiting for the customer",
+  claim_accepted: "Claim accepted",
+  claim_rejected: "Claim rejected",
+  claim_resolved: "Claim resolved",
 };
 export const eventLabel = (type: string) =>
   eventLabels[type] ?? type.replaceAll("_", " ");
@@ -509,7 +515,19 @@ export function eventSummary(event: OrderEvent, order: AdminOrder): string {
       case "sku":
         return String(value);
       case "number":
-        return `shipment #${value}`;
+        return event.type.startsWith("claim_")
+          ? `claim ${value}`
+          : `shipment #${value}`;
+      case "claimId":
+        return null; // the claim number next to it says the same
+      case "windowEnd":
+        return `window ends ${value}`;
+      case "dueAt":
+        return `settle by ${value}`;
+      case "refundAmountMinor":
+        return `agreed refund ${money(Number(value))}`;
+      case "resolution":
+        return String(value);
       case "fromNumber":
         return `shipment #${value} → ${data.newPart ? `new part #${data.toNumber} (no fee)` : `#${data.toNumber}`}`;
       case "toNumber":
