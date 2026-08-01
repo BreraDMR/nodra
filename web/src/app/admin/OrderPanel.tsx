@@ -676,6 +676,31 @@ export function OrderPanel({
             />
             {paymentForm(order)}
 
+            <h3>After-sales claims</h3>
+            {order.claims.length ? (
+              <ul className="order-claims">
+                {order.claims.map((claim) => (
+                  <li key={claim.id}>
+                    <strong>{claim.number}</strong>
+                    <span>
+                      {claim.kind === "return" ? "Return" : "Warranty"} ·{" "}
+                      {claim.sku || "whole order"}
+                    </span>
+                    <Chip value={claim.status} />
+                    <small>
+                      window ends {claim.windowEnd}
+                      {claim.dueAt ? ` · settle by ${claim.dueAt}` : ""}
+                      {claim.overdue ? " · overdue" : ""}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="variant-note">
+                No claims on this order. Register one on the Claims screen.
+              </p>
+            )}
+
             <h3>Journal</h3>
             <Journal order={order} />
           </div>
