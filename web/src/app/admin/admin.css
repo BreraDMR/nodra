@@ -1651,3 +1651,66 @@ button.mini-order:hover {
 .batch-row .admin-link {
   margin-left: 10px;
 }
+
+/* Claims (D08.4) */
+.claim-hits {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.claim-hits li {
+  border-top: 1px solid var(--line);
+  padding: 6px 0;
+}
+.claim-open-form p {
+  margin: 0 0 12px;
+}
+.claim-open-form .admin-link {
+  margin-left: 12px;
+}
+.claim-detail {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 18px;
+}
+.claim-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+.claim-facts dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #738073;
+}
+.claim-facts dd {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.claim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.claim-action-form small {
+  display: block;
+  color: #738073;
+  font-size: 12px;
+}
+.order-claims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.order-claims li {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
