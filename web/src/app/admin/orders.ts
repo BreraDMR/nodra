@@ -1,3 +1,4 @@
+import type { AdminClaim } from "./claims";
 import {
   ApiError,
   errorText,
@@ -208,6 +209,7 @@ export type AdminOrder = {
   economics: OrderEconomics | null;
   lookupToken: string;
   actions: OrderAction[];
+  claims: AdminClaim[];
 };
 
 // GET /api/admin/settings, read-only on the server side
@@ -276,6 +278,17 @@ const statusLabels: Record<string, string> = {
   active: "Active",
   returned: "Returned",
   correction: "Correction",
+  // after-sale claims (D08.4)
+  open: "Open",
+  waiting: "Waiting for the customer",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  resolved: "Resolved",
+  return: "Return",
+  warranty: "Warranty",
+  refund: "Refund",
+  replacement: "Replacement",
+  repair: "Repair",
 };
 export const statusLabel = (value: string) =>
   statusLabels[value] ?? value.replaceAll("_", " ");
