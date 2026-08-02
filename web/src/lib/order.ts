@@ -11,7 +11,7 @@ import {
   type OrderStatus,
   type PaymentStatus,
   type ShipmentStatus,
-} from "./shop";
+} from "./shop.ts";
 
 export const channels: ContactChannel[] = ["whatsapp", "telegram", "phone"];
 
