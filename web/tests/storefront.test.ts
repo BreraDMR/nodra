@@ -1,0 +1,123 @@
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { copy, type Locale } from "../src/lib/shop.ts";
+import { orderCopy } from "../src/lib/order.ts";
+
+// D06.5: the storefront check. The copy dictionaries keep cs/de/en in lockstep,
+// and the promises the storefront states in words match the numbers the API
+// calculates with (points per 100 Kč, 14 days to return, no hardcoded delivery
+// fee anywhere — that one comes from the quote).
+
+const locales = Object.keys(copy) as Locale[];
+
+function leaves(value: unknown, path: string[] = []): [string, unknown][] {
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, child]) =>
+      leaves(child, [...path, key]),
+    );
+  }
+  return [[path.join("."), value]];
+}
+
+function placeholderSet(text: string): string[] {
+  return [...String(text).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+}
+
+test("every locale carries the same copy keys", () => {
+  for (const dictionary of [copy, orderCopy] as const) {
+    const base = leaves(dictionary.cs);
+    for (const locale of locales) {
+      const theirs = leaves(dictionary[locale]);
+      assert.deepEqual(
+        theirs.map(([key]) => key),
+        base.map(([key]) => key),
+        `${locale} keys differ from cs`,
+      );
+    }
+  }
+});
+
+// czkNote is empty in cs on purpose: Czech shoppers see CZK prices, so there
+// is nothing to explain. de/en see the EUR reference and the note tells them
+// the order itself runs in CZK (D00.5; the split goes away with D06.7).
+const mayBeEmpty = new Set(["orderCopy.czkNote"]);
+
+test("no copy string is empty and the arrays keep their length per locale", () => {
+  for (const dictionary of [copy, orderCopy] as const) {
+    for (const locale of locales) {
+      for (const [key, value] of leaves(dictionary[locale])) {
+        if (
+          value === "" &&
+          mayBeEmpty.has(`${dictionary === copy ? "copy" : "orderCopy"}.${key}`)
+        ) {
+          continue;
+        }
+        if (Array.isArray(value)) {
+          assert.ok(value.length > 0, `${locale} ${key} is an empty array`);
+        } else {
+          assert.equal(typeof value, "string", `${locale} ${key} type`);
+          assert.ok(
+            (value as string).trim() !== "",
+            `${locale} ${key} is empty`,
+          );
+        }
+      }
+    }
+  }
+});
+
+test("placeholders survive the translation", () => {
+  for (const dictionary of [copy, orderCopy] as const) {
+    const base = leaves(dictionary.cs).filter(([, v]) =>
+      /\{\w+\}/.test(String(v)),
+    );
+    for (const [key] of base) {
+      const wanted = placeholderSet(
+        String(leaves(dictionary.cs).find(([k]) => k === key)?.[1]),
+      );
+      for (const locale of locales) {
+        const theirs = leaves(dictionary[locale]).find(([k]) => k === key);
+        assert.deepEqual(
+          placeholderSet(String(theirs?.[1])),
+          wanted,
+          `${locale} ${key} placeholders`,
+        );
+      }
+    }
+  }
+});
+
+// The numbers the words promise; the API side is pinned by the phpunit tests
+// (QuoteApiTest: fee 149, free from 50000; Loyalty: 1 point per 10000 minor).
+const POINTS_PER_KCZ = 100;
+const RETURN_DAYS = 14;
+
+test("the points promise names the same hundred the API earns by", () => {
+  const re = new RegExp(`\\D${POINTS_PER_KCZ}\\s*(Kč|Kč\\.|kč)`);
+  for (const locale of locales) {
+    assert.match(copy[locale].pointsRule, re, `${locale} pointsRule`);
+    assert.match(copy[locale].pointsRule, /1\b/, `${locale} pointsRule point`);
+  }
+});
+
+test("the returns promise matches the claim window", () => {
+  const re = new RegExp(`\\b${RETURN_DAYS}\\b`);
+  for (const locale of locales) {
+    assert.match(copy[locale].returnsNote, re, `${locale} returnsNote`);
+  }
+});
+
+test("no delivery fee or threshold is hardcoded in the storefront", () => {
+  // the quote calculates these; a hardcoded number here would quietly drift
+  // away from the API (D00.2: the tariffs are still owner decisions)
+  const forbidden = /149\s*Kč|500\s*Kč|free from 500/i;
+  for (const file of ["src/lib/shop.ts", "src/lib/order.ts"]) {
+    const text = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(
+      text,
+      forbidden,
+      `${file} hardcodes a delivery promise`,
+    );
+  }
+});
