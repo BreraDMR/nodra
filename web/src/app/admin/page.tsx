@@ -1050,9 +1050,7 @@ export default function AdminPage() {
                       <strong>{dashboard?.claims.open ?? "—"}</strong>
                       <span>Open cases</span>
                       <small>
-                        returns and warranty cases the registry still holds;
-                        {dashboard?.claims.overdue ?? 0} past the settlement
-                        deadline
+                        {`returns and warranty cases the registry still holds, ${dashboard?.claims.overdue ?? 0} past the settlement deadline`}
                       </small>
                     </button>
                   </div>
