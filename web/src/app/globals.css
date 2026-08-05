@@ -1621,3 +1621,55 @@ p {
     padding-top: 65px;
   }
 }
+
+/* Loading and error fallbacks for the locale segment (D06.5) */
+.page-loading {
+  min-height: 100vh;
+  padding: 0 clamp(16px, 4vw, 64px);
+}
+.loading-hero,
+.loading-card {
+  border-radius: 18px;
+  background: linear-gradient(100deg, #eceee9 40%, #f6f7f3 50%, #eceee9 60%);
+  background-size: 200% 100%;
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+.loading-hero {
+  height: min(56vh, 480px);
+  margin: 16px 0 40px;
+}
+.loading-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  padding-bottom: 64px;
+}
+.loading-card {
+  height: 300px;
+}
+.loading-card:nth-child(even) {
+  animation-delay: 0.2s;
+}
+@keyframes loading-pulse {
+  0%,
+  100% {
+    background-position: 0% 0;
+  }
+  50% {
+    background-position: -100% 0;
+  }
+}
+.page-error {
+  min-height: 60vh;
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 12px;
+  padding: 32px clamp(16px, 4vw, 64px);
+}
+.page-error h1 {
+  margin: 0;
+}
+.page-error .button {
+  margin-top: 8px;
+}
