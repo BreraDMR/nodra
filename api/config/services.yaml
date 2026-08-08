@@ -29,6 +29,9 @@ parameters:
     app.payment.handover_methods: [cash, bank_transfer]                   # card only once there is a terminal
     app.legal.privacy_version: 'draft-2026-09'    # stored with every privacy consent, default until the D00.7 texts exist
 
+    # D09.3 hardening without a host: where the API error journal lives (one JSON line per error response)
+    app.api_error_log: '%kernel.logs_dir%/api-errors.jsonl'
+
     # D03.2 import: the supplier behind the uploaded Awin feed; more feeds join in D03.4
     app.import.awin_supplier: 'bike_components'
     # D03.4 feed refresh: defaults picked while the owner was away, see docs/design/d03-import.md
@@ -44,11 +47,20 @@ services:
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            # the throttling limiters of D09.3, defined in framework.yaml
+            Symfony\Component\RateLimiter\RateLimiterFactory $apiPublicLimiter: '@limiter.api_public'
+            Symfony\Component\RateLimiter\RateLimiterFactory $apiCheckoutLimiter: '@limiter.api_checkout'
+            Symfony\Component\RateLimiter\RateLimiterFactory $apiAuthLimiter: '@limiter.api_auth'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+
+    App\Api\ApiErrorLogSubscriber:
+        arguments:
+            $logFile: '%app.api_error_log%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
