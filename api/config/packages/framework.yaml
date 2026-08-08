@@ -13,6 +13,31 @@ framework:
             # an empty stdClass (attribute values) goes out as {}, empty lists stay []
             preserve_empty_objects: true
 
+    # D09.3: request throttling without a host. The counters live in the file
+    # cache pool; Redis replaces it when the shop gets real hosting.
+    rate_limiter:
+        limiters:
+            api_public:
+                policy: sliding_window
+                limit: 240
+                interval: 1 minute
+                cache_pool: cache.rate_limiter
+            api_checkout:
+                policy: sliding_window
+                limit: 30
+                interval: 1 minute
+                cache_pool: cache.rate_limiter
+            api_auth:
+                policy: fixed_window
+                limit: 10
+                interval: 1 minute
+                cache_pool: cache.rate_limiter
+
+    cache:
+        pools:
+            rate_limiter.cache:
+                adapter: cache.app
+
     #esi: true
     #fragments: true
 
@@ -21,3 +46,22 @@ when@test:
         test: true
         session:
             storage_factory_id: session.storage.factory.mock_file
+        # the whole functional suite shares one client IP; keep the limits far
+        # away and test the 429 path against a hand-built limiter instead
+        rate_limiter:
+            limiters:
+                api_public:
+                    policy: sliding_window
+                    limit: 100000
+                    interval: 1 minute
+                    cache_pool: cache.rate_limiter
+                api_checkout:
+                    policy: sliding_window
+                    limit: 100000
+                    interval: 1 minute
+                    cache_pool: cache.rate_limiter
+                api_auth:
+                    policy: fixed_window
+                    limit: 100000
+                    interval: 1 minute
+                    cache_pool: cache.rate_limiter
