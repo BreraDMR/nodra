@@ -13,6 +13,9 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Table(name: 'product')]
 #[ORM\Index(columns: ['category_id', 'status', 'featured_rank'], name: 'idx_product_browse')]
 #[ORM\Index(columns: ['brand'], name: 'idx_product_brand')]
+// the partial index (status = 'published') is created in migration Version20260809120856;
+// the ORM copy keeps the schema validator in sync with its columns
+#[ORM\Index(columns: ['featured_rank', 'slug'], name: 'idx_product_published')]
 class Product
 {
     #[ORM\Id]
