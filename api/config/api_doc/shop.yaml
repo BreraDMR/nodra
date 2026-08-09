@@ -14,7 +14,9 @@ info:
     supplier, seller, offer id or URL, supplier order reference, purchases, exchange rate, markup, margin, order
     economics, RRP, market price and journal actors are admin-only and never appear in public responses. Feed imports
     are admin-only too: source files, supplier SKUs, import runs and field origins stay out of every public response.
-    Dates without a time (promisedDate, fxRateDate) are Prague calendar dates, YYYY-MM-DD.
+    Dates without a time (promisedDate, fxRateDate) are Prague calendar dates, YYYY-MM-DD. Public and
+    sign-in endpoints are throttled per client IP; above the limit the answer is a 429 `too_many_requests`
+    with a `Retry-After` header.
 servers:
   - url: http://localhost:8000
 tags:
