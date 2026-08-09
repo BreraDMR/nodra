@@ -14,6 +14,12 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity]
 #[ORM\Table(name: 'order_item')]
 #[ORM\Index(columns: ['order_id'], name: 'idx_order_item_order')]
+// the partial index below (state = 'active') is created in migration Version20260809120856;
+// the ORM copy keeps the schema validator in sync with its columns
+#[ORM\Index(columns: ['order_id', 'procurement_status'], name: 'idx_order_item_active')]
+// the partial index below (state = 'active') is created in migration Version20260809120856;
+// the ORM copy keeps the schema validator in sync with its columns
+#[ORM\Index(columns: ['order_id', 'procurement_status'], name: 'idx_order_item_active')]
 class OrderItem
 {
     #[ORM\Id]
