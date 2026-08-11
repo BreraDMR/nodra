@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.7.0
+  version: 0.8.0
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -1078,6 +1078,69 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/ActionRefused' }
         '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/products/{id}/external-ratings:
+    get:
+      tags: [Administration]
+      summary: List the product's outside ratings
+      description: >-
+        D07.3: ratings of the product's models as outside sources show them, typed in by an
+        admin, newest check first. They never appear in any public response, and no code ever
+        scrapes or invents them.
+      parameters: [{ $ref: '#/components/parameters/ProductId' }]
+      responses:
+        '200':
+          description: Ratings of the product.
+          content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: '#/components/schemas/AdminExternalRating' } }, total: { type: integer } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Administration]
+      summary: Record an outside rating seen at a source
+      description: >-
+        An admin types in what the source showed: the source slug, the model designation as the
+        source names it, the source's number and its scale (4.5 out of 5, 87 out of 100), the
+        review count and the day it was checked. One rating per source and model (409
+        `rating_exists`); re-checking is an update, not a second row. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/ProductId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ExternalRatingWriteRequest' } } }
+      responses:
+        '201':
+          description: Rating recorded.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminExternalRating' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/external-ratings/{id}:
+    put:
+      tags: [Administration]
+      summary: Update a rating after a re-check
+      description: Changes the number, scale, count, checked day and the source page. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/RatingId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ExternalRatingWriteRequest' } } }
+      responses:
+        '200':
+          description: Rating updated.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminExternalRating' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Validation' }
+    delete:
+      tags: [Administration]
+      summary: Remove a wrong rating
+      description: The row is gone; recording it again starts fresh. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/RatingId' }]
+      responses:
+        '204': { description: Rating removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/admin/pricing-rules:
     get:
       tags: [Administration]
@@ -1362,6 +1425,7 @@ components:
     PaymentId: { name: paymentId, in: path, required: true, description: 'Ledger entry id; an entry of another order is not found.', schema: { type: string, format: uuid } }
     PurchaseId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     ClaimId: { name: id, in: path, required: true, description: 'Claim id; a foreign id is not found.', schema: { type: string, format: uuid } }
+    RatingId: { name: id, in: path, required: true, description: 'Outside rating id; a foreign id is not found.', schema: { type: string, format: uuid } }
   responses:
     Unauthorized:
       description: No admin session.
@@ -2435,6 +2499,31 @@ components:
       properties:
         resolution: { type: string, enum: [refund, replacement, repair] }
         note: { type: [string, 'null'], maxLength: 500 }
+    AdminExternalRating:
+      type: object
+      required: [id, productId, source, model, rating, ratingScale, ratingCount, checkedAt, url, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        source: { type: string, description: 'Lowercase slug of the outside source, e.g. bike-components.' }
+        model: { type: string, description: 'The model designation as the source names it.' }
+        rating: { type: number, description: "The source's number." }
+        ratingScale: { type: number, description: 'What the number is out of, e.g. 5 or 100.' }
+        ratingCount: { type: integer, description: 'How many reviews the rating counts.' }
+        checkedAt: { type: string, format: date, description: The Prague day an admin saw it at the source. }
+        url: { type: [string, 'null'], description: The page it was seen on. }
+        updatedAt: { type: string, format: date-time }
+    ExternalRatingWriteRequest:
+      type: object
+      required: [source, model, rating, ratingCount, checkedAt]
+      properties:
+        source: { type: string, minLength: 2, maxLength: 60, pattern: '^[a-z0-9][a-z0-9-_.]{1,59}$' }
+        model: { type: string, minLength: 1, maxLength: 160 }
+        rating: { type: number, minimum: 0 }
+        ratingCount: { type: integer, minimum: 0 }
+        checkedAt: { type: string, format: date }
+        ratingScale: { type: number, minimum: 0, exclusiveMinimum: true, default: 5 }
+        url: { type: [string, 'null'], maxLength: 255 }
     ToPurchase:
       type: object
       required: [groups, lineCount]
