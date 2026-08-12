@@ -105,6 +105,10 @@ final class ShopContractTest extends ApiTestCase
             'get /api/admin/purchases/{id}' => ['200', '401', '404'],
             'post /api/admin/purchases/{id}/receive' => ['200', '401', '403', '404', '409'],
             'post /api/admin/purchases/{id}/cancel' => ['200', '401', '403', '404', '409', '422'],
+            'get /api/admin/products/{id}/external-ratings' => ['200', '401', '404'],
+            'post /api/admin/products/{id}/external-ratings' => ['201', '401', '403', '404', '409', '422'],
+            'put /api/admin/external-ratings/{id}' => ['200', '401', '403', '404', '422'],
+            'delete /api/admin/external-ratings/{id}' => ['204', '401', '403', '404'],
             'get /api/admin/claims' => ['200', '401', '422'],
             'post /api/admin/claims' => ['201', '401', '403', '404', '409', '422'],
             'get /api/admin/claims/{id}' => ['200', '401', '404'],
@@ -274,6 +278,7 @@ final class ShopContractTest extends ApiTestCase
             'MoveLineRequest' => \App\Admin\MoveLineRequest::class, 'RescheduleShipmentRequest' => \App\Admin\RescheduleShipmentRequest::class,
             'ClaimOpenRequest' => \App\Admin\ClaimOpenRequest::class, 'ClaimWaitRequest' => \App\Admin\ClaimWaitRequest::class,
             'ClaimAcceptRequest' => \App\Admin\ClaimAcceptRequest::class, 'ClaimResolveRequest' => \App\Admin\ClaimResolveRequest::class,
+            'ExternalRatingWriteRequest' => \App\Admin\ExternalRatingWriteRequest::class,
         ] as $schema => $class) {
             $parameters = (new \ReflectionMethod($class, '__construct'))->getParameters();
             self::assertEqualsCanonicalizing(array_keys($schemas[$schema]['properties']), array_map(static fn (\ReflectionParameter $p): string => $p->getName(), $parameters), $schema);
