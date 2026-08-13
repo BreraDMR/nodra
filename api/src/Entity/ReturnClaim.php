@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Order\OrderQueues;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UuidType;
@@ -42,7 +41,9 @@ class ReturnClaim
 
     private const RETURN_WINDOW_DAYS = 14;
     private const WARRANTY_WINDOW_MONTHS = 24;
+    /** ČOI: the seller refunds within 14 days of the withdrawal, not of its acceptance */
     private const RETURN_REFUND_DAYS = 14;
+    /** ČOI: the claim is settled within 30 days of the day the customer lodged it; D00.7 may set the final text */
     private const WARRANTY_SETTLE_DAYS = 30;
 
     #[ORM\Id]
@@ -87,6 +88,10 @@ class ReturnClaim
     #[ORM\Column(length: 180)]
     private string $openedBy;
 
+    /** Prague calendar day the customer lodged the case; both windows and the settle deadline count from it */
+    #[ORM\Column(type: Types::DATE_IMMUTABLE)]
+    private \DateTimeImmutable $contactedOn;
+
     /** Prague calendar date the goods were handed over; both windows count from it */
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
     private \DateTimeImmutable $handoverDate;
@@ -95,7 +100,7 @@ class ReturnClaim
     #[ORM\Column(type: Types::DATE_IMMUTABLE)]
     private \DateTimeImmutable $windowEnd;
 
-    /** when the accepted case must be settled, null until acceptance */
+    /** when the case must be settled: fixed once from the contact day, accepting again never moves it */
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $dueAt = null;
 
@@ -103,10 +108,11 @@ class ReturnClaim
     private ?\DateTimeImmutable $resolvedAt = null;
 
     /**
+     * @param \DateTimeImmutable $contactedOn Prague calendar day the customer lodged the case
      * @param \DateTimeImmutable $handoverDate Prague calendar date the goods were handed over
      * @param \DateTimeImmutable $windowEnd    the last day of the customer's window, from {@see self::windowEnd()}
      */
-    public function __construct(ShopOrder $order, ?OrderItem $item, string $kind, ?string $note, string $openedBy, \DateTimeImmutable $handoverDate, \DateTimeImmutable $windowEnd)
+    public function __construct(ShopOrder $order, ?OrderItem $item, string $kind, ?string $note, string $openedBy, \DateTimeImmutable $contactedOn, \DateTimeImmutable $handoverDate, \DateTimeImmutable $windowEnd)
     {
         if (!in_array($kind, self::KINDS, true)) {
             throw new \InvalidArgumentException('Unknown claim kind');
@@ -119,22 +125,23 @@ class ReturnClaim
         $this->note = $note;
         $this->openedAt = new \DateTimeImmutable();
         $this->openedBy = $openedBy;
+        $this->contactedOn = $contactedOn;
         $this->handoverDate = $handoverDate;
         $this->windowEnd = $windowEnd;
+        $days = $kind === self::KIND_RETURN ? self::RETURN_REFUND_DAYS : self::WARRANTY_SETTLE_DAYS;
+        $this->dueAt = $contactedOn->modify(sprintf('+%d days', $days));
     }
 
     public function wait(): void { $this->move(self::WAITING, [self::OPEN]); }
 
-    /** Acknowledge the case; accepted -> accepted corrects the agreed refund and the deadline. */
-    public function accept(?int $refundAmountMinor, \DateTimeImmutable $today): void
+    /** Acknowledge the case; accepted -> accepted corrects the agreed refund and never the deadline. */
+    public function accept(?int $refundAmountMinor): void
     {
         $this->move(self::ACCEPTED, [self::OPEN, self::WAITING, self::ACCEPTED]);
         if ($refundAmountMinor !== null && $refundAmountMinor < 0) {
             throw new \InvalidArgumentException('A refund amount cannot be negative');
         }
         $this->refundAmountMinor = $refundAmountMinor;
-        $days = $this->kind === self::KIND_RETURN ? self::RETURN_REFUND_DAYS : self::WARRANTY_SETTLE_DAYS;
-        $this->dueAt = $today->modify(sprintf('+%d days', $days));
     }
 
     public function reject(string $reason): void
@@ -153,18 +160,16 @@ class ReturnClaim
         $this->resolvedAt = new \DateTimeImmutable();
     }
 
-    /** The claim was opened on or before the last day of the customer's window; both are Prague calendar dates. */
+    /** The customer lodged the case on or before the last day of the window; both are Prague calendar dates. */
     public function isOnTime(): bool
     {
-        $opened = $this->openedAt->setTimezone(new \DateTimeZone(OrderQueues::TIMEZONE))->setTime(0, 0);
-
-        return $opened <= $this->windowEnd->setTime(0, 0);
+        return $this->contactedOn <= $this->windowEnd->setTime(0, 0);
     }
 
-    /** The settlement deadline has passed and the case is still accepted. */
+    /** The settle deadline has passed and the case is still not closed. */
     public function isOverdue(\DateTimeImmutable $today): bool
     {
-        return $this->status === self::ACCEPTED && $this->dueAt !== null && $today->setTime(0, 0) > $this->dueAt->setTime(0, 0);
+        return in_array($this->status, self::OPEN_STATUSES, true) && $this->dueAt !== null && $today->setTime(0, 0) > $this->dueAt->setTime(0, 0);
     }
 
     public function isOpen(): bool { return in_array($this->status, self::OPEN_STATUSES, true); }
@@ -188,6 +193,7 @@ class ReturnClaim
     public function getResolutionNote(): ?string { return $this->resolutionNote; }
     public function getOpenedAt(): \DateTimeImmutable { return $this->openedAt; }
     public function getOpenedBy(): string { return $this->openedBy; }
+    public function getContactedOn(): \DateTimeImmutable { return $this->contactedOn; }
     public function getHandoverDate(): \DateTimeImmutable { return $this->handoverDate; }
     public function getWindowEnd(): \DateTimeImmutable { return $this->windowEnd; }
     public function getDueAt(): ?\DateTimeImmutable { return $this->dueAt; }
