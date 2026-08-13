@@ -27,9 +27,13 @@ trait AdminOrderSteps
         return $result;
     }
 
-    private function pay(string $id, int $amount, string $kind = 'payment', string $method = 'cash', int $status = 201): array
+    private function pay(string $id, int $amount, string $kind = 'payment', string $method = 'cash', int $status = 201, ?string $claimId = null): array
     {
-        $result = $this->sendJson('POST', '/api/admin/orders/'.$id.'/payments', ['kind' => $kind, 'method' => $method, 'amountMinor' => $amount], $this->token, ['HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))]);
+        $body = ['kind' => $kind, 'method' => $method, 'amountMinor' => $amount];
+        if ($claimId !== null) {
+            $body['claimId'] = $claimId;
+        }
+        $result = $this->sendJson('POST', '/api/admin/orders/'.$id.'/payments', $body, $this->token, ['HTTP_IDEMPOTENCY_KEY' => bin2hex(random_bytes(12))]);
         self::assertResponseStatusCodeSame($status, json_encode($result));
 
         return $result;
