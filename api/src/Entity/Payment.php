@@ -16,6 +16,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity]
 #[ORM\Table(name: 'payment')]
 #[ORM\Index(columns: ['order_id', 'recorded_at'], name: 'idx_payment_order')]
+#[ORM\Index(columns: ['claim_id'], name: 'idx_payment_claim')]
 class Payment
 {
     public const PAYMENT = 'payment';
@@ -67,10 +68,18 @@ class Payment
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?self $corrects = null;
 
-    public function __construct(ShopOrder $order, ?Shipment $shipment, string $kind, string $method, int $amountMinor, string $recordedBy, ?string $note, string $idempotencyKey, string $requestHash)
+    /** refunds only: the claim whose money this entry is; one entry settles one claim */
+    #[ORM\ManyToOne(targetEntity: ReturnClaim::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?ReturnClaim $claim = null;
+
+    public function __construct(ShopOrder $order, ?Shipment $shipment, string $kind, string $method, int $amountMinor, string $recordedBy, ?string $note, string $idempotencyKey, string $requestHash, ?ReturnClaim $claim = null)
     {
         if ($amountMinor <= 0) {
             throw new \InvalidArgumentException('An amount must be above zero');
+        }
+        if ($claim !== null && $kind !== self::REFUND) {
+            throw new \InvalidArgumentException('Only a refund can settle a claim');
         }
         $this->id = Uuid::v7();
         $this->order = $order;
@@ -83,6 +92,7 @@ class Payment
         $this->note = $note;
         $this->idempotencyKey = $idempotencyKey;
         $this->requestHash = $requestHash;
+        $this->claim = $claim;
     }
 
     /** A correction that cancels the amount of a payment or a refund. */
@@ -101,6 +111,7 @@ class Payment
     public function getId(): Uuid { return $this->id; }
     public function getOrder(): ShopOrder { return $this->order; }
     public function getShipment(): ?Shipment { return $this->shipment; }
+    public function getClaim(): ?ReturnClaim { return $this->claim; }
     public function getKind(): string { return $this->kind; }
     public function getMethod(): string { return $this->method; }
     public function getAmountMinor(): int { return $this->amountMinor; }
