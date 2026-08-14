@@ -17,7 +17,8 @@ use Symfony\Component\Uid\Uuid;
 /**
  * The after-sale claims registry (D08.4). A claim is only a record beside the order: opening and moving it never
  * touches line states, stock or the ledger — those stay with the order actions. The one money rule: a claim closes
- * as `refund` only when the order ledger holds enough refunds recorded since the claim was opened.
+ * as `refund` only when the order ledger holds refunds tagged with this claim for the agreed amount — one refund
+ * settles one claim, so the money of two cases can never mix.
  */
 final class ClaimService
 {
@@ -28,7 +29,7 @@ final class ClaimService
         private ClockInterface $clock,
     ) {}
 
-    public function open(string $orderId, ?string $itemId, string $kind, ?string $note, string $actor): array
+    public function open(string $orderId, ?string $itemId, string $kind, ?string $note, string $contactedOn, string $actor): array
     {
         $order = $this->em->find(ShopOrder::class, Uuid::fromString(strtolower($orderId)));
         if ($order === null) {
@@ -50,13 +51,22 @@ final class ClaimService
         if ($item !== null && $this->openClaimOnItem($item) !== null) {
             throw OrderProblem::conflict('claim_open', 'This line already has a claim that is not closed');
         }
+        // the calendar day is read as a Prague date straight away, like the handover date is
+        $contacted = \DateTimeImmutable::createFromFormat('!Y-m-d', $contactedOn, new \DateTimeZone(OrderQueues::TIMEZONE));
+        if ($contacted === false) {
+            throw OrderProblem::unprocessable('invalid_contact_date', 'The contact day must be a YYYY-MM-DD date');
+        }
+        if ($contacted->format('Y-m-d') > $this->today()->format('Y-m-d')) {
+            throw OrderProblem::unprocessable('contact_in_future', 'The customer cannot have contacted in the future');
+        }
 
         $handoverDate = $handover->setTimezone(new \DateTimeZone(OrderQueues::TIMEZONE))->setTime(0, 0);
-        $claim = new ReturnClaim($order, $item, $kind, $note, $actor, $handoverDate, ReturnClaim::windowEnd($kind, $handoverDate));
+        $claim = new ReturnClaim($order, $item, $kind, $note, $actor, $contacted, $handoverDate, ReturnClaim::windowEnd($kind, $handoverDate));
         $this->em->persist($claim);
         $this->journal->record($order, 'claim_opened', [
             'claimId' => $claim->getId()->toRfc4122(), 'number' => $claim->getNumber(), 'kind' => $kind,
-            'itemId' => $item?->getId()->toRfc4122(), 'windowEnd' => $claim->getWindowEnd()->format('Y-m-d'),
+            'itemId' => $item?->getId()->toRfc4122(), 'contactedOn' => $claim->getContactedOn()->format('Y-m-d'),
+            'windowEnd' => $claim->getWindowEnd()->format('Y-m-d'), 'dueAt' => $claim->getDueAt()?->format('Y-m-d'),
         ], $actor);
         $this->em->flush();
 
@@ -81,15 +91,14 @@ final class ClaimService
     public function accept(string $claimId, ?int $refundAmountMinor, ?string $note, string $actor): array
     {
         $claim = $this->claim($claimId);
-        $today = $this->today();
-        $claim->accept($refundAmountMinor, $today);
+        $claim->accept($refundAmountMinor);
         $this->journal->record($claim->getOrder(), 'claim_accepted', [
             'claimId' => $claim->getId()->toRfc4122(), 'number' => $claim->getNumber(),
             'refundAmountMinor' => $refundAmountMinor, 'dueAt' => $claim->getDueAt()?->format('Y-m-d'), 'note' => $note,
         ], $actor);
         $this->em->flush();
 
-        return ClaimPresenter::present($claim, $today);
+        return ClaimPresenter::present($claim, $this->today());
     }
 
     public function reject(string $claimId, string $reason, string $actor): array
@@ -104,17 +113,23 @@ final class ClaimService
 
     public function resolve(string $claimId, string $resolution, ?string $note, string $actor): array
     {
-        $claim = $this->claim($claimId);
-        if ($resolution === ReturnClaim::RESOLUTION_REFUND) {
-            $this->requireRefundRecorded($claim);
-        }
-        $claim->resolve($resolution);
-        $this->journal->record($claim->getOrder(), 'claim_resolved', [
-            'claimId' => $claim->getId()->toRfc4122(), 'number' => $claim->getNumber(), 'resolution' => $resolution, 'note' => $note,
-        ], $actor);
-        $this->em->flush();
+        return $this->db->transactional(function () use ($claimId, $resolution, $note, $actor): array {
+            $claim = $this->claim($claimId);
+            if ($resolution === ReturnClaim::RESOLUTION_REFUND) {
+                // the order row lock puts this check and the status flip into one step with the payment
+                // recording and voiding, so two simultaneous actions can never share one refund
+                $this->db->executeStatement('SELECT id FROM shop_order WHERE id = :id FOR UPDATE', ['id' => $claim->getOrder()->getId()->toRfc4122()]);
+                $this->em->refresh($claim);
+                $this->requireRefundRecorded($claim);
+            }
+            $claim->resolve($resolution);
+            $this->journal->record($claim->getOrder(), 'claim_resolved', [
+                'claimId' => $claim->getId()->toRfc4122(), 'number' => $claim->getNumber(), 'resolution' => $resolution, 'note' => $note,
+            ], $actor);
+            $this->em->flush();
 
-        return ClaimPresenter::present($claim, $this->today());
+            return ClaimPresenter::present($claim, $this->today());
+        });
     }
 
     public function list(AdminClaimsQuery $query): array
@@ -154,31 +169,25 @@ final class ClaimService
         ];
     }
 
-    /** The claim closes as a refund only when the ledger holds it: refunds recorded since the claim was opened, minus the ones voided since. */
+    /** The claim closes as a refund only when the ledger holds it: refunds tagged with this claim, minus the ones voided since. */
     private function requireRefundRecorded(ReturnClaim $claim): void
     {
         $agreed = $claim->getRefundAmountMinor();
-        // stored timestamps have no microseconds, so a refund in the opened second is told from a pre-claim one by
-        // the ledger entry's UUID v7: entries the process created later carry a bigger id
         $params = [
             'order' => $claim->getOrder()->getId()->toRfc4122(),
-            'opened' => $claim->getOpenedAt()->format(\DATE_ATOM),
-            'claimId' => $claim->getId()->toRfc4122(),
+            'claim' => $claim->getId()->toRfc4122(),
         ];
-        $since = static fn (string $alias): string => $alias === ''
-            ? "(recorded_at > :opened OR (recorded_at = :opened AND id > :claimId))"
-            : "($alias.recorded_at > :opened OR ($alias.recorded_at = :opened AND $alias.id > :claimId))";
         $refunded = (int) $this->db->fetchOne(
-            "SELECT COALESCE(SUM(amount_minor), 0) FROM payment WHERE order_id = :order AND kind = 'refund' AND ".$since(''),
+            "SELECT COALESCE(SUM(amount_minor), 0) FROM payment WHERE order_id = :order AND kind = 'refund' AND claim_id = :claim",
             $params,
         );
         $voided = (int) $this->db->fetchOne(
             "SELECT COALESCE(SUM(p.amount_minor), 0) FROM payment p JOIN payment r ON r.id = p.corrects_id
-             WHERE p.order_id = :order AND p.kind = 'correction' AND r.kind = 'refund' AND ".$since('r'),
+             WHERE p.order_id = :order AND p.kind = 'correction' AND r.claim_id = :claim",
             $params,
         );
         if ($agreed === null || $refunded - $voided < $agreed) {
-            throw OrderProblem::conflict('refund_not_recorded', 'Record the refund on the order first; nothing covers the agreed amount yet', [
+            throw OrderProblem::conflict('refund_not_recorded', 'Record the refund on the order first, tagged with this claim; nothing covers the agreed amount yet', [
                 'agreedMinor' => $agreed, 'coveredMinor' => max(0, $refunded - $voided),
             ]);
         }
