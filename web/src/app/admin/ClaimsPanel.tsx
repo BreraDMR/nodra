@@ -8,6 +8,7 @@ import {
   claimResolutions,
   claimStatusLabels,
   claimStatuses,
+  todayInPrague,
   type AdminClaim,
   type ClaimKind,
   type ClaimResolution,
@@ -39,14 +40,16 @@ type OpenForm = {
   order: OrderDetail | null;
   itemId: string;
   kind: ClaimKind;
+  contactedOn: string;
   note: string;
 };
-const freshOpen: OpenForm = {
+const freshOpen = (): OpenForm => ({
   order: null,
   itemId: "",
   kind: "return",
+  contactedOn: todayInPrague(),
   note: "",
-};
+});
 
 // the small form under an expanded claim
 type ActionForm = {
@@ -90,7 +93,6 @@ export function ClaimsPanel({
   const [orderQuery, setOrderQuery] = useState("");
   const [orderHits, setOrderHits] = useState<OrderRow[]>([]);
   const [openForm, setOpenForm] = useState<OpenForm>(freshOpen);
-
   const refresh = useCallback(() => setRevision((n) => n + 1), []);
 
   useEffect(() => {
@@ -143,7 +145,7 @@ export function ClaimsPanel({
     setError("");
     try {
       const detail = await send<OrderDetail>(`/api/admin/orders/${row.id}`);
-      setOpenForm({ ...freshOpen, order: detail });
+      setOpenForm({ ...freshOpen(), order: detail });
     } catch (e) {
       setError(errorText(e, "Could not load the order"));
     }
@@ -158,9 +160,10 @@ export function ClaimsPanel({
         orderId: openForm.order.id,
         itemId: openForm.itemId || null,
         kind: openForm.kind,
+        contactedOn: openForm.contactedOn,
         note: openForm.note.trim() || null,
       });
-      setOpenForm(freshOpen);
+      setOpenForm(freshOpen());
       setOpen(claim);
       setForm(null);
       refresh();
@@ -253,7 +256,7 @@ export function ClaimsPanel({
               <button
                 type="button"
                 className="admin-link"
-                onClick={() => setOpenForm(freshOpen)}
+                onClick={() => setOpenForm(freshOpen())}
               >
                 pick another order
               </button>
@@ -292,6 +295,18 @@ export function ClaimsPanel({
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="admin-field">
+                Customer contacted on
+                <input
+                  type="date"
+                  required
+                  max={todayInPrague()}
+                  value={openForm.contactedOn}
+                  onChange={(e) =>
+                    setOpenForm({ ...openForm, contactedOn: e.target.value })
+                  }
+                />
               </label>
               <label className="admin-field">
                 What the customer reported
@@ -450,7 +465,7 @@ export function ClaimsPanel({
                     <strong>{c.number}</strong>
                     <small>
                       {claimKindLabels[c.kind]}
-                      {!c.onTime && " · opened late"}
+                      {!c.onTime && " · contacted late"}
                     </small>
                   </td>
                   <td>
@@ -565,6 +580,10 @@ export function ClaimsPanel({
               <div>
                 <dt>Handed over</dt>
                 <dd>{formatDay(shown.handoverDate)}</dd>
+              </div>
+              <div>
+                <dt>Customer contacted</dt>
+                <dd>{formatDay(shown.contactedOn)}</dd>
               </div>
               <div>
                 <dt>Window ends</dt>
@@ -729,8 +748,9 @@ export function ClaimsPanel({
                 {form.action === "resolve" && form.resolution === "refund" && (
                   <small>
                     Refund money goes through the order ledger; the claim closes
-                    only when refunds recorded since it was opened cover the
-                    agreed amount.
+                    only when refunds tagged with this claim cover the agreed
+                    amount. Record the refund on the order and pick this claim
+                    there.
                   </small>
                 )}
               </form>

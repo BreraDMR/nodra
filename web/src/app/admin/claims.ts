@@ -22,6 +22,7 @@ export type AdminClaim = {
   resolutionNote: string | null;
   openedAt: string;
   openedBy: string;
+  contactedOn: string;
   handoverDate: string;
   windowEnd: string;
   onTime: boolean;
@@ -48,6 +49,12 @@ export const claimKindLabels: Record<ClaimKind, string> = {
   return: "Return (14 days)",
   warranty: "Warranty (24 months)",
 };
+
+// Prague day the customer lodged the case, for the register form's default
+export const todayInPrague = (): string =>
+  new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Prague" }).format(
+    new Date(),
+  );
 
 export const claimStatusLabels: Record<ClaimStatus, string> = {
   open: "Open",
