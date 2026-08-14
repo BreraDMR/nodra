@@ -15,6 +15,9 @@ final readonly class ClaimOpenRequest
         #[Assert\NotNull]
         #[Assert\Choice(choices: ReturnClaim::KINDS)]
         public string $kind,
+        #[Assert\NotBlank]
+        #[Assert\Date]
+        public string $contactedOn,
         #[Assert\Uuid]
         public ?string $itemId = null,
         #[Assert\Length(max: 500)]

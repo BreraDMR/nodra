@@ -38,7 +38,7 @@ final class AdminClaimController extends AbstractController
     public function open(#[MapRequestPayload] ClaimOpenRequest $payload, Request $request): JsonResponse
     {
         return $this->write($request, fn (string $actor): array => $this->claims->open(
-            $payload->orderId, $payload->itemId, $payload->kind, $payload->note === null ? null : trim($payload->note), $actor,
+            $payload->orderId, $payload->itemId, $payload->kind, $payload->note === null ? null : trim($payload->note), $payload->contactedOn, $actor,
         ), 201);
     }
 
