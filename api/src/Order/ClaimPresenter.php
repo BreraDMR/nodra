@@ -31,6 +31,7 @@ final class ClaimPresenter
             'resolutionNote' => $claim->getResolutionNote(),
             'openedAt' => $claim->getOpenedAt()->format(\DATE_ATOM),
             'openedBy' => $claim->getOpenedBy(),
+            'contactedOn' => $claim->getContactedOn()->format('Y-m-d'),
             'handoverDate' => $claim->getHandoverDate()->format('Y-m-d'),
             'windowEnd' => $claim->getWindowEnd()->format('Y-m-d'),
             'onTime' => $claim->isOnTime(),

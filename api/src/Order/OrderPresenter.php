@@ -211,6 +211,7 @@ final class OrderPresenter
             'shipmentId' => $payment->getShipment()?->getId()->toRfc4122(),
             'recordedAt' => $payment->getRecordedAt()->format(\DATE_ATOM), 'recordedBy' => $payment->getRecordedBy(),
             'note' => $payment->getNote(),
+            'claimId' => $payment->getClaim()?->getId()->toRfc4122(),
             'correctsId' => $payment->getCorrects()?->getId()->toRfc4122(),
             'voidedById' => $s->correctionOf($payment)?->getId()->toRfc4122(),
             'corrections' => $this->rules->paymentCorrections($s, $payment),

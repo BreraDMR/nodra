@@ -57,7 +57,7 @@ final class AdminService
 
         return [
             'open' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM return_claim WHERE status IN ('open', 'waiting', 'accepted')"),
-            'overdue' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM return_claim WHERE status = 'accepted' AND due_at < :today", ['today' => $today]),
+            'overdue' => (int) $this->db->fetchOne("SELECT COUNT(*) FROM return_claim WHERE status IN ('open', 'waiting', 'accepted') AND due_at < :today", ['today' => $today]),
         ];
     }
 
