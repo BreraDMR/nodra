@@ -153,6 +153,8 @@ export type AdminPayment = {
   recordedBy: string;
   // for a correction, the reason it voided the other entry
   note: string | null;
+  // on a refund: the claim the money settles
+  claimId: string | null;
   correctsId: string | null;
   voidedById: string | null;
   corrections: PaymentCorrection[];
@@ -520,6 +522,8 @@ export function eventSummary(event: OrderEvent, order: AdminOrder): string {
           : `shipment #${value}`;
       case "claimId":
         return null; // the claim number next to it says the same
+      case "contactedOn":
+        return `customer contacted ${value}`;
       case "windowEnd":
         return `window ends ${value}`;
       case "dueAt":

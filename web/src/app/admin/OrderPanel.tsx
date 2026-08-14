@@ -688,7 +688,8 @@ export function OrderPanel({
                     </span>
                     <Chip value={claim.status} />
                     <small>
-                      window ends {claim.windowEnd}
+                      customer contacted {claim.contactedOn} · window ends{" "}
+                      {claim.windowEnd}
                       {claim.dueAt ? ` · settle by ${claim.dueAt}` : ""}
                       {claim.overdue ? " · overdue" : ""}
                     </small>
@@ -1091,6 +1092,13 @@ function Payments({
               <td>
                 <b>{kindLabels[p.kind] || p.kind}</b>
                 <small>{paymentMethodLabels[p.method] || p.method}</small>
+                {p.claimId && (
+                  <small>
+                    Settles{" "}
+                    {order.claims.find((c) => c.id === p.claimId)?.number ??
+                      "claim"}
+                  </small>
+                )}
                 {p.voidedById && (
                   <small className="ledger-link">
                     Voided · {link(p.voidedById, "by")}

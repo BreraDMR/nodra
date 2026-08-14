@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { claimKindLabels, claimStatusLabels, type AdminClaim } from "./claims";
 import {
   deliveryMethodLabels,
   formatPrice,
@@ -24,8 +25,14 @@ export type PaymentBody = {
   method: PaymentMethod;
   amountMinor: number;
   shipmentId: string | null;
+  claimId: string | null;
   note: string | null;
 };
+// claims whose money can still be settled: not closed yet
+const openClaims = (order: AdminOrder): AdminClaim[] =>
+  order.claims.filter((c) =>
+    ["open", "waiting", "accepted"].includes(c.status),
+  );
 // what the amount field starts with: what's due, or what's owed back
 function suggested(order: AdminOrder, kind: PaymentKind): string {
   const amount =
@@ -68,9 +75,11 @@ export function PaymentForm({
   const [picked, setPicked] = useState<PaymentMethod | "">("");
   const [amount, setAmount] = useState(() => suggested(order, initialKind));
   const [shipmentId, setShipmentId] = useState("");
+  const [claimId, setClaimId] = useState("");
   const [note, setNote] = useState("");
   const [problem, setProblem] = useState("");
   const methods = methodsFor(kind, accepted);
+  const claims = openClaims(order);
   // the settings can arrive after the form opened, so the method follows the list
   const method: PaymentMethod | "" =
     picked && methods.includes(picked) ? picked : (methods[0] ?? "");
@@ -100,12 +109,13 @@ export function PaymentForm({
       method,
       amountMinor,
       shipmentId: shipmentId || null,
+      claimId: kind === "refund" ? claimId || null : null,
       note: note.trim() || null,
     };
     if (
       kind === "refund" &&
       !confirm(
-        `Record a refund of ${formatMinor(amountMinor, order.currency)} (${paymentMethodLabels[method]}) on ${order.reference}? Ledger entries are never edited or deleted.`,
+        `Record a refund of ${formatMinor(amountMinor, order.currency)} (${paymentMethodLabels[method]}) on ${order.reference}${claimId ? ", settling the picked claim" : ""}? Ledger entries are never edited or deleted.`,
       )
     )
       return;
@@ -183,6 +193,23 @@ export function PaymentForm({
             ))}
           </select>
         </label>
+        {kind === "refund" && claims.length > 0 && (
+          <label className="admin-field">
+            Settles claim · optional
+            <select
+              value={claimId}
+              onChange={(e) => setClaimId(e.target.value)}
+            >
+              <option value="">— order money, no claim —</option>
+              {claims.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.number} · {claimKindLabels[c.kind]} ·{" "}
+                  {claimStatusLabels[c.status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="admin-field wide">
           Note · optional
           <textarea
