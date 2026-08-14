@@ -9,6 +9,7 @@ use App\Entity\LoyaltyEntry;
 use App\Entity\OrderItem;
 use App\Entity\Payment;
 use App\Entity\ProductVariant;
+use App\Entity\ReturnClaim;
 use App\Entity\Shipment;
 use App\Entity\SupplierOffer;
 use Doctrine\DBAL\Connection;
@@ -248,15 +249,15 @@ final class OrderActions
      *
      * @return ?array{payment: array, order: array}
      */
-    public function recordPayment(string $orderId, string $key, string $kind, string $method, int $amountMinor, ?string $shipmentId, ?string $note, string $actor): ?array
+    public function recordPayment(string $orderId, string $key, string $kind, string $method, int $amountMinor, ?string $shipmentId, ?string $claimId, ?string $note, string $actor): ?array
     {
         if (strlen($key) < 16 || strlen($key) > 80) {
             throw OrderProblem::unprocessable('invalid_idempotency_key', 'Idempotency-Key must contain 16 to 80 characters');
         }
-        $requestHash = hash('sha256', json_encode([strtolower($orderId), $kind, $method, $amountMinor, $shipmentId === null ? null : strtolower($shipmentId), $note], JSON_THROW_ON_ERROR));
+        $requestHash = hash('sha256', json_encode([strtolower($orderId), $kind, $method, $amountMinor, $shipmentId === null ? null : strtolower($shipmentId), $claimId === null ? null : strtolower($claimId), $note], JSON_THROW_ON_ERROR));
 
         try {
-            $paymentId = $this->db->transactional(function () use ($orderId, $key, $requestHash, $kind, $method, $amountMinor, $shipmentId, $note, $actor): ?string {
+            $paymentId = $this->db->transactional(function () use ($orderId, $key, $requestHash, $kind, $method, $amountMinor, $shipmentId, $claimId, $note, $actor): ?string {
                 $this->db->fetchOne('SELECT pg_advisory_xact_lock(hashtextextended(:key, 1))', ['key' => $key]);
                 $existing = $this->em->getRepository(Payment::class)->findOneBy(['idempotencyKey' => $key]);
                 if ($existing !== null) {
@@ -266,7 +267,7 @@ final class OrderActions
                 if ($s === null) {
                     return null;
                 }
-                $payment = $this->appendPayment($s, $key, $requestHash, $kind, $method, $amountMinor, $shipmentId, $note, $actor);
+                $payment = $this->appendPayment($s, $key, $requestHash, $kind, $method, $amountMinor, $shipmentId, $claimId, $note, $actor);
                 $this->em->flush();
 
                 return $payment->getId()->toRfc4122();
@@ -287,7 +288,7 @@ final class OrderActions
         return ['payment' => $entry, 'order' => $order];
     }
 
-    private function appendPayment(OrderState $s, string $key, string $requestHash, string $kind, string $method, int $amountMinor, ?string $shipmentId, ?string $note, string $actor): Payment
+    private function appendPayment(OrderState $s, string $key, string $requestHash, string $kind, string $method, int $amountMinor, ?string $shipmentId, ?string $claimId, ?string $note, string $actor): Payment
     {
         $refund = $kind === Payment::REFUND;
         $this->rules->require($refund ? OrderRules::RECORD_REFUND : OrderRules::RECORD_PAYMENT, $this->rules->orderActions($s), 'order');
@@ -298,6 +299,20 @@ final class OrderActions
         if ($shipmentId !== null) {
             $shipment = $s->shipment($shipmentId) ?? throw OrderProblem::notFound('Shipment not found in this order');
         }
+        // the claim tag tells whose money the refund is; it decides the coverage, not the recording time
+        $claim = null;
+        if ($claimId !== null) {
+            if (!$refund) {
+                throw OrderProblem::unprocessable('claim_on_payment', 'Only a refund can settle a claim');
+            }
+            $claim = $this->em->find(ReturnClaim::class, Uuid::fromString(strtolower($claimId)));
+            if ($claim === null || !$claim->getOrder()->getId()->equals($s->order->getId())) {
+                throw OrderProblem::unprocessable('claim_not_on_order', 'The claim does not belong to this order');
+            }
+            if (!$claim->isOpen()) {
+                throw OrderProblem::unprocessable('claim_closed', 'This claim is already closed; void the refund and record it again if the case reopens');
+            }
+        }
         if (!$refund && $amountMinor > $s->amountDueMinor()) {
             throw OrderProblem::unprocessable('overpayment', sprintf('The amount is above what is still due (%d)', $s->amountDueMinor()), ['amountDueMinor' => $s->amountDueMinor()]);
         }
@@ -305,12 +320,12 @@ final class OrderActions
             throw OrderProblem::unprocessable('refund_exceeds_paid', sprintf('The refund is above what was paid (%d)', $s->netPaidMinor()), ['paidMinor' => $s->netPaidMinor()]);
         }
         $completedBefore = $s->order->getStatus() === OrderStatus::COMPLETED;
-        $payment = new Payment($s->order, $shipment, $kind, $method, $amountMinor, $actor, $note, $key, $requestHash);
+        $payment = new Payment($s->order, $shipment, $kind, $method, $amountMinor, $actor, $note, $key, $requestHash, $claim);
         $this->em->persist($payment);
         $s->addPayment($payment);
         $this->journal->record($s->order, $refund ? 'refund_recorded' : 'payment_recorded', [
             'paymentId' => $payment->getId()->toRfc4122(), 'method' => $method, 'amountMinor' => $amountMinor,
-            'shipmentId' => $shipment?->getId()->toRfc4122(), 'note' => $note,
+            'shipmentId' => $shipment?->getId()->toRfc4122(), 'claimId' => $claim?->getId()->toRfc4122(), 'note' => $note,
         ], $actor);
         $this->tx->settle($s, $actor);
         // a payment on a completed order only comes after a voided one, so it gives back what the void took
