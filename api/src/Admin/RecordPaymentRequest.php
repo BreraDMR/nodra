@@ -18,6 +18,8 @@ final readonly class RecordPaymentRequest
         public int $amountMinor,
         #[Assert\Uuid]
         public ?string $shipmentId = null,
+        #[Assert\Uuid]
+        public ?string $claimId = null,
         #[Assert\Length(max: 500)]
         public ?string $note = null,
     ) {}

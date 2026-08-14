@@ -138,7 +138,7 @@ final class AdminOrderController extends AbstractController
 
         return $this->write($request, fn (string $actor): ?array => $this->actions->recordPayment(
             $id, $request->headers->get('Idempotency-Key', ''), $payload->kind, $payload->method, $payload->amountMinor,
-            $payload->shipmentId, $note === '' ? null : $note, $actor,
+            $payload->shipmentId, $payload->claimId, $note === '' ? null : $note, $actor,
         ), 201);
     }
 
