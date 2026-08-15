@@ -29,6 +29,14 @@ parameters:
     app.payment.handover_methods: [cash, bank_transfer]                   # card only once there is a terminal
     app.legal.privacy_version: 'draft-2026-09'    # stored with every privacy consent, default until the D00.7 texts exist
 
+    # D08 evening installations (read by App\Installation\InstallationSettings). Values marked default were chosen
+    # without the owner; the works list ships empty until D00.4, so no code, no price and no customer purchase exists.
+    app.installation.evening_start: 17     # Prague hour an installation may start at
+    app.installation.evening_end: 21       # Prague hour it must end by (default, D00.4)
+    app.installation.max_per_evening: 2    # bookings that may stay open on one evening (default)
+    app.installation.travel_minutes: 30    # gap two open windows must keep for the road between addresses (default)
+    app.installation.works: []             # [{code, name, priceMinor|null}]; the owner fills it (D00.4)
+
     # D09.3 hardening without a host: where the API error journal lives (one JSON line per error response)
     app.api_error_log: '%kernel.logs_dir%/api-errors.jsonl'
 
