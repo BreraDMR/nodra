@@ -76,6 +76,7 @@ final class AdminOverviewTest extends ApiTestCase
                     'en' => 'We agree the place and time at Anděl by message.',
                 ],
             ],
+            'installation' => ['works' => [], 'eveningStart' => 17, 'eveningEnd' => 21, 'maxPerEvening' => 2, 'travelMinutes' => 30],
             'privacyVersion' => 'draft-2026-09',
         ], $settings);
     }
