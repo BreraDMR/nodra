@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.9.0
+  version: 0.10.0
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -1084,6 +1084,134 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/ActionRefused' }
         '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/installations:
+    get:
+      tags: [Administration]
+      summary: List installation bookings
+      description: >-
+        The evening installation registry (D08.1–D08.2), newest first, up to 30 per page. `status` filters; `date`
+        is a Prague evening `YYYY-MM-DD` and keeps the bookings whose window in force falls on it. A booking never
+        changes the order — lines, stock and the ledger stay with the order actions.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: status, in: query, schema: { type: string, enum: [planned, confirmed, done, cancelled] } }
+        - { name: date, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Booking page.
+          content: { application/json: { schema: { $ref: '#/components/schemas/InstallationPage' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Validation' }
+    post:
+      tags: [Administration]
+      summary: Book an installation on an order
+      description: >-
+        The window is one Prague evening: from at or after 17:00, to at or before 21:00, same calendar date in
+        Europe/Prague (422 otherwise) — the wall-clock rules hold on the DST changeover night too. On that evening
+        no more than `maxPerEvening` bookings may stay open (409 `evening_full`) and two open windows must keep at
+        least `travelMinutes` apart for the road between addresses (409 `window_taken`); a cancelled booking frees
+        its slot. `works` are codes of `app.installation.works` (422 `unknown_work`); with the list empty no code
+        exists, and the price stays null. Journal `installation_booked`. Requires X-CSRF-Token.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/InstallationOpenRequest' } } }
+      responses:
+        '201':
+          description: Booking registered.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminInstallation' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/installations/{id}:
+    get:
+      tags: [Administration]
+      summary: Read a booking
+      parameters: [{ $ref: '#/components/parameters/InstallationId' }]
+      responses:
+        '200':
+          description: The booking.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminInstallation' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/installations/{id}/reschedule:
+    post:
+      tags: [Administration]
+      summary: Move the booking to another window
+      description: >-
+        On a `planned` booking it moves the preliminary window; on a `confirmed` one it moves the confirmed work
+        window. The same evening and travel rules apply, the booking itself excluded (409 `evening_full`,
+        `window_taken`). Journal `installation_rescheduled`. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/InstallationId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/InstallationRescheduleRequest' } } }
+      responses:
+        '200':
+          description: Booking updated.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminInstallation' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/installations/{id}/confirm:
+    post:
+      tags: [Administration]
+      summary: Confirm the installation
+      description: >-
+        `planned` → `confirmed`: compatibility and conditions checked with the customer, the note stores what was
+        checked. Fixes the work window: `workFrom`/`workTo` default to the preliminary window and may be adjusted
+        (422 on a bad window, 409 `evening_full`/`window_taken` on a taken evening). Journal
+        `installation_confirmed`. Requires X-CSRF-Token.
+      parameters: [{ $ref: '#/components/parameters/InstallationId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/InstallationConfirmRequest' } } }
+      responses:
+        '200':
+          description: Booking updated.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminInstallation' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /api/admin/installations/{id}/complete:
+    post:
+      tags: [Administration]
+      summary: Close the installation as done
+      description: '`confirmed` → `done` (terminal), the result note stores how it went. Journal `installation_completed`. Requires X-CSRF-Token.'
+      parameters: [{ $ref: '#/components/parameters/InstallationId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200':
+          description: Booking updated.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminInstallation' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
+  /api/admin/installations/{id}/cancel:
+    post:
+      tags: [Administration]
+      summary: Call the installation off
+      description: '`planned` or `confirmed` → `cancelled` (terminal), frees its evening slot, the reason stored. Journal `installation_cancelled`. Requires X-CSRF-Token.'
+      parameters: [{ $ref: '#/components/parameters/InstallationId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReasonRequest' } } }
+      responses:
+        '200':
+          description: Booking updated.
+          content: { application/json: { schema: { $ref: '#/components/schemas/AdminInstallation' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Invalid CSRF token. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ActionRefused' }
   /api/admin/products/{id}/external-ratings:
     get:
       tags: [Administration]
@@ -1431,6 +1559,7 @@ components:
     PaymentId: { name: paymentId, in: path, required: true, description: 'Ledger entry id; an entry of another order is not found.', schema: { type: string, format: uuid } }
     PurchaseId: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     ClaimId: { name: id, in: path, required: true, description: 'Claim id; a foreign id is not found.', schema: { type: string, format: uuid } }
+    InstallationId: { name: id, in: path, required: true, description: 'Installation booking id; a foreign id is not found.', schema: { type: string, format: uuid } }
     RatingId: { name: id, in: path, required: true, description: 'Outside rating id; a foreign id is not found.', schema: { type: string, format: uuid } }
   responses:
     Unauthorized:
@@ -2134,9 +2263,27 @@ components:
             overdue: { type: integer, description: Accepted claims past their dueAt. }
     AdminSettings:
       type: object
-      required: [currency, payment, delivery, privacyVersion]
+      required: [currency, payment, delivery, installation, privacyVersion]
       properties:
         currency: { type: string, enum: [CZK], description: Currency of every new order. }
+        installation:
+          type: object
+          required: [works, eveningStart, eveningEnd, maxPerEvening, travelMinutes]
+          properties:
+            works:
+              type: array
+              description: 'The works the owner offers (D00.4); empty until then, so the customer sees no way to buy an installation.'
+              items:
+                type: object
+                required: [code, name, priceMinor]
+                properties:
+                  code: { type: string }
+                  name: { type: string }
+                  priceMinor: { type: [integer, 'null'] }
+            eveningStart: { type: integer, description: Prague hour an installation may start at. }
+            eveningEnd: { type: integer, description: Prague hour an installation must end by. }
+            maxPerEvening: { type: integer }
+            travelMinutes: { type: integer, description: Gap two open windows on one evening must keep for the road. }
         payment:
           type: object
           required: [handoverMethods, paymentMethods, refundMethods]
@@ -2508,6 +2655,63 @@ components:
       required: [resolution]
       properties:
         resolution: { type: string, enum: [refund, replacement, repair] }
+        note: { type: [string, 'null'], maxLength: 500 }
+    AdminInstallation:
+      type: object
+      required: [id, orderId, orderReference, customerName, status, from, to, workFrom, workTo, durationMinutes, works, workNames, priceMinor, note, compatibilityNote, resultNote, cancelledReason, createdAt, createdBy, confirmedAt, completedAt, cancelledAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        orderReference: { type: string }
+        customerName: { type: string }
+        status: { type: string, enum: [planned, confirmed, done, cancelled] }
+        from: { type: string, format: date-time, description: 'Preliminary window start, agreed with the customer.' }
+        to: { type: string, format: date-time, description: Preliminary window end. }
+        workFrom: { type: [string, 'null'], format: date-time, description: 'Confirmed work window; set at confirm, null until then.' }
+        workTo: { type: [string, 'null'], format: date-time }
+        durationMinutes: { type: integer, description: 'Length of the window in force: the work window once confirmed, the preliminary one before.' }
+        works: { type: array, items: { type: string }, description: Codes of app.installation.works. }
+        workNames: { type: array, items: { type: string }, description: The works as the setting names them. }
+        priceMinor: { type: [integer, 'null'], description: 'Sum of the chosen works prices; null while any chosen work has no price.' }
+        note: { type: [string, 'null'], description: What the customer asked for. }
+        compatibilityNote: { type: [string, 'null'], description: What was checked before confirmation (D08.2). }
+        resultNote: { type: [string, 'null'] }
+        cancelledReason: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string, description: Admin email. }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        cancelledAt: { type: [string, 'null'], format: date-time }
+    InstallationPage:
+      type: object
+      required: [items, page, pages, total]
+      properties:
+        page: { type: integer }
+        pages: { type: integer }
+        total: { type: integer }
+        items: { type: array, items: { $ref: '#/components/schemas/AdminInstallation' } }
+    InstallationOpenRequest:
+      type: object
+      required: [orderId, from, to]
+      properties:
+        orderId: { type: string, format: uuid }
+        from: { type: string, format: date-time, description: 'Preliminary window start, a Prague evening at or after 17:00.' }
+        to: { type: string, format: date-time, description: 'Preliminary window end, the same Prague date, at or before 21:00.' }
+        works: { type: array, items: { type: string, maxLength: 60 }, description: Codes from app.installation.works. }
+        note: { type: [string, 'null'], maxLength: 500 }
+    InstallationRescheduleRequest:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+    InstallationConfirmRequest:
+      type: object
+      required: [compatibilityNote]
+      properties:
+        compatibilityNote: { type: string, minLength: 1, maxLength: 500, description: What was checked with the customer (D08.2). }
+        workFrom: { type: [string, 'null'], format: date-time, description: 'Work window start; defaults to the preliminary window.' }
+        workTo: { type: [string, 'null'], format: date-time }
         note: { type: [string, 'null'], maxLength: 500 }
     AdminExternalRating:
       type: object
