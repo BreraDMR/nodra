@@ -18,6 +18,7 @@ import {
 } from "./orders";
 import { OrdersPanel } from "./OrdersPanel";
 import ImportPanel from "./ImportPanel";
+import { InstallationsPanel } from "./InstallationsPanel";
 import { PricingRulesPanel } from "./PricingRulesPanel";
 import { PurchasesPanel } from "./PurchasesPanel";
 import { RepricePanel, type RepriceFilter } from "./RepricePanel";
@@ -128,6 +129,7 @@ type Tab =
   | "orders"
   | "purchases"
   | "claims"
+  | "installations"
   | "import";
 const fresh = {
   slug: "",
@@ -773,6 +775,13 @@ export default function AdminPage() {
               <small>{dashboard?.claims.open ?? 0}</small>
             </button>
             <button
+              aria-label="Installations"
+              className={tab === "installations" ? "active" : ""}
+              onClick={() => setTab("installations")}
+            >
+              ▧ <span>Installations</span>
+            </button>
+            <button
               aria-label="Import"
               className={tab === "import" ? "active" : ""}
               onClick={() => setTab("import")}
@@ -1352,6 +1361,9 @@ export default function AdminPage() {
           )}
           {tab === "claims" && (
             <ClaimsPanel send={send} onChanged={pricesChanged} />
+          )}
+          {tab === "installations" && (
+            <InstallationsPanel send={send} onChanged={pricesChanged} />
           )}
           {tab === "import" && (
             <ImportPanel send={send} csrfToken={user.csrfToken} />
