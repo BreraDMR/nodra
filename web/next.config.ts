@@ -39,8 +39,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        // browser-side /api calls go where the API serves; a second local stack
+        // (a copy database) moves both with API_PROXY_URL and API_INTERNAL_URL
         source: "/api/:path*",
-        destination: "http://127.0.0.1:8000/api/:path*",
+        destination: `${process.env.API_PROXY_URL || "http://127.0.0.1:8000"}/api/:path*`,
       },
     ];
   },
