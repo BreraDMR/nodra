@@ -1110,7 +1110,9 @@ paths:
         Europe/Prague (422 otherwise) — the wall-clock rules hold on the DST changeover night too. On that evening
         no more than `maxPerEvening` bookings may stay open (409 `evening_full`) and two open windows must keep at
         least `travelMinutes` apart for the road between addresses (409 `window_taken`); a cancelled booking frees
-        its slot. `works` are codes of `app.installation.works` (422 `unknown_work`); with the list empty no code
+        its slot. The capacity check and the write run as one step under the evening lock, so a second admin
+        writing the same evening waits for the first one to finish (409 `evening_busy` when the lock is not free
+        in time). `works` are codes of `app.installation.works` (422 `unknown_work`); with the list empty no code
         exists, and the price stays null. Journal `installation_booked`. Requires X-CSRF-Token.
       requestBody:
         required: true
@@ -1142,7 +1144,8 @@ paths:
       description: >-
         On a `planned` booking it moves the preliminary window; on a `confirmed` one it moves the confirmed work
         window. The same evening and travel rules apply, the booking itself excluded (409 `evening_full`,
-        `window_taken`). Journal `installation_rescheduled`. Requires X-CSRF-Token.
+        `window_taken`); the check and the write run under the evening lock (409 `evening_busy` when another
+        writer holds it). Journal `installation_rescheduled`. Requires X-CSRF-Token.
       parameters: [{ $ref: '#/components/parameters/InstallationId' }]
       requestBody:
         required: true
@@ -1163,7 +1166,8 @@ paths:
       description: >-
         `planned` → `confirmed`: compatibility and conditions checked with the customer, the note stores what was
         checked. Fixes the work window: `workFrom`/`workTo` default to the preliminary window and may be adjusted
-        (422 on a bad window, 409 `evening_full`/`window_taken` on a taken evening). Journal
+        (422 on a bad window, 409 `evening_full`/`window_taken` on a taken evening, 409 `evening_busy` while
+        another writer holds the evening lock). Journal
         `installation_confirmed`. Requires X-CSRF-Token.
       parameters: [{ $ref: '#/components/parameters/InstallationId' }]
       requestBody:
