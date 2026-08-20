@@ -1,15 +1,18 @@
 "use client";
 import { useMemo, useSyncExternalStore } from "react";
 import type { CartItem } from "./shop";
+// the -czk key drops carts saved before D00.5: those lines carried euro prices,
+// and mixing them into a koruna basket would sum two currencies into one number
+const CART_KEY = "nodra-cart-czk";
 export function readCart(): CartItem[] {
   try {
-    return JSON.parse(localStorage.getItem("nodra-cart") || "[]") as CartItem[];
+    return JSON.parse(localStorage.getItem(CART_KEY) || "[]") as CartItem[];
   } catch {
     return [];
   }
 }
 export function writeCart(items: CartItem[]): void {
-  localStorage.setItem("nodra-cart", JSON.stringify(items));
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
   window.dispatchEvent(new Event("cart-updated"));
 }
 export function addCart(item: CartItem): void {
@@ -30,7 +33,7 @@ function subscribe(callback: () => void): () => void {
   };
 }
 function snapshot(): string {
-  return localStorage.getItem("nodra-cart") || "[]";
+  return localStorage.getItem(CART_KEY) || "[]";
 }
 export function useCartItems(): CartItem[] {
   const raw = useSyncExternalStore(subscribe, snapshot, () => "[]");
