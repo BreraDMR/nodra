@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Admin;
 
+use App\Installation\InstallationService;
 use App\Installation\InstallationSettings;
 use App\Order\OrderQueues;
 use App\Tests\Support\AdminOrderSteps;
 use App\Tests\Support\ApiTestCase;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use Symfony\Component\Yaml\Yaml;
 
 /**
  * Evening installation bookings (D08.1–D08.2): Prague evening windows with the DST night included, the count
  * limit and the travel gap that keeps two windows apart, the preliminary vs confirmed work window split, the
- * works list that ships empty, and the whole lifecycle on one order.
+ * works list that ships empty, the whole lifecycle on one order, and the evening lock that keeps two writers
+ * from double-booking the same evening.
  */
 final class InstallationBookingTest extends ApiTestCase
 {
@@ -131,6 +135,30 @@ final class InstallationBookingTest extends ApiTestCase
         [$exactFrom, $exactTo] = $this->evening(4, 19, 30, 21, 0);
         $second = $this->book(['orderId' => $id, 'from' => $exactFrom, 'to' => $exactTo]);
         self::assertSame('planned', $second['status']);
+    }
+
+    /** The check and the write are one step: while a second session holds the evening lock, nothing is written and the evening answers busy. */
+    public function testABusyEveningRefusesTheSecondBookingUntilTheWriterIsDone(): void
+    {
+        [$id] = $this->placedOrder('T-IB-LOCK');
+        [$from, $to, $day] = $this->evening(12);
+
+        // a second admin session mid-write holds the evening lock; the request must wait, not double-book
+        $writer = DriverManager::getConnection(static::getContainer()->get(Connection::class)->getParams());
+        $writer->beginTransaction();
+        $writer->fetchOne('SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))', ['key' => InstallationService::eveningLockKey($day)]);
+
+        $problem = $this->book(['orderId' => $id, 'from' => $from, 'to' => $to], 409);
+        self::assertSame('evening_busy', $problem['code']);
+        self::assertSame(0, (int) $this->db()->fetchOne(
+            'SELECT COUNT(*) FROM installation_booking WHERE order_id = :id',
+            ['id' => $id],
+        ), 'nothing is written while the writer holds the lock');
+
+        // as soon as the writer is done, the same request goes through
+        $writer->rollBack();
+        $booking = $this->book(['orderId' => $id, 'from' => $from, 'to' => $to]);
+        self::assertSame('planned', $booking['status']);
     }
 
     public function testRescheduleOnPlannedAndConfirmedAndTerminality(): void
