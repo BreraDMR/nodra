@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: NODRA Commerce API
-  version: 0.10.1
+  version: 0.11.0
   description: >-
     JSON contract for the NODRA cycling equipment storefront and administration.
     Every error under /api/ is JSON whatever the Accept header says, see Problem. A request body or query string
@@ -1708,7 +1708,10 @@ components:
         category: { type: string, description: Category slug. }
         categoryName: { type: string }
         image: { type: string }
-        fromPrice: { $ref: '#/components/schemas/Price' }
+        fromPrice: { $ref: '#/components/schemas/Price', description: 'Cheapest active variant, CZK in every language (D00.5).' }
+        fromPriceEur:
+          oneOf: [{ $ref: '#/components/schemas/Price' }, { type: 'null' }]
+          description: 'Reference-only euro price of the same variant, null when unknown; the shop never calculates with it.'
         inStock: { type: boolean }
         availableUnits: { type: integer, minimum: 0 }
         availability:
@@ -1740,7 +1743,10 @@ components:
                   id: { type: string, format: uuid }
                   sku: { type: string }
                   label: { type: string }
-                  price: { $ref: '#/components/schemas/Price' }
+                  price: { $ref: '#/components/schemas/Price', description: 'CZK in every language (D00.5); this is the money the order charges.' }
+                  priceEur:
+                    oneOf: [{ $ref: '#/components/schemas/Price' }, { type: 'null' }]
+                    description: 'Reference-only euro price, null when unknown; the shop never calculates with it.'
                   stock: { type: integer }
                   availability: { $ref: '#/components/schemas/Availability' }
                   mpn: { type: [string, 'null'] }
