@@ -17,8 +17,7 @@ final class CatalogService
     {
         $locale = $query->locale;
         $nameSql = $this->nameSql($locale);
-        $currency = $locale === 'cs' ? 'CZK' : 'EUR';
-        $priceColumn = $currency === 'CZK' ? 'price_czk' : 'price_eur';
+        // the money is CZK in every language (D00.5); the euro column only feeds the reference display
         $params = ['locale' => $locale];
         $types = [];
         $where = "p.status = 'published'";
@@ -82,7 +81,8 @@ final class CatalogService
         $page = min($query->page, $pages);
         $rows = $this->db->fetchAllAssociative("SELECT p.id, p.slug, p.brand, c.slug AS category, c.names ->> :locale AS category_name,
             p.image, p.badge, $nameSql AS name,
-            COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.$priceColumn END), MIN(v.$priceColumn)) AS from_price,
+            COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_czk END), MIN(v.price_czk)) AS from_price,
+            COALESCE(MIN(CASE WHEN v.stock > 0 THEN v.price_eur END), MIN(v.price_eur)) AS from_eur,
             COALESCE(SUM(GREATEST(v.stock, 0)), 0) AS available_units
             FROM product p JOIN category c ON c.id = p.category_id
             JOIN product_variant v ON v.product_id = p.id AND v.active = TRUE
@@ -92,7 +92,7 @@ final class CatalogService
         $availability = $this->availability->forProducts(array_column($rows, 'id'));
 
         return [
-            'items' => array_map(fn (array $row): array => $this->card($row, $currency) + ['availability' => $availability[$row['id']]['card']], $rows),
+            'items' => array_map(fn (array $row): array => $this->card($row) + ['availability' => $availability[$row['id']]['card']], $rows),
             'page' => $page,
             'pages' => $pages,
             'total' => $total,
@@ -111,7 +111,6 @@ final class CatalogService
         if ($row === false) {
             return null;
         }
-        $currency = $locale === 'cs' ? 'CZK' : 'EUR';
         $copy = json_decode($row['copy'], true, flags: JSON_THROW_ON_ERROR)[$locale];
         $index = CategoryIndex::load($this->db);
         $path = $index->path($row['category_id']);
@@ -137,11 +136,12 @@ final class CatalogService
             'breadcrumbs' => array_map(static fn (array $category): array => ['slug' => $category['slug'], 'name' => $category['names'][$locale]], $path),
             'specs' => AttributeSchema::specs($attributes, $definitions, $locale),
             'inBox' => $inBox === '' ? null : $inBox,
-            'fromPrice' => ['amount' => (int) $row[$currency === 'CZK' ? 'from_czk' : 'from_eur'], 'currency' => $currency],
+            'fromPrice' => ['amount' => (int) $row['from_czk'], 'currency' => 'CZK'],
+            'fromPriceEur' => $row['from_eur'] === null ? null : ['amount' => (int) $row['from_eur'], 'currency' => 'EUR'],
             'inStock' => (int) $row['available_units'] > 0,
             'availableUnits' => (int) $row['available_units'],
             'availability' => $availability['card'],
-            'variants' => array_map(static function (array $variant) use ($locale, $currency, $definitions, $availability): array {
+            'variants' => array_map(static function (array $variant) use ($locale, $definitions, $availability): array {
                 $labels = json_decode($variant['label'], true, flags: JSON_THROW_ON_ERROR);
 
                 return [
@@ -149,7 +149,8 @@ final class CatalogService
                     'color' => $variant['color'], 'size' => $variant['size'], 'stock' => (int) $variant['stock'],
                     'mpn' => $variant['mpn'], 'ean' => $variant['ean'],
                     'specs' => AttributeSchema::specs(json_decode($variant['attributes'], true, flags: JSON_THROW_ON_ERROR), $definitions, $locale),
-                    'price' => ['amount' => (int) $variant[$currency === 'CZK' ? 'price_czk' : 'price_eur'], 'currency' => $currency],
+                    'price' => ['amount' => (int) $variant['price_czk'], 'currency' => 'CZK'],
+                    'priceEur' => $variant['price_eur'] === null ? null : ['amount' => (int) $variant['price_eur'], 'currency' => 'EUR'],
                     'availability' => $availability['variants'][$variant['id']] ?? Sourcing::unavailable()->toPublic(),
                 ];
             }, $variants),
@@ -229,13 +230,14 @@ final class CatalogService
         };
     }
 
-    private function card(array $row, string $currency): array
+    private function card(array $row): array
     {
         return [
             'id' => $row['id'], 'slug' => $row['slug'], 'name' => $row['name'], 'brand' => $row['brand'],
             'category' => $row['category'], 'categoryName' => $row['category_name'],
             'image' => $row['image'], 'badge' => $row['badge'],
-            'fromPrice' => ['amount' => (int) $row['from_price'], 'currency' => $currency],
+            'fromPrice' => ['amount' => (int) $row['from_price'], 'currency' => 'CZK'],
+            'fromPriceEur' => $row['from_eur'] === null ? null : ['amount' => (int) $row['from_eur'], 'currency' => 'EUR'],
             'inStock' => (int) $row['available_units'] > 0,
             'availableUnits' => (int) $row['available_units'],
         ];
