@@ -17,6 +17,7 @@ export type Card = {
   image: string;
   badge: string | null;
   fromPrice: Money;
+  fromPriceEur: Money | null;
   inStock: boolean;
   availableUnits: number;
   availability: Availability;
@@ -35,6 +36,7 @@ export type Variant = {
   size: string | null;
   stock: number;
   price: Money;
+  priceEur: Money | null;
   mpn: string | null;
   ean: string | null;
   specs: Spec[];
