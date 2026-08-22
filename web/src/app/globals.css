@@ -820,6 +820,11 @@ p {
   font: 700 28px var(--display);
   margin: 25px 0 46px;
 }
+.price-eur {
+  color: var(--muted);
+  font-size: 14px;
+  margin: -40px 0 25px;
+}
 .variant-heading {
   display: flex;
   justify-content: space-between;
