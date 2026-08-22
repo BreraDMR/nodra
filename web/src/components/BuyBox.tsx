@@ -52,6 +52,9 @@ export function BuyBox({
       ? t.out
       : availabilityText(availabilityOf(variant), locale);
   const specs = mergeSpecs(product.specs, variant?.specs ?? []);
+  // euro rides along as a reference only; every language calculates in CZK (D00.5)
+  const euroRef =
+    locale === "cs" ? null : (variant?.priceEur ?? product.fromPriceEur);
   // contact channels come from the config only; nothing is shown without them (D00.3)
   const channels: { label: string; href: string }[] = [];
   if (contactLinks.whatsapp)
@@ -87,6 +90,8 @@ export function BuyBox({
           ? money(variant.price, locale)
           : money(product.fromPrice, locale)}
       </div>
+      {/* euro rides along as a reference only; every language calculates in CZK (D00.5) */}
+      {euroRef && <p className="price-eur">≈ {money(euroRef, locale)}</p>}
       <p className={`product-availability ${status}`} aria-live="polite">
         {statusText}
       </p>
