@@ -108,17 +108,41 @@ test("the returns promise matches the claim window", () => {
   }
 });
 
-test("no delivery fee or threshold is hardcoded in the storefront", () => {
-  // the quote calculates these; a hardcoded number here would quietly drift
-  // away from the API (D00.2: the tariffs are still owner decisions)
+// The Prague delivery terms are an owner decision since 28.09 (149 Kč, free from
+// 500 Kč) and the quote still calculates them (phpunit QuoteApiTest pins the same
+// numbers). The home page states them in words, so every locale must name the
+// same numbers — a silent drift away from the API would promise something else.
+const PRAGUE_FEE = 149;
+const FREE_FROM = 500;
+
+test("the home delivery promise names the agreed Prague tariffs", () => {
+  for (const locale of locales) {
+    const text = copy[locale].home.deliveryText;
+    assert.match(text, new RegExp(`\\D${PRAGUE_FEE}`), `${locale} fee`);
+    assert.match(text, new RegExp(`\\D${FREE_FROM}`), `${locale} threshold`);
+  }
+});
+
+test("no delivery fee or threshold leaks beyond the home delivery copy", () => {
+  // outside the agreed home block the quote still calculates these; a stray
+  // number here would quietly drift away from the API
   const forbidden = /149\s*Kč|500\s*Kč|free from 500/i;
-  for (const file of ["src/lib/shop.ts", "src/lib/order.ts"]) {
+  for (const file of ["src/lib/order.ts", "src/lib/cart.ts"]) {
     const text = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(
       text,
       forbidden,
       `${file} hardcodes a delivery promise`,
     );
+  }
+  for (const locale of locales) {
+    const text = [
+      copy[locale].demo,
+      copy[locale].returnsNote,
+      copy[locale].consultAsk,
+      copy[locale].consultAskPending,
+    ].join("\n");
+    assert.doesNotMatch(text, forbidden, `${locale} copy hardcodes a tariff`);
   }
 });
 
