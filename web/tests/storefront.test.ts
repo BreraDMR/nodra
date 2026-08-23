@@ -121,3 +121,34 @@ test("no delivery fee or threshold is hardcoded in the storefront", () => {
     );
   }
 });
+
+// D00.5 / D06.7: one currency everywhere. The API ships CZK prices on every
+// language (phpunit ProductCurrencyTest) and the order charges the same koruna
+// amount; the euro next to the price is a label the shop never converts with.
+test("the basket and the order run in koruna, euro is a label only", () => {
+  for (const file of [
+    "src/lib/shop.ts",
+    "src/lib/order.ts",
+    "src/lib/cart.ts",
+    "src/components/BuyBox.tsx",
+    "src/app/[locale]/basket/page.tsx",
+  ]) {
+    const text = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(
+      text,
+      /price_eur|from_eur/,
+      `${file} reads a euro column for the calculation`,
+    );
+    assert.doesNotMatch(text, /"EUR"/, `${file} hardcodes the euro currency`);
+    assert.doesNotMatch(
+      text,
+      /rate\s*[:=]|exchange\s*rate/i,
+      `${file} converts currencies on its own`,
+    );
+  }
+  // cs stays silent (a Czech sees koruna anyway); de/en explain the CZK order
+  assert.equal(orderCopy.cs.czkNote, "");
+  for (const locale of ["de", "en"] as const) {
+    assert.match(orderCopy[locale].czkNote, /CZK/);
+  }
+});
