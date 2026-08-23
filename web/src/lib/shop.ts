@@ -253,8 +253,9 @@ export const copy = {
       "Přihlášení přes Google zatím není dostupné. Zkontrolujte OAuth nastavení nebo použijte demo účet.",
     demoError: "Přihlášení k demo účtu se nepodařilo.",
     heroEyebrow: "VYBAVENÍ PRO KAŽDOU CESTU",
-    heroTitle: "Město končí. Jízda pokračuje.",
-    heroText: "Promyšlené vybavení pro cestu přes město i daleko za něj.",
+    heroTitle: "Komponenty a doplňky pro každodenní jízdu.",
+    heroText:
+      "Objednávejte u NODRA — poradíme s výběrem a doručíme po České republice.",
     explore: "Prohlédnout kolekci",
     featured: "Na cestu",
     featuredText: "Věci, které s vámi udrží krok.",
@@ -335,6 +336,32 @@ export const copy = {
     storyLabel: "NODRA / NÁŠ PŘÍSTUP",
     storyImageAlt: "Brašna do rámu na kole",
     marquee: ["JEĎTE S CHUTÍ", "DOJEĎTE DÁL", "ZVOLTE DELŠÍ CESTU"],
+    home: {
+      catalogLabel: "NODRA / KATALOG",
+      catalogTitle: "Komponenty a doplňky na kolo",
+      catalogText:
+        "Známé modely objednáte přímo z katalogu. Ke každé kartě uvádíme dostupnost a termín, který s vámi potvrdíme při objednávce.",
+      catalogAll: "Celý obchod",
+      consultLabel: "NODRA / KONZULTACE",
+      consultTitle: "Nejste si jistí výběrem?",
+      consultText:
+        "Napište nám, poradíme s výběrem, velikostí i kompatibilitou. Konzultace je zdarma a bez závazku.",
+      consultPending:
+        "Kanály pro dotazy připravujeme; výběr a kompatibilitu prověříme při potvrzení objednávky.",
+      deliveryLabel: "NODRA / DOPRAVA",
+      deliveryTitle: "Praha — osobně v domluvený čas",
+      deliveryText:
+        "Po Praze doručíme osobně večer, kdy se domluvíte — 149 Kč, od 500 Kč zdarma. Dodáváme jen po České republice, cenu mimo Prahu potvrdíme při objednávce.",
+      deliveryPayment: "Platíte při převzetí — hotově nebo převodem.",
+      pickupLabel: "NODRA / VYZVEDNUTÍ",
+      pickupTitle: "Zdarma na Andělu",
+      pickupText:
+        "Objednávku si můžete vyzvednout na Andělu — místo i přesný čas domluvíme zprávou.",
+      installLabel: "NODRA / MONTÁŽ",
+      installTitle: "Jednoduchá montáž — už brzy",
+      installText:
+        "Připravujeme montáž jednoduchých dílů u vás doma po Praze, večer od 17:00. Přesný seznam prací i podmínky zveřejníme, jakmile je doladíme.",
+    },
     footerTagline: "DOBRÁ VÝBAVA. VOLNÁ CESTA.",
     collectionLabel: "NODRA / KATALOG",
     selectionLabel: "NODRA / VÁŠ VÝBĚR",
@@ -374,9 +401,9 @@ export const copy = {
       "Die Google-Anmeldung ist noch nicht verfügbar. Prüfe die OAuth-Einstellungen oder verwende das Demo-Konto.",
     demoError: "Die Anmeldung beim Demo-Konto ist fehlgeschlagen.",
     heroEyebrow: "AUSRÜSTUNG FÜR JEDEN WEG",
-    heroTitle: "Die Stadt endet. Die Fahrt geht weiter.",
+    heroTitle: "Fahrradteile und Zubehör für jeden Tag.",
     heroText:
-      "Durchdachte Ausrüstung für den Weg durch die Stadt und weit darüber hinaus.",
+      "Bestelle bei NODRA — wir beraten dich und liefern in Tschechien.",
     explore: "Kollektion entdecken",
     featured: "Für unterwegs",
     featuredText: "Ausrüstung, die mit dir Schritt hält.",
@@ -457,6 +484,32 @@ export const copy = {
     storyLabel: "NODRA / UNSER ANSATZ",
     storyImageAlt: "Rahmentasche am Fahrrad",
     marquee: ["GUT FAHREN", "WEITERKOMMEN", "DEN LANGEN WEG NEHMEN"],
+    home: {
+      catalogLabel: "NODRA / KATALOG",
+      catalogTitle: "Komponenten und Zubehör",
+      catalogText:
+        "Bekannte Modelle bestellst du direkt aus dem Katalog. Zu jeder Karte zeigen wir Verfügbarkeit und Termin, den wir mit dir bestätigen.",
+      catalogAll: "Zum ganzen Shop",
+      consultLabel: "NODRA / BERATUNG",
+      consultTitle: "Unsicher bei der Wahl?",
+      consultText:
+        "Schreib uns, wir beraten dich zu Auswahl, Größe und Kompatibilität. Die Beratung ist kostenlos und unverbindlich.",
+      consultPending:
+        "Kontaktwege bereiten wir vor; Auswahl und Kompatibilität prüfen wir bei der Bestellbestätigung.",
+      deliveryLabel: "NODRA / LIEFERUNG",
+      deliveryTitle: "Prag — persönlich zur vereinbarten Zeit",
+      deliveryText:
+        "In Prag liefern wir persönlich am vereinbarten Abend — 149 Kč, ab 500 Kč kostenlos. Wir liefern nur innerhalb Tschechiens; den Preis außerhalb Prags bestätigen wir bei der Bestellung.",
+      deliveryPayment: "Zahlung bei Übergabe — bar oder per Überweisung.",
+      pickupLabel: "NODRA / ABHOLUNG",
+      pickupTitle: "Kostenlos am Anděl",
+      pickupText:
+        "Deine Bestellung kannst du am Anděl abholen — Ort und genaue Zeit klären wir per Nachricht.",
+      installLabel: "NODRA / MONTAGE",
+      installTitle: "Einfache Montage — bald",
+      installText:
+        "Wir bereiten die Montage einfacher Teile bei dir zu Hause in Prag vor, abends ab 17:00. Die genaue Liste der Arbeiten und die Bedingungen veröffentlichen wir, sobald sie feststehen.",
+    },
     footerTagline: "GUTE AUSRÜSTUNG. OFFENE WEGE.",
     collectionLabel: "NODRA / KATALOG",
     selectionLabel: "NODRA / DEINE AUSWAHL",
@@ -496,9 +549,9 @@ export const copy = {
       "Google sign-in is not available yet. Check the OAuth setup or use the demo account.",
     demoError: "Demo sign-in failed.",
     heroEyebrow: "GEAR FOR EVERY WAY THROUGH",
-    heroTitle: "The city ends. The ride goes on.",
+    heroTitle: "Bike components and accessories for every day.",
     heroText:
-      "Considered gear for the route across town and the miles beyond it.",
+      "Order from NODRA — we help you choose and deliver across Czechia.",
     explore: "Explore the collection",
     featured: "Made for the miles",
     featuredText: "The pieces that keep pace with you.",
@@ -579,6 +632,32 @@ export const copy = {
     storyLabel: "NODRA / OUR APPROACH",
     storyImageAlt: "Cycling frame bag on a bicycle",
     marquee: ["RIDE WELL", "GO FURTHER", "TAKE THE LONG WAY"],
+    home: {
+      catalogLabel: "NODRA / CATALOG",
+      catalogTitle: "Bike components and accessories",
+      catalogText:
+        "Known models you can order straight from the catalog. Every card shows availability and the lead time we confirm with you.",
+      catalogAll: "Browse the whole shop",
+      consultLabel: "NODRA / ADVICE",
+      consultTitle: "Not sure what fits?",
+      consultText:
+        "Write to us — we will help with the choice, the size and compatibility. The advice is free and comes with no obligation.",
+      consultPending:
+        "The contact channels are on their way; we check the choice and compatibility at order confirmation.",
+      deliveryLabel: "NODRA / DELIVERY",
+      deliveryTitle: "Prague — in person, at an agreed time",
+      deliveryText:
+        "In Prague we deliver in person on an agreed evening — 149 Kč, free from 500 Kč. We deliver within Czechia only; the price outside Prague is confirmed with the order.",
+      deliveryPayment: "You pay on handover — cash or bank transfer.",
+      pickupLabel: "NODRA / PICKUP",
+      pickupTitle: "Free at Anděl",
+      pickupText:
+        "You can pick your order up at Anděl — we agree the place and the exact time by message.",
+      installLabel: "NODRA / INSTALLATION",
+      installTitle: "Simple installation — coming soon",
+      installText:
+        "We are preparing at-home installation of simple parts across Prague, evenings from 17:00. The exact list of works and the terms follow once they are settled.",
+    },
     footerTagline: "GOOD GEAR. OPEN ROADS.",
     collectionLabel: "NODRA / THE COLLECTION",
     selectionLabel: "NODRA / YOUR SELECTION",
