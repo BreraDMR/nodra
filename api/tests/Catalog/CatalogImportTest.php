@@ -16,7 +16,9 @@ use App\Catalog\CatalogSeeder;
 use App\Catalog\CatalogService;
 use App\Entity\Category;
 use App\Entity\Product;
+use App\Import\ImportService;
 use App\Pricing\AvailabilityService;
+use App\Tests\Import\AwinFeed;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -241,6 +243,42 @@ final class CatalogImportTest extends KernelTestCase
         $this->import();
         self::assertSame(count($rows), (int) $db->fetchOne("SELECT COUNT(*) FROM supplier_offer WHERE supplier = 'demo'"));
         self::assertSame(0, (int) $db->fetchOne("SELECT COUNT(*) FROM supplier_offer WHERE supplier = 'demo' AND checked_at < NOW() - INTERVAL '8 days'"));
+    }
+
+    public function testTheFeedMatchesASeededPilotCardByItsVerifiedEan(): void
+    {
+        self::bootKernel();
+        $db = static::getContainer()->get(Connection::class);
+        $this->import();
+
+        // the pilot codes were read off public seller pages (docs/pilot-data-check.md) and ship in the seed files
+        $codes = $db->fetchAllAssociative("SELECT p.slug, v.mpn, v.ean FROM product p JOIN product_variant v ON v.product_id = p.id
+            WHERE p.slug IN ('sigma-buster-800-front', 'continental-grand-prix-5000-25-622', 'shimano-slx-cs-m7100-12sp', 'knog-oi-classic-large') ORDER BY p.slug");
+        self::assertSame([
+            ['slug' => 'continental-grand-prix-5000-25-622', 'mpn' => '0101624', 'ean' => '4019238007824'],
+            ['slug' => 'knog-oi-classic-large', 'mpn' => '11980KN', 'ean' => '9328389026635'],
+            ['slug' => 'shimano-slx-cs-m7100-12sp', 'mpn' => 'ICSM7100051', 'ean' => null],
+            ['slug' => 'sigma-buster-800-front', 'mpn' => '19800', 'ean' => '4016224198009'],
+        ], array_map(static fn (array $row): array => ['slug' => $row['slug'], 'mpn' => $row['mpn'], 'ean' => $row['ean']], $codes));
+
+        // a feed row carrying the Sigma's EAN matches the seeded variant instead of planning a new product
+        $sigma = $db->fetchAssociative('SELECT v.id FROM product_variant v JOIN product p ON p.id = v.product_id WHERE p.slug = :slug', ['slug' => 'sigma-buster-800-front']);
+        $feed = AwinFeed::csv([AwinFeed::row([
+            'product_name' => 'Sigma Buster 800 front light',
+            'brand_name' => 'Sigma',
+            'ean' => '4016224198009',
+            'mpn' => '19800',
+        ], 1)]);
+        $report = static::getContainer()->get(ImportService::class)->preview('feed.csv', $feed);
+        self::assertSame(0, $report['counts']['newProducts']);
+        self::assertSame(1, $report['counts']['updates']);
+        self::assertSame($sigma['id'], $report['updates'][0]['variantId']);
+
+        // codes wiped by hand are refilled from the seed, the same way a blank brand is
+        $db->executeStatement('UPDATE product_variant SET mpn = NULL, ean = NULL WHERE id = :id', ['id' => $sigma['id']]);
+        static::getContainer()->get(EntityManagerInterface::class)->clear();
+        self::assertStringContainsString('Products: 0 added, 1 filled', $this->import());
+        self::assertSame(['mpn' => '19800', 'ean' => '4016224198009'], $db->fetchAssociative('SELECT mpn, ean FROM product_variant WHERE id = :id', ['id' => $sigma['id']]));
     }
 
     private function import(): string
