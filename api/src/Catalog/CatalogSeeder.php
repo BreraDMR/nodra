@@ -106,10 +106,21 @@ final class CatalogSeeder
                         ++$newOffers;
                     }
                 }
-                $newOffers += $this->seedDemoOffers($existing, $this->em->getRepository(ProductVariant::class)->findBy(['product' => $existing]), $rank, $item, $now);
+                $variants = $this->em->getRepository(ProductVariant::class)->findBy(['product' => $existing]);
+                $codeFills = $this->seedVariantCodes($item, $variants);
+                $newOffers += $this->seedDemoOffers($existing, $variants, $rank, $item, $now);
+                $touched = $codeFills !== [];
                 if ($blank && (($existing->getBrand() === null && $brand !== null) || ($existing->getAttributes() === [] && $attributes !== []))) {
                     $existing->describe($existing->getBrand() ?? $brand, $existing->getAttributes() ?: $attributes);
+                    $touched = true;
+                }
+                if ($touched) {
                     ++$filled;
+                }
+                foreach ($codeFills as $fill) {
+                    if ($run !== null) {
+                        $this->origins->forRun($run, ImportFieldOrigin::ENTITY_VARIANT, $fill['variant']->getId(), $fill['fields'], $now);
+                    }
                 }
                 continue;
             }
@@ -161,10 +172,22 @@ final class CatalogSeeder
                 );
                 $this->em->persist($variant);
                 $newVariants[] = $variant;
+                $mpn = $option['mpn'] ?? null;
+                $ean = self::seedEan($option);
+                if ($mpn !== null || $ean !== null) {
+                    $variant->identify($mpn, $ean, []);
+                }
                 // the first price is history too; existing variants' prices are never touched by the import
                 $this->history->record($variant, null, null, PriceChange::IMPORT);
                 if ($run !== null) {
-                    $this->origins->forRun($run, ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), ['sku', 'label', 'price'], $now);
+                    $fields = ['sku', 'label', 'price'];
+                    if ($mpn !== null) {
+                        $fields[] = 'mpn';
+                    }
+                    if ($ean !== null) {
+                        $fields[] = 'ean';
+                    }
+                    $this->origins->forRun($run, ImportFieldOrigin::ENTITY_VARIANT, $variant->getId(), $fields, $now);
                 }
             }
             $newOffers += $this->seedDemoOffers($product, $newVariants, $rank, $item, $now);
@@ -209,6 +232,51 @@ final class CatalogSeeder
         }
 
         return $added;
+    }
+
+    /** Seed EANs must pass the check digit: a typo in the seed files fails the import loudly. */
+    private static function seedEan(array $option): ?string
+    {
+        return isset($option['ean']) ? Gtin::normalize($option['ean']) : null;
+    }
+
+    /**
+     * Seed MPN/EANs reach existing variants as well, matched by the seed's deterministic SKU, but only
+     * into still-blank fields, so a code an import or the admin already wrote is never overwritten.
+     *
+     * @param list<ProductVariant> $variants
+     * @return list<array{variant: ProductVariant, fields: list<string>}>
+     */
+    private function seedVariantCodes(array $item, array $variants): array
+    {
+        $prefix = 'ND-'.strtoupper(substr(hash('sha256', $item['slug']), 0, 12)).'-';
+        $bySku = [];
+        foreach ($variants as $variant) {
+            $bySku[$variant->getSku()] = $variant;
+        }
+        $fills = [];
+        foreach ($item['variants'] as $index => $option) {
+            $variant = $bySku[$prefix.($index + 1)] ?? null;
+            if ($variant === null) {
+                continue;
+            }
+            $mpn = $variant->getMpn() ?? ($option['mpn'] ?? null);
+            $ean = $variant->getEan() ?? self::seedEan($option);
+            $fields = [];
+            if ($mpn !== null && $variant->getMpn() === null) {
+                $fields[] = 'mpn';
+            }
+            if ($ean !== null && $variant->getEan() === null) {
+                $fields[] = 'ean';
+            }
+            if ($fields === []) {
+                continue;
+            }
+            $variant->identify($mpn, $ean, $variant->getAttributes());
+            $fills[] = ['variant' => $variant, 'fields' => $fields];
+        }
+
+        return $fills;
     }
 
     /** @return array<string, Category> */
