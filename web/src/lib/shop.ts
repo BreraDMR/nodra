@@ -323,6 +323,9 @@ export const copy = {
     metaDescription:
       "Komponenty a doplňky na kolo v Praze. Poradíme s výběrem, doručíme po Praze nebo si objednávku vyzvednete na Andělu.",
     announcement: "NODRA / VYBAVENÍ NA KAŽDODENNÍ JÍZDU",
+    demoBanner:
+      "Ukázka portfolia — objednávky jsou testovací, platby ani dodání se neprovádějí.",
+    demoOrder: "Testovací objednávka — žádná platba ani dodání neproběhnou.",
     location: "PRAHA · ČESKO",
     homeLabel: "NODRA – úvodní stránka",
     mainNav: "Hlavní navigace",
@@ -471,6 +474,9 @@ export const copy = {
     metaDescription:
       "Fahrradkomponenten und Zubehör in Prag. Wir beraten bei der Auswahl, liefern innerhalb Prags oder Sie holen die Bestellung am Anděl ab.",
     announcement: "NODRA / AUSRÜSTUNG FÜR JEDEN TAG",
+    demoBanner:
+      "Portfolio-Demo — Bestellungen sind Tests, Zahlungen und Lieferungen finden nicht statt.",
+    demoOrder: "Testbestellung — es erfolgt keine Zahlung und keine Lieferung.",
     location: "PRAG · TSCHECHIEN",
     homeLabel: "NODRA – Startseite",
     mainNav: "Hauptnavigation",
@@ -619,6 +625,9 @@ export const copy = {
     metaDescription:
       "Bike components and accessories in Prague. We help you choose, deliver across Prague, or you pick up your order at Anděl.",
     announcement: "NODRA / CURATED FOR THE EVERYDAY ESCAPE",
+    demoBanner:
+      "Portfolio demo — orders are test orders, no payments or deliveries take place.",
+    demoOrder: "This is a test order — no payment or delivery will happen.",
     location: "PRAGUE · CZECHIA",
     homeLabel: "NODRA home",
     mainNav: "Main navigation",
