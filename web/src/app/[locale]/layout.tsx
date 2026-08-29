@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DemoBanner } from "@/components/DemoBanner";
 import { StoreFooter, QuickContact } from "@/components/StoreFooter";
 import { StoreHeader } from "@/components/StoreHeader";
 import { copy, isLocale } from "@/lib/shop";
@@ -27,6 +28,7 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
   return (
     <>
+      <DemoBanner locale={locale} />
       <StoreHeader locale={locale} />
       {children}
       <StoreFooter locale={locale} />
