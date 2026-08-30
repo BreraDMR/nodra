@@ -881,6 +881,22 @@ p {
   font-size: 14px;
   margin: -40px 0 25px;
 }
+.demo-banner {
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  padding: 9px 16px;
+}
+.demo-order-note {
+  border: 1px dashed var(--ink);
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 14px;
+  padding: 10px 14px;
+  max-width: 640px;
+}
 .variant-heading {
   display: flex;
   justify-content: space-between;
