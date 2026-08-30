@@ -216,3 +216,38 @@ test("the demo mode labels the shop and the admin login leaks no credentials", (
     "a credential hint on the admin login screen",
   );
 });
+
+// P03: until real photos exist (D07.2) the demo names the shared category
+// scene an illustration — on catalog tiles and on the product page.
+test("the demo labels shared images as illustrations", () => {
+  for (const locale of locales) {
+    assert.ok(
+      copy[locale].illustrationNote.trim().length > 10,
+      `${locale} illustration note`,
+    );
+    assert.ok(
+      copy[locale].illustrationChip.trim().length > 3,
+      `${locale} illustration chip`,
+    );
+  }
+  const card = readFileSync(
+    new URL("../src/components/ProductCard.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(card, /isDemoMode/, "the catalog tile ignores the demo flag");
+  assert.match(
+    card,
+    /illustrationChip/,
+    "the catalog tile has no illustration chip",
+  );
+  const detail = readFileSync(
+    new URL("../src/app/[locale]/shop/[slug]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(detail, /isDemoMode/, "the product page ignores the demo flag");
+  assert.match(
+    detail,
+    /illustrationNote/,
+    "the product page has no illustration note",
+  );
+});
