@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BuyBox } from "@/components/BuyBox";
+import { isDemoMode } from "@/lib/demo";
 import { api, availabilityOf, copy, isLocale, type Product } from "@/lib/shop";
 export async function generateMetadata({
   params,
@@ -63,6 +64,9 @@ export default async function ProductPage({
             sizes="(max-width: 800px) 100vw, 60vw"
             priority
           />
+          {/* the shared category scene stands in for a real photo until D07.2;
+              in the demo it says so instead of pretending to be the product */}
+          {isDemoMode && <p className="image-note">{t.illustrationNote}</p>}
         </div>
         <BuyBox product={product} locale={locale} />
       </div>
