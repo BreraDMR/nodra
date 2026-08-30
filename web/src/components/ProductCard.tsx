@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { isDemoMode } from "@/lib/demo";
 import {
   availabilityOf,
   availabilityText,
   badgeName,
+  copy,
   money,
   type Card,
   type Locale,
@@ -33,6 +35,13 @@ export function ProductCard({
         {product.badge && product.badge !== "Bestseller" && (
           <span className="product-badge">
             {badgeName(locale, product.badge)}
+          </span>
+        )}
+        {/* until real product photos arrive (D07.2), the demo names the shared
+            category scene for what it is: an illustration, not the product */}
+        {isDemoMode && (
+          <span className="product-illustration">
+            {copy[locale].illustrationChip}
           </span>
         )}
       </div>
