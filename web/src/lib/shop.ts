@@ -326,6 +326,8 @@ export const copy = {
     demoBanner:
       "Ukázka portfolia — objednávky jsou testovací, platby ani dodání se neprovádějí.",
     demoOrder: "Testovací objednávka — žádná platba ani dodání neproběhnou.",
+    illustrationChip: "ilustrace",
+    illustrationNote: "Ilustrační fotografie — skutečný výrobek se může lišit.",
     location: "PRAHA · ČESKO",
     homeLabel: "NODRA – úvodní stránka",
     mainNav: "Hlavní navigace",
@@ -477,6 +479,8 @@ export const copy = {
     demoBanner:
       "Portfolio-Demo — Bestellungen sind Tests, Zahlungen und Lieferungen finden nicht statt.",
     demoOrder: "Testbestellung — es erfolgt keine Zahlung und keine Lieferung.",
+    illustrationChip: "Symbolfoto",
+    illustrationNote: "Symbolfoto — das echte Produkt kann abweichen.",
     location: "PRAG · TSCHECHIEN",
     homeLabel: "NODRA – Startseite",
     mainNav: "Hauptnavigation",
@@ -628,6 +632,8 @@ export const copy = {
     demoBanner:
       "Portfolio demo — orders are test orders, no payments or deliveries take place.",
     demoOrder: "This is a test order — no payment or delivery will happen.",
+    illustrationChip: "illustrative",
+    illustrationNote: "Illustrative photo — the actual product may differ.",
     location: "PRAGUE · CZECHIA",
     homeLabel: "NODRA home",
     mainNav: "Main navigation",
