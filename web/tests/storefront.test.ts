@@ -176,3 +176,43 @@ test("the basket and the order run in koruna, euro is a label only", () => {
     assert.match(orderCopy[locale].czkNote, /CZK/);
   }
 });
+
+// P02: the portfolio demo names its boundary in every language, the banner is
+// really wired into the locale layout, and the admin login never displays
+// credentials — a public visitor must not get a key to the working admin.
+test("the demo mode labels the shop and the admin login leaks no credentials", () => {
+  for (const locale of locales) {
+    assert.match(copy[locale].demoBanner, /[Dd]emo|portfol/);
+    assert.ok(
+      copy[locale].demoOrder.trim().length > 10,
+      `${locale} order note`,
+    );
+  }
+  const layout = readFileSync(
+    new URL("../src/app/[locale]/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(layout, /DemoBanner/, "the demo banner is not in the layout");
+  for (const file of [
+    "src/app/[locale]/checkout/page.tsx",
+    "src/app/[locale]/order/page.tsx",
+  ]) {
+    const text = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+    assert.match(text, /isDemoMode/, `${file} ignores the demo flag`);
+    assert.match(text, /demoOrder/, `${file} has no demo order note`);
+  }
+  const admin = readFileSync(
+    new URL("../src/app/admin/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    admin,
+    /NodraDemo2026/,
+    "the demo admin password in the login screen",
+  );
+  assert.doesNotMatch(
+    admin,
+    /account: \S+@\S+ \/ \S+/,
+    "a credential hint on the admin login screen",
+  );
+});
