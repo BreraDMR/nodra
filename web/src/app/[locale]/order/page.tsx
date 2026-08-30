@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { isDemoMode } from "@/lib/demo";
 import {
   channels,
   dateText,
@@ -111,6 +112,11 @@ export default function OrderPage() {
               receipt.status === "confirmed") &&
               ` ${payOnReceiptText(receipt.paymentMethods, locale)}`}
           </p>
+          {isDemoMode && (
+            <p className="demo-order-note" role="note">
+              {t.demoOrder}
+            </p>
+          )}
           <div className="receipt">
             <div>
               <span>{t.order}</span>
