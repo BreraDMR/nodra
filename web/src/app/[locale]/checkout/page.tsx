@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCartItems, writeCart } from "@/lib/cart";
+import { isDemoMode } from "@/lib/demo";
 import { channels, expectedText, orderCopy, pickupNoteText } from "@/lib/order";
 import {
   availabilityText,
@@ -703,6 +704,11 @@ export default function Checkout() {
             · {t.czechOnly}. {o.carrierOff}
           </p>
           <div className="demo-notice">✦ {t.demo}</div>
+          {isDemoMode && (
+            <p className="demo-order-note" role="note">
+              {t.demoOrder}
+            </p>
+          )}
           {notice && (
             <p className="form-notice" role="status">
               {notice}
