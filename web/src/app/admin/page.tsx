@@ -693,7 +693,6 @@ export default function AdminPage() {
                 Sign in <span>↗</span>
               </button>
             </form>
-            <small>Local demo account: admin@nodra.test / NodraDemo2026!</small>
           </div>
           <span className="admin-login-foot">NODRA STUDIO © 2026</span>
         </div>
