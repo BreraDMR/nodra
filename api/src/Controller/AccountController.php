@@ -24,6 +24,7 @@ final class AccountController extends AbstractController
         #[Autowire('%env(GOOGLE_CLIENT_SECRET)%')] private string $clientSecret,
         #[Autowire('%env(GOOGLE_REDIRECT_URI)%')] private string $redirectUri,
         #[Autowire('%kernel.environment%')] private string $environment,
+        #[Autowire(param: 'app.account.demo_login')] private bool $demoLogin,
     ) {}
 
     #[Route('/google/start', methods: ['GET'])]
@@ -68,7 +69,9 @@ final class AccountController extends AbstractController
     #[Route('/demo-login', methods: ['POST'])]
     public function demo(Request $request): JsonResponse
     {
-        if ($this->environment !== 'dev') {
+        // the demo rider account is a demo feature: dev always has it, a deployment
+        // only after APP_DEMO_LOGIN=1 — a real shop answers 404 like any absent route
+        if (!$this->demoLogin && $this->environment !== 'dev') {
             return $this->json(['message' => 'Demo sign-in is unavailable'], 404);
         }
         $request->getSession()->start();
