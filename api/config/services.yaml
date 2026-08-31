@@ -27,6 +27,10 @@ parameters:
         de: 'Ort und Zeit der Übergabe am Anděl vereinbaren wir per Nachricht.'
         en: 'We agree the place and time at Anděl by message.'
     app.payment.handover_methods: [cash, bank_transfer]                   # card only once there is a terminal
+
+    # P02 portfolio demo: the web demo rider account ("Vyzkoušet demo účet") stays closed outside dev
+    # unless the deployment turns it on here — a real shop never does.
+    app.account.demo_login: '%env(bool:APP_DEMO_LOGIN)%'
     app.legal.privacy_version: 'draft-2026-09'    # stored with every privacy consent, default until the D00.7 texts exist
 
     # D08 evening installations (read by App\Installation\InstallationSettings). Values marked default were chosen
