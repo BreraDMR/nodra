@@ -206,6 +206,22 @@ final class PurchaseApiTest extends ApiTestCase
         self::assertSame([48000, 52000, false], [$economics['costMinor'], $economics['expectedResultMinor'], $economics['costComplete']]);
     }
 
+    /** The portfolio demo data prices lines from the seeded demo supplier; its purchases say so (P04). */
+    public function testADemoOfferLineBuysUnderTheDemoSupplier(): void
+    {
+        $this->token = $this->loginAdmin();
+        $id = $this->placeOrder([$this->offered('T-P-DEMO-1', 30000, 'demo') => 1]);
+        $this->act($id, 'confirm', self::AGREED);
+        $order = $this->order($id);
+
+        $purchase = $this->purchase(['supplier' => 'demo', 'reference' => 'DEMO-P04', 'currency' => 'CZK', 'lines' => [
+            ['itemId' => $order['items'][0]['id'], 'unitPriceMinor' => 20000],
+        ]]);
+
+        self::assertSame(['demo', 'ordered', 'DEMO-P04'], [$purchase['supplier'], $purchase['status'], $purchase['reference']]);
+        self::assertSame('ordered', $this->line($this->order($id), 'T-P-DEMO-1')['procurementStatus']);
+    }
+
     public function testUnknownPurchasesAreNotFound(): void
     {
         $this->token = $this->loginAdmin();
