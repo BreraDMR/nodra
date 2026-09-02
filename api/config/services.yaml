@@ -44,6 +44,10 @@ parameters:
     # D09.3 hardening without a host: where the API error journal lives (one JSON line per error response)
     app.api_error_log: '%kernel.logs_dir%/api-errors.jsonl'
 
+    # P02: the fixtures create the admin with this password. Empty means: the well-known dev
+    # password in dev, a random one anywhere else (a demo deployment sets its own).
+    app.admin.password: '%env(string:APP_ADMIN_PASSWORD)%'
+
     # D03.2 import: the supplier behind the uploaded Awin feed; more feeds join in D03.4
     app.import.awin_supplier: 'bike_components'
     # D03.4 feed refresh: defaults picked while the owner was away, see docs/design/d03-import.md
