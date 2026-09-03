@@ -11,7 +11,11 @@ Requirements: PHP 8.4+, Composer, Node.js 22+, npm and Docker with Compose. Port
 ./scripts/dev.sh
 ```
 
-Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http://127.0.0.1:3000/de), [English storefront](http://127.0.0.1:3000/en), [customer account](http://127.0.0.1:3000/cs/account), [admin](http://127.0.0.1:3000/admin), or [local email inbox](http://127.0.0.1:8025). The account page includes a development-only demo sign-in. Demo admin: `admin@nodra.test` / `NodraDemo2026!`. Replace this credential before any public deployment. Stop the web servers with Ctrl+C and containers with `cd api && docker compose down`. To reset all demo orders and products, run `cd api && php bin/console doctrine:fixtures:load --no-interaction` while the database is running. To add catalog cards to an existing local database without resetting orders or edited stock, run `cd api && php bin/console app:catalog:import`.
+Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http://127.0.0.1:3000/de), [English storefront](http://127.0.0.1:3000/en), [customer account](http://127.0.0.1:3000/cs/account), [admin](http://127.0.0.1:3000/admin), or [local email inbox](http://127.0.0.1:8025). The admin needs a credentials row in the stand database; no password ships in the code, so create your own admin user before signing in. The account page's demo sign-in works in development, and elsewhere only after starting the API with `APP_DEMO_LOGIN=1`. Stop the web servers with Ctrl+C and containers with `cd api && docker compose down`. To reset all demo orders and products, run `cd api && php bin/console doctrine:fixtures:load --no-interaction` while the database is running. To add catalog cards to an existing local database without resetting orders or edited stock, run `cd api && php bin/console app:catalog:import`.
+
+### The explicit portfolio demo
+
+The same code builds two things. The ordinary build is a shop; a build with `NEXT_PUBLIC_DEMO_MODE=1` is an explicit portfolio demo: every page carries a banner naming the demo («Ukázka portfolia — objednávky jsou testovací, platby ani dodání se neprovádějí» and its de/en versions), checkout and the receipt say the order is a test, and the shared category illustrations are labeled as illustrations instead of posing as product photos. Screenshots and a short scripted walkthrough live in [`docs/screenshots/`](docs/screenshots) and [`docs/screencast/demo-scenario.webm`](docs/screencast/demo-scenario.webm); the cards meant for a demo run and the filter paths that hold are listed in [`docs/showcase-cards.md`](docs/showcase-cards.md); the case study is [`docs/case-study.md`](docs/case-study.md).
 
 Google sign-in uses an OAuth 2.0 web application client. Register `http://127.0.0.1:3000/api/account/google/callback` as an authorized redirect URI in Google Cloud, then put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `api/.env.local`. The public account button redirects to Google once these values are set. The local demo sign-in and points work without credentials. Welcome emails are delivered only to Mailpit at port 8025; a real SMTP transport is not configured.
 
@@ -29,7 +33,7 @@ Run verification with `./scripts/check.sh`; it prepares the `app_test` database 
 - After-sales: a claims registry for 14-day returns and 24-month warranty cases with Prague-calendar deadlines counted from the day the customer contacted the shop, and refunds tagged to one claim each; evening installation bookings with a preliminary window, a confirmed work window, a per-evening limit and a travel gap between windows
 - Admin products and orders are paginated; dashboard tiles track revenue, work queues, pricing alerts, import problems and open after-sales cases
 - Rate limiting on public catalog, checkout and admin sign-in, a JSON error journal for every 4xx+ API response, and local backup/restore/migration-rehearsal scripts in `scripts/`
-- Original AI-generated demo imagery and a responsive storefront and admin interface
+- Original AI-generated demo imagery and a responsive storefront and admin interface; in the demo build the shared category scenes are labeled as illustrations (real per-product photography is future work, D07.2)
 
 ## Architecture
 
@@ -39,7 +43,7 @@ For a future image CDN, set `MEDIA_ORIGIN` to its HTTPS origin or path when buil
 
 `api/` contains entities, migrations, fixtures, controllers and services. `web/` contains React routes and components. `docs/architecture.md` records the main decisions and demo boundaries.
 
-The [80 Allegro → NODRA link pairs](docs/allegro-nodra-links.md) let you compare every sourced card. The [real-commerce roadmap](docs/real-commerce-roadmap.md) describes the supplier-backed order flow and the work required before accepting actual sales.
+The [85 sourced cards → NODRA link pairs](docs/allegro-nodra-links.md) let you compare every sourced card. The [real-commerce roadmap](docs/real-commerce-roadmap.md) describes the supplier-backed order flow and the work required before accepting actual sales. Seven engineering decisions worth an interview answer are in [`docs/how-it-works.md`](docs/how-it-works.md); [`docs/perf-local.md`](docs/perf-local.md) records a local, sequential latency measurement against a 1 050-card copy of the catalog — a data-volume check, not a production load test.
 
 The [commerce concept and implementation sequence](docs/commerce-concept.md) record the owner's retailer positioning, planned delivery and installation services, pricing, reviews and the decisions still pending.
 
@@ -51,4 +55,4 @@ NODRA is not a real merchant. Delivery is restricted to Czechia regardless of in
 
 ## Publication status
 
-This repository has no GitHub remote and has not been pushed. Its local history uses the retrospective 2026-01-10 to 2026-06-20 dates requested for portfolio presentation; those timestamps do not represent elapsed development time. `./scripts/check.sh` passes with 290 PHPUnit tests (27213 assertions) plus 6 web tests, ESLint, Prettier and the production build. Review the demo credential, production security and legal obligations before any public deployment.
+This repository has no GitHub remote and has not been pushed. Its local history uses the retrospective 2026-01-10 to 2026-06-20 dates requested for portfolio presentation; those timestamps do not represent elapsed development time. `./scripts/check.sh` passes with 297 PHPUnit tests (28621 assertions) plus 10 web tests, ESLint, Prettier and the production build. No secret usable in a published demo ships in the code: the fixtures create the admin with the well-known password in development only — any other environment must set `APP_ADMIN_PASSWORD` or receives a generated random one, and OAuth and mail transports live in ignored env files. Review production security and legal obligations before any public deployment.
