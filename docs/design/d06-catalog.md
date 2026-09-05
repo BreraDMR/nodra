@@ -1,6 +1,6 @@
 # D06.2 — catalog navigation, search, filters and the mobile catalog
 
-Working spec for **D06.2** in [`../development-plan.md`](../development-plan.md): native category navigation, model/MPN search, attribute filters and an understandable mobile catalog. It covers the storefront only; the admin catalog screens are D05.
+Working spec for the storefront catalog: native category navigation, model/MPN search, attribute filters and an understandable mobile catalog. It covers the storefront only; the admin catalog screens are D05.
 
 ## What already exists (built with D01–D04)
 

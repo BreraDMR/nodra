@@ -1,6 +1,6 @@
 # D02 — cost, price, availability and lead time
 
-Working spec for backlog items D02.1–D02.5 in [`../development-plan.md`](../development-plan.md). Owner decisions it relies on: procurement after the customer order, percentage markup, price slightly below the manufacturer's RRP, suppliers never shown to customers. Values marked **default** were chosen while the owner was away and wait for his confirmation (D00.5, D00.6).
+Working spec for the pricing stage. Owner decisions it relies on: procurement after the customer order, percentage markup, price slightly below the manufacturer's RRP, suppliers never shown to customers. Values marked **default** were chosen while the owner was away and wait for his confirmation (D00.5, D00.6).
 
 ## Cost of a variant
 
@@ -31,7 +31,7 @@ Table `price_change`: `variant_id`, old/new CZK and EUR, `reason` (`manual`, `re
 
 ## Market reference price
 
-The competitor survey ([`../market/competitors.md`](../market/competitors.md)) showed Czech shops selling common parts 30–66 % below RRP, so "slightly below RRP" alone can leave NODRA far above the street price. A variant can therefore also carry `market_price_minor` (CZK), `market_price_source` and `market_checked_at` — the lowest price a Czech customer would realistically pay elsewhere, entered by the admin. It is admin-only, like RRP. The pricing panel and the reprice preview show NODRA's price against it, and a variant priced more than 15 % above it (**default**) is flagged `above_market`. The flag only informs; it doesn't block publishing, because installation and evening delivery can justify the gap.
+A survey of Czech competitors showed Czech shops selling common parts 30–66 % below RRP, so "slightly below RRP" alone can leave NODRA far above the street price. A variant can therefore also carry `market_price_minor` (CZK), `market_price_source` and `market_checked_at` — the lowest price a Czech customer would realistically pay elsewhere, entered by the admin. It is admin-only, like RRP. The pricing panel and the reprice preview show NODRA's price against it, and a variant priced more than 15 % above it (**default**) is flagged `above_market`. The flag only informs; it doesn't block publishing, because installation and evening delivery can justify the gap.
 
 ## Availability and lead time (public)
 

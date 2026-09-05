@@ -1,6 +1,6 @@
 # D08.1–D08.2 — installation bookings
 
-Working spec for the installation-booking model in [`../development-plan.md`](../development-plan.md). Evening installation in Prague on top of an order: evening intervals with a duration, a limit per evening, the works list and the cancellation. Values marked **default** were chosen without the owner; prices and the works list stay **empty settings** until D00.4.
+Working spec for the installation-booking model. Evening installation in Prague on top of an order: evening intervals with a duration, a limit per evening, the works list and the cancellation. Values marked **default** were chosen without the owner; prices and the works list stay **empty settings** until D00.4.
 
 ## What a booking is
 

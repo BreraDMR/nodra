@@ -1,6 +1,6 @@
 # D03 — controlled feed import: preview (D03.2), dedup and origins (D03.3), chunked refresh (D03.4)
 
-Working spec for the import stage of [`../development-plan.md`](../development-plan.md), built on the catalog model (D01) and the pricing engine (D02). Source research is [`../market/sources.md`](../market/sources.md): the first feed is the bike-components.de affiliate CSV through Awin (Create-a-Feed), Rose Bikes next, BIKE24 to be confirmed inside the Awin directory. Development can start against a fixture CSV with the documented Awin fields before the Awin program is approved; the live file is then a config value, not a code change. D03.2 is done and live; the D03.3 and D03.4 sections below are the working spec for the next two stages.
+Working spec for the import stage, built on the catalog model (D01) and the pricing engine (D02). From the source research, the first feed is the bike-components.de affiliate CSV through Awin (Create-a-Feed), Rose Bikes next, BIKE24 to be confirmed inside the Awin directory. Development can start against a fixture CSV with the documented Awin fields before the Awin program is approved; the live file is then a config value, not a code change. D03.2 is done and live; the D03.3 and D03.4 sections below are the working spec for the next two stages.
 
 ## The import run (file → preview → apply)
 
@@ -32,7 +32,7 @@ Working spec for the import stage of [`../development-plan.md`](../development-p
 ## Identity and matching (as D03.2 shipped it; D03.3 extends it below)
 
 - A variant matches by EAN, else by (brand, MPN), else by (supplier, supplier SKU) for re-imports of the same feed.
-- New products are created as `draft` with their variants; publication stays a manual admin action — the plan's «публикация после проверки».
+- New products are created as `draft` with their variants; publication stays a manual admin action — publish only after a check.
 - The same physical product matched through another supplier becomes an additional offer of the existing variant, never a second product.
 - A row matching several existing variants, or an EAN claimed by two of our products, is a conflict: it goes to the conflicts section, nothing is written for it.
 
@@ -49,9 +49,9 @@ Counts on top, lists below; nothing is written by preview. Each list row links t
 
 ## Apply
 
-- One transaction per run; rows are independent — one bad row never blocks the rest (the D01 «импорт не падает» rule).
+- One transaction per run; rows are independent — one bad row never blocks the rest (the rule that an import never fails as a whole).
 - Every written field records its origin (the import run), the same discipline the pricing flows use; admin-cleared values are never refilled by a later run (see gaps).
-- No deletion, ever: an offer missing from a newer feed just ages past the freshness window and the storefront says «уточним наличие и срок» (D02.4); an import never unpublishes or removes anything.
+- No deletion, ever: an offer missing from a newer feed just ages past the freshness window and the storefront says it will confirm availability and lead time (D02.4); an import never unpublishes or removes anything.
 - The run is journaled with its counts; import errors surface in the admin — the hook D05.5 left open lands here.
 
 ## Gaps from D01 closed here

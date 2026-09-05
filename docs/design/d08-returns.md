@@ -1,6 +1,6 @@
 # D08.4 — returns and warranty claims
 
-Working spec for D08.4 in [`../development-plan.md`](../development-plan.md), on top of the D04/D05 order model. Goal from the plan: record returns and warranty cases separately from the original purchase and track their deadlines and money. Values marked **default** were chosen without the owner.
+Working spec for returns and warranty, on top of the D04/D05 order model. Goal from the plan: record returns and warranty cases separately from the original purchase and track their deadlines and money. Values marked **default** were chosen without the owner.
 
 ## What a claim is
 
@@ -27,7 +27,7 @@ Opening a claim requires the goods to have been handed over: the line's shipment
 
 Actions: `wait` (open → waiting, with a note), `accept` (open, waiting or accepted → accepted; an accepted → accepted call corrects the agreed amount and never moves a deadline), `reject` (with a reason), `resolve` (accepted → resolved, with the outcome).
 
-Two dates live apart on purpose: **`contactedOn`** is the Prague calendar day the customer lodged the case (the withdrawal or the reklamacе), typed in by the admin — possibly days after the call; **`openedAt`** is when the admin entered the record. Deadlines count from `contactedOn`, per ČOI: the refund time for a withdrawal and the 30-day settle time for a warranty both run from the day the customer acted, not from the day NODRA got around to it.
+Two dates live apart on purpose: **`contactedOn`** is the Prague calendar day the customer lodged the case (the withdrawal or the reklamace), typed in by the admin — possibly days after the call; **`openedAt`** is when the admin entered the record. Deadlines count from `contactedOn`, per ČOI: the refund time for a withdrawal and the 30-day settle time for a warranty both run from the day the customer acted, not from the day NODRA got around to it.
 
 Deadlines are **stored**, so later edits never shift them, and are Prague calendar dates (`YYYY-MM-DD`):
 

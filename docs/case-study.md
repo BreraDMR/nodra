@@ -14,7 +14,7 @@ order with the customer, records the purchase from a supplier offer, receives
 the goods, schedules and performs the hand-over and records the cash payment in
 an append-only ledger. Returns and warranty claims run their Prague-calendar
 deadlines; evening installations book with a per-evening capacity and a travel
-gap. `./scripts/check.sh` holds it together: 297 API tests (28 621 assertions),
+gap. `./scripts/check.sh` holds it together: 300 API tests (28 628 assertions),
 10 web tests, contract lint, schema validation, ESLint, Prettier, production
 build.
 
@@ -64,15 +64,14 @@ The demo says what it is on every page (`NEXT_PUBLIC_DEMO_MODE`): orders are
 tests, no payment or delivery happens, and the shared category illustrations
 are labeled as illustrations. Availability and lead times come from seeded demo
 supplier offers; MPN/EAN codes are filled only where they were verified against
-public product pages (`docs/pilot-data-check.md`), and stay empty otherwise.
+public product pages, and stay empty otherwise.
 The local latency measurement in [`docs/perf-local.md`](perf-local.md) is a
 sequential run against a 1 050-card copy — evidence the data model holds at
 volume, not a production load test.
 
 ## See it
 
-There is no public demo site yet — hosting waits for the owner's separate
-decision ([`docs/demo-deployment.md`](demo-deployment.md) holds the ready
+There is no public demo site yet — hosting is a separate step ([`docs/demo-deployment.md`](demo-deployment.md) holds the ready
 release plan). Everything below comes from a local run; to see the shop live,
 follow «Run locally» in the [README](../README.md).
 
@@ -84,4 +83,3 @@ follow «Run locally» in the [README](../README.md).
   the admin dashboard: work queues, no supplier data exposed
 - [`docs/screencast/demo-scenario.webm`](screencast/demo-scenario.webm) —
   an 11-second scripted walk: home → catalog → product → add to basket
-- `STATUS.md` — recorded end-to-end walks with the exact commands and orders

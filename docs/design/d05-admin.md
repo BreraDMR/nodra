@@ -1,6 +1,6 @@
 # D05 — the admin for daily work
 
-Working spec for D05.1–D05.5 in [`../development-plan.md`](../development-plan.md), built on the D04 order model ([`d04-order.md`](d04-order.md)). Goal from the plan: the owner runs every order through the admin without touching the database and never loses a debt, a delay or a purchase. Values marked **default** were chosen without the owner.
+Working spec for the admin stage, built on the D04 order model ([`d04-order.md`](d04-order.md)). Goal from the plan: the owner runs every order through the admin without touching the database and never loses a debt, a delay or a purchase. Values marked **default** were chosen without the owner.
 
 ## Queues (D05.1)
 

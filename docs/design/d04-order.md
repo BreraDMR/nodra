@@ -1,6 +1,6 @@
 # D04 — order request, procurement, handover and payment on receipt
 
-Working spec for backlog items D04.0–D04.7 in [`../development-plan.md`](../development-plan.md). It replaces the demo checkout, which reserves supplier-derived stock and has one status for everything. Owner decisions it relies on ([`../commerce-concept.md`](../commerce-concept.md)): NODRA buys from a supplier **after** the customer orders, delivers only within Czechia, gets paid on receipt, and never shows the supplier. Values marked **default** were chosen without the owner and are settings, not constants.
+Working spec for the order stage. It replaces the demo checkout, which reserves supplier-derived stock and has one status for everything. Owner decisions it relies on: NODRA buys from a supplier **after** the customer orders, delivers only within Czechia, gets paid on receipt, and never shows the supplier. Values marked **default** were chosen without the owner and are settings, not constants.
 
 **Owner decisions of 28 September 2026:** the order is always in **CZK** for every language (EUR stays a display reference, D06.7); personal delivery in Prague costs **149 Kč** below 500 Kč of goods and is free from 500 Kč; when the customer takes the order in parts, **every part is free** if the goods total is at least 500 Kč.
 
