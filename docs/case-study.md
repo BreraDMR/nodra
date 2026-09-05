@@ -71,6 +71,11 @@ volume, not a production load test.
 
 ## See it
 
+There is no public demo site yet — hosting waits for the owner's separate
+decision ([`docs/demo-deployment.md`](demo-deployment.md) holds the ready
+release plan). Everything below comes from a local run; to see the shop live,
+follow «Run locally» in the [README](../README.md).
+
 - [`docs/screenshots/storefront-home.png`](screenshots/storefront-home.png) —
   the Czech storefront with the demo banner
 - [`docs/screenshots/storefront-mobile.png`](screenshots/storefront-mobile.png) —
