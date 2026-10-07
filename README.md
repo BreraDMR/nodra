@@ -2,6 +2,26 @@
 
 A portfolio cycling equipment store built with React/Next.js 16, Symfony 8 and PostgreSQL. Its 85 demo cards feature real product models researched on Czech marketplaces; the retailer, stock and product imagery are illustrative snapshots. Checkout does not collect payment or arrange shipment; an order is a request that NODRA confirms by hand, quotes and walks through procurement, delivery and a recorded cash or transfer payment.
 
+https://github.com/user-attachments/assets/3ff0f7c1-0f7f-449b-a455-23ee7c5c5ae9
+
+<sub>A 22-second overview recorded from a local run of the demo build: the storefront in three languages, checkout, and then the same order walked through the back office. The file is also in <a href="docs/screencast/nodra-overview.mp4"><code>docs/screencast/nodra-overview.mp4</code></a>.</sub>
+
+## Screenshots
+
+| Storefront | Catalog with compatibility filters |
+|---|---|
+| ![English storefront with the demo banner](docs/screenshots/storefront-home.png) | ![Lights narrowed to front lights by the Position facet](docs/screenshots/storefront-catalog.png) |
+| **Product page** | **Checkout: an order request, not a payment** |
+| ![Product page with lead time, MPN and EAN](docs/screenshots/storefront-product.png) | ![Checkout with contact channel and Prague delivery](docs/screenshots/storefront-checkout.png) |
+| **Admin dashboard** | **One order, start to finish** |
+| ![Admin dashboard with revenue and work queues](docs/screenshots/admin-overview.png) | ![Order drawer with shipment, payment ledger and journal](docs/screenshots/admin-order-journal.png) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile-home.png" width="250" alt="Mobile home page">
+  <img src="docs/screenshots/storefront-mobile.png" width="250" alt="Mobile catalog with facets">
+  <img src="docs/screenshots/mobile-product.png" width="250" alt="Mobile product page">
+</p>
+
 ## Run locally
 
 Requirements: PHP 8.4+, Composer, Node.js 22+, npm and Docker with Compose. Ports 3000, 8000, 55432, 1025 and 8025 must be available.
@@ -15,7 +35,7 @@ Open [the Czech storefront](http://127.0.0.1:3000/cs), [German storefront](http:
 
 ### The explicit portfolio demo
 
-The same code builds two things. The ordinary build is a shop; a build with `NEXT_PUBLIC_DEMO_MODE=1` is an explicit portfolio demo: every page carries a banner naming the demo («Ukázka portfolia — objednávky jsou testovací, platby ani dodání se neprovádějí» and its de/en versions), checkout and the receipt say the order is a test, and the shared category illustrations are labeled as illustrations instead of posing as product photos. Screenshots and a short scripted walkthrough live in [`docs/screenshots/`](docs/screenshots) and [`docs/screencast/demo-scenario.webm`](docs/screencast/demo-scenario.webm); the cards meant for a demo run and the filter paths that hold are listed in [`docs/showcase-cards.md`](docs/showcase-cards.md); the case study is [`docs/case-study.md`](docs/case-study.md).
+The same code builds two things. The ordinary build is a shop; a build with `NEXT_PUBLIC_DEMO_MODE=1` is an explicit portfolio demo: every page carries a banner naming the demo («Ukázka portfolia — objednávky jsou testovací, platby ani dodání se neprovádějí» and its de/en versions), checkout and the receipt say the order is a test, and the shared category illustrations are labeled as illustrations instead of posing as product photos. Screenshots, the overview video and an earlier 11-second scripted walk live in [`docs/screenshots/`](docs/screenshots), [`docs/screencast/nodra-overview.mp4`](docs/screencast/nodra-overview.mp4) and [`docs/screencast/demo-scenario.webm`](docs/screencast/demo-scenario.webm); the cards meant for a demo run and the filter paths that hold are listed in [`docs/showcase-cards.md`](docs/showcase-cards.md); the case study is [`docs/case-study.md`](docs/case-study.md).
 
 Google sign-in uses an OAuth 2.0 web application client. Register `http://127.0.0.1:3000/api/account/google/callback` as an authorized redirect URI in Google Cloud, then put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in ignored `api/.env.local`. The public account button redirects to Google once these values are set. The local demo sign-in and points work without credentials. Welcome emails are delivered only to Mailpit at port 8025; a real SMTP transport is not configured.
 
