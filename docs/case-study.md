@@ -75,8 +75,10 @@ There is no public demo site yet — hosting is a separate step ([`docs/demo-dep
 release plan). Everything below comes from a local run; to see the shop live,
 follow «Run locally» in the [README](../README.md).
 
+- [`docs/screencast/nodra-overview.mp4`](screencast/nodra-overview.mp4) —
+  a 22-second overview: storefront, checkout and one order through the back office
 - [`docs/screenshots/storefront-home.png`](screenshots/storefront-home.png) —
-  the Czech storefront with the demo banner
+  the English storefront with the demo banner
 - [`docs/screenshots/storefront-mobile.png`](screenshots/storefront-mobile.png) —
   the 390 px catalog with facets
 - [`docs/screenshots/admin-overview.png`](screenshots/admin-overview.png) —
